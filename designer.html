@@ -454,46 +454,37 @@ async function postToWebflow(){
   btn.disabled=true; btn.textContent='Posting to Webflow...';
   const resultEl=document.getElementById('postResult'); resultEl.textContent='';
   try{
-    const collectionId=COLLECTION_MAP[activeRow.content_type]||COLLECTION_MAP['Other'];
-    const isLive=publishMode==='live';
-    const slug=slugify(activeRow.title||'untitled');
-    let fields={};
-    const ct=activeRow.content_type;
-    if(ct==='Blog'){
-      fields={name:activeRow.title,slug,'blog-content':activeRow.content||'','author-name':activeRow.writer_name||'','_archived':false,'_draft':!isLive};
-      if(activeRow.image_url)fields['blog-image']={url:activeRow.image_url};
-    }else if(ct==='Whitepaper'){
-      fields={name:activeRow.title,slug,'white-paper-content':activeRow.content||'','short-para':(activeRow.content||'').substring(0,200),'_archived':false,'_draft':!isLive};
-      if(activeRow.image_url)fields['white-paper-image']={url:activeRow.image_url};
-    }else if(ct==='Newsletter'){
-      fields={name:activeRow.title,slug,'pr-description':activeRow.content||'','news-pr-name':activeRow.title,'_archived':false,'_draft':!isLive};
-      if(activeRow.image_url)fields['pr-bg-img']={url:activeRow.image_url};
-    }else{
-      fields={name:activeRow.title,slug,'casestudy-content':activeRow.content||'','small-info':(activeRow.content||'').substring(0,200),'_archived':false,'_draft':!isLive};
-      if(activeRow.image_url)fields['case-study-image']={url:activeRow.image_url};
-    }
-    const res=await fetch('https://api.webflow.com/collections/'+collectionId+'/items',{
+    // Call Supabase Edge Function — avoids CORS issue with direct Webflow API calls
+    const res=await fetch('https://imtoahbuliuywiljxvpg.supabase.co/functions/v1/post-to-webflow',{
       method:'POST',
-      headers:{'Authorization':'Bearer '+WEBFLOW_TOKEN,'Content-Type':'application/json','accept-version':'1.0.0'},
-      body:JSON.stringify({fields})
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo',
+        'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo'
+      },
+      body:JSON.stringify({
+        row: activeRow,
+        publish_mode: publishMode
+      })
     });
     const data=await res.json();
-    if(data._id||data.id){
-      if(isLive){
-        await fetch('https://api.webflow.com/sites/'+WEBFLOW_SITE_ID+'/publish',{
-          method:'POST',headers:{'Authorization':'Bearer '+WEBFLOW_TOKEN,'Content-Type':'application/json','accept-version':'1.0.0'},
-          body:JSON.stringify({domains:[]})
-        });
-      }
-      await updateRow(activeRow.id,{posted_to_webflow:true,webflow_item_id:data._id||data.id,webflow_status:isLive?'live':'draft'});
+    if(data.success){
+      await updateRow(activeRow.id,{
+        posted_to_webflow:true,
+        webflow_item_id:data.item_id,
+        webflow_status:data.status
+      });
+      const isLive=data.status==='live';
       showToast(isLive?'Posted live on Webflow!':'Saved as draft on Webflow!','success');
       resultEl.textContent=isLive?'Live on website!':'Saved as draft in Webflow CMS';
       resultEl.style.color=isLive?'var(--green)':'var(--yellow)';
-      activeRow.posted_to_webflow=true; await fetchData();
+      activeRow.posted_to_webflow=true;
+      await fetchData();
     }else{
-      const errMsg=data.message||data.msg||JSON.stringify(data);
+      const errMsg=data.error||JSON.stringify(data);
       showToast('Webflow error: '+errMsg,'error');
-      resultEl.textContent='Error: '+errMsg; resultEl.style.color='var(--accent)';
+      resultEl.textContent='Error: '+errMsg;
+      resultEl.style.color='var(--accent)';
       btn.disabled=false; btn.textContent='Post to Webflow';
     }
   }catch(e){
