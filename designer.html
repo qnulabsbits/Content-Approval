@@ -278,18 +278,11 @@ const BUCKET='content-images';
 let allRows=[],currentFilter='all',activeRow=null,toastTimer=null,realtimeWS=null;
 
 async function sbFetch(path,options={}) {
-  const isWrite=options.method&&options.method!=='GET';
-  const h={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
-  if(isWrite) h['Prefer']='return=representation';
-  if(options.headers) Object.assign(h,options.headers);
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),10000);
-  try {
-    const res=await fetch(SUPA_URL+'/rest/v1/'+path,{...options,headers:h,signal:controller.signal});
-    clearTimeout(timer);
-    if(!res.ok) throw new Error(await res.text());
-    const t=await res.text(); return t?JSON.parse(t):null;
-  } catch(e) { clearTimeout(timer); throw e; }
+  const h = {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
+  if(options.headers) Object.assign(h, options.headers);
+  const res=await fetch(SUPA_URL+'/rest/v1/'+path,{...options,headers:h});
+  if(!res.ok) throw new Error(await res.text());
+  const t=await res.text(); return t?JSON.parse(t):null;
 }
 async function getAll(){return await sbFetch(TABLE+'?order=created_at.asc&select=*');}
 async function insertRow(data){return await sbFetch(TABLE,{method:'POST',body:JSON.stringify(data)});}
@@ -298,22 +291,19 @@ async function updateRow(id,data){return await sbFetch(TABLE+'?id=eq.'+id,{metho
 async function uploadImage(file){
   const ext=file.name.split('.').pop();
   const path='images/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
-  const res=await fetch(SUPA_STORAGE+'/object/'+BUCKET+'/'+path,{method:'POST',
-    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type,'x-upsert':'true'},body:file});
+  const res=await fetch(SUPA_STORAGE+'/object/'+BUCKET+'/'+path,{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type,'x-upsert':'true'},body:file});
   if(!res.ok) throw new Error('Image upload failed');
   return SUPA_STORAGE+'/object/public/'+BUCKET+'/'+path;
 }
 
 function subscribeRealtime(){
   if(realtimeWS) return;
-  try {
-    const ws=new WebSocket(SUPA_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPA_KEY+'&vsn=1.0.0');
-    ws.onopen=()=>ws.send(JSON.stringify({topic:'realtime:public:'+TABLE,event:'phx_join',payload:{},ref:'1'}));
-    ws.onmessage=(e)=>{try{const m=JSON.parse(e.data);if(['INSERT','UPDATE','DELETE'].includes(m.event))fetchData();}catch(_){}};
-    ws.onerror=()=>{realtimeWS=null;setTimeout(subscribeRealtime,8000);};
-    ws.onclose=()=>{realtimeWS=null;setTimeout(subscribeRealtime,8000);};
-    realtimeWS=ws;
-  } catch(_){setTimeout(subscribeRealtime,8000);}
+  const ws=new WebSocket(SUPA_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPA_KEY+'&vsn=1.0.0');
+  ws.onopen=()=>ws.send(JSON.stringify({topic:'realtime:public:'+TABLE,event:'phx_join',payload:{},ref:'1'}));
+  ws.onmessage=(e)=>{const m=JSON.parse(e.data);if(['INSERT','UPDATE','DELETE'].includes(m.event))fetchData();};
+  ws.onerror=()=>setTimeout(subscribeRealtime,5000);
+  ws.onclose=()=>{realtimeWS=null;setTimeout(subscribeRealtime,5000);};
+  realtimeWS=ws;
 }
 
 function getStatus(row){
@@ -325,16 +315,17 @@ function getStatus(row){
   if(row.content&&row.content.trim()) return 'submitted';
   return 'draft';
 }
-function badgeHTML(s){
-  const m={draft:['draft','Draft'],submitted:['submitted','Submitted'],'with-seo':['with-seo','With SEO'],'with-cmo':['with-cmo','With CMO'],'with-designer':['with-designer','With Designer'],ready:['ready','CMO Approved'],posted:['posted','Posted']};
-  const[c,l]=m[s]||['draft','Draft'];
-  return `<span class="badge ${c}"><span class="badge-dot"></span>${l}</span>`;
+function badgeHTML(status){
+  const map={draft:['draft','Draft'],submitted:['submitted','Submitted'],'with-seo':['with-seo','With SEO'],'with-cmo':['with-cmo','With CMO'],'with-designer':['with-designer','With Designer'],ready:['ready','CMO Approved'],posted:['posted','Posted']};
+  const [cls,label]=map[status]||['draft','Draft'];
+  return '<span class="badge '+cls+'"><span class="badge-dot"></span>'+label+'</span>';
 }
 function getTypeLabel(row){return row.content_type==='Other'?(row.content_type_other||'Other'):(row.content_type||'');}
 function typePillHTML(row){
-  const label=getTypeLabel(row); if(!label) return '<span style="color:var(--border2);font-size:12px">-</span>';
+  const label=getTypeLabel(row);
+  if(!label) return '<span style="color:var(--border2);font-size:12px">-</span>';
   const cls={Blog:'blog',Whitepaper:'whitepaper',Newsletter:'newsletter',Other:'other'}[row.content_type]||'other';
-  return `<span class="type-pill ${cls}">${label}</span>`;
+  return '<span class="type-pill '+cls+'">'+label+'</span>';
 }
 function formatDate(s){if(!s)return '-';return new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
 function slugify(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
@@ -352,7 +343,7 @@ function filterRows(f,btn){
 function setLastUpdated(){const el=document.getElementById('lastUpdated');if(el)el.textContent='Updated '+new Date().toLocaleTimeString();}
 function handleTypeChange(sel,wrapId){document.getElementById(wrapId).classList.toggle('show',sel.value==='Other');}
 function downloadWord(content,title){
-  const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:12pt;line-height:1.6;margin:40px;}h1{font-size:16pt;margin-bottom:20px;}</style></head><body><h1>${title}</h1><div>${content.replace(/\n/g,'<br>')}</div></body></html>`;
+  const html='<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:12pt;line-height:1.6;margin:40px;}h1{font-size:16pt;margin-bottom:20px;}</style></head><body><h1>'+title+'</h1><div>'+content.replace(/\n/g,'<br>')+'</div></body></html>';
   const blob=new Blob(['\ufeff',html],{type:'application/msword'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=slugify(title||'content')+'.doc'; a.click(); URL.revokeObjectURL(a.href);
 }
@@ -373,50 +364,94 @@ let publishMode='draft';
 
 function selectPublishOpt(mode){
   publishMode=mode;
-  document.getElementById('optDraft').classList.toggle('selected',mode==='draft');
-  document.getElementById('optLive').classList.toggle('selected',mode==='live');
+  const d=document.getElementById('optDraft');
+  const l=document.getElementById('optLive');
+  if(d) d.classList.toggle('selected',mode==='draft');
+  if(l) l.classList.toggle('selected',mode==='live');
 }
+
 async function fetchData(){
-  try{allRows=await getAll()||[];updateStats(allRows);renderTable(allRows);setLastUpdated();subscribeRealtime();}
-  catch(e){document.getElementById('tableContainer').innerHTML=`<div class="empty-state"><div class="empty-title">Could not load</div><div class="empty-sub">${e.message}</div></div>`;}
+  try{
+    allRows=await getAll()||[];
+    updateStats(allRows); renderTable(allRows); setLastUpdated(); subscribeRealtime();
+  }catch(e){
+    document.getElementById('tableContainer').innerHTML=`<div class="empty-state"><div class="empty-title">Could not load</div><div class="empty-sub">${e.message}</div></div>`;
+  }
 }
+
 function updateStats(r){
   document.getElementById('s1').textContent=r.filter(x=>x.cmo_approved&&!x.posted_to_webflow).length;
   document.getElementById('s2').textContent=r.filter(x=>x.posted_to_webflow&&x.webflow_status==='live').length;
   document.getElementById('s3').textContent=r.filter(x=>x.posted_to_webflow&&x.webflow_status==='draft').length;
   document.getElementById('s4').textContent=r.length;
 }
+
 function renderTable(rows){
   const c=document.getElementById('tableContainer');
   const fm={ready:r=>r.cmo_approved&&!r.posted_to_webflow,posted:r=>r.posted_to_webflow};
   const filtered=currentFilter==='all'?rows:rows.filter(fm[currentFilter]||Boolean);
-  if(!filtered.length){c.innerHTML='<div class="empty-state"><div class="empty-title">Nothing here</div></div>';return;}
-  let h=`<table><thead><tr><th>#</th><th>Title</th><th>Type</th><th>Image</th><th>Section</th><th>Designer Approve</th><th>Webflow</th><th>Status</th></tr></thead><tbody>`;
+  if(!filtered.length){
+    c.innerHTML='<div class="empty-state"><div class="empty-title">Nothing here</div><div class="empty-sub">No content matches this filter.</div></div>';
+    return;
+  }
+
+  let h=`<table><thead><tr>
+    <th>#</th><th>Title</th><th>Type</th><th>Image</th>
+    <th>Section</th><th>Designer Approve</th><th>Webflow</th><th>Status</th>
+  </tr></thead><tbody>`;
+
   filtered.forEach((row,i)=>{
     const can=row.cmo_approved;
     const section=SECTION_NAMES[row.content_type]||'Case Studies';
+    const imgCell=row.image_url?`<img class="img-thumb" src="${row.image_url}"/>`:'–';
+
+    // Build toggle cell safely without nested template literals
+    let toggleCell='';
+    if(can){
+      toggleCell=`<div class="toggle-wrap">
+        <label class="toggle designer" id="dtog_${row.id}">
+          <input type="checkbox" ${row.designer_approved?'checked':''} data-id="${row.id}" onchange="handleTableToggle(this)"/>
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">${row.designer_approved?'Approved':'Pending'}</span>
+      </div>`;
+    } else {
+      toggleCell='<span style="font-size:12px;color:var(--muted)">CMO pending</span>';
+    }
+
+    const webflowCell=row.posted_to_webflow
+      ?`<span style="color:var(--green);font-size:12px;font-weight:600">${row.webflow_status==='live'?'Live':'Draft'}</span>`
+      :'<span style="color:var(--muted);font-size:12px">Not posted</span>';
+
     h+=`<tr onclick="${can?`openModal(${row.id})`:''}" style="${can?'':'opacity:0.5;cursor:default'}">
       <td class="num-cell">${i+1}</td>
       <td style="font-weight:600">${row.title||'-'}</td>
       <td>${typePillHTML(row)}</td>
-      <td>${row.image_url?`<img class="img-thumb" src="${row.image_url}"/>`:'–'}</td>
+      <td>${imgCell}</td>
       <td style="font-size:12px;font-weight:600;color:var(--blue)">${section}</td>
-      <td onclick="event.stopPropagation()">${can?`
-        <div class="toggle-wrap">
-          <label class="toggle designer" id="dtog_${row.id}">
-            <input type="checkbox" ${row.designer_approved?'checked':''} onchange="quickToggle(${row.id},this.checked,document.getElementById('dtog_${row.id}'))"/>
-            <span class="toggle-slider"></span>
-          </label>
-          <span class="toggle-label">${row.designer_approved?'Approved':'Pending'}</span>
-        </div>`:'<span style="font-size:12px;color:var(--muted)">CMO pending</span>'}</td>
-      <td>${row.posted_to_webflow?`<span style="color:var(--green);font-size:12px;font-weight:600">${row.webflow_status==='live'?'Live':'Draft'}</span>`:'<span style="color:var(--muted);font-size:12px">Not posted</span>'}</td>
+      <td onclick="event.stopPropagation()">${toggleCell}</td>
+      <td>${webflowCell}</td>
       <td>${badgeHTML(getStatus(row))}</td>
     </tr>`;
   });
-  h+=`</tbody></table>`; c.innerHTML=h;
+
+  h+=`</tbody></table>`;
+  c.innerHTML=h;
 }
+
+// Separate handler for table toggles — avoids nested template literal issues
+async function handleTableToggle(input){
+  const id=input.getAttribute('data-id');
+  const checked=input.checked;
+  const el=document.getElementById('dtog_'+id);
+  if(!el){showToast('Toggle element not found.','error');return;}
+  await quickToggle(id,checked,el);
+}
+
 function openModal(id){
-  activeRow=allRows.find(r=>r.id==id); if(!activeRow)return;
+  activeRow=allRows.find(r=>r.id==id);
+  if(!activeRow){showToast('Could not find content row.','error');return;}
+
   document.getElementById('fsTitle').textContent=activeRow.title||'Untitled';
   document.getElementById('fsSubtitle').textContent=`Written by ${activeRow.writer_name||'-'} · ${formatDate(activeRow.created_at)}`;
   document.getElementById('fsWriter').textContent=activeRow.writer_name||'-';
@@ -426,18 +461,35 @@ function openModal(id){
   document.getElementById('fsType').innerHTML=typePillHTML(activeRow);
   document.getElementById('fsSection').textContent=SECTION_NAMES[activeRow.content_type]||'Case Studies';
   document.getElementById('fsContent').textContent=activeRow.content||'No content.';
-  const img=document.getElementById('fsImg'); const noImg=document.getElementById('fsNoImg');
-  if(activeRow.image_url){img.src=activeRow.image_url;img.classList.add('show');noImg.style.display='none';}
-  else{img.classList.remove('show');noImg.style.display='block';}
-  const checked=activeRow.designer_approved;
+
+  const img=document.getElementById('fsImg');
+  const noImg=document.getElementById('fsNoImg');
+  if(activeRow.image_url){
+    img.src=activeRow.image_url; img.classList.add('show'); noImg.style.display='none';
+  } else {
+    img.classList.remove('show'); noImg.style.display='block';
+  }
+
+  const checked=!!activeRow.designer_approved;
   document.getElementById('fsToggleInput').checked=checked;
   document.getElementById('fsToggleLabel').textContent=checked?'Approved':'Pending';
-  document.getElementById('postBtn').disabled=!checked||activeRow.posted_to_webflow;
+
+  const postBtn=document.getElementById('postBtn');
+  postBtn.disabled=!checked||!!activeRow.posted_to_webflow;
+  postBtn.textContent='Post to Webflow';
+
   const pr=document.getElementById('postResult');
-  if(activeRow.posted_to_webflow){pr.textContent=activeRow.webflow_status==='live'?'Already posted live':'Already saved as draft';pr.style.color=activeRow.webflow_status==='live'?'var(--green)':'var(--yellow)';}
-  else pr.textContent='';
-  selectPublishOpt('draft'); openFS();
+  if(activeRow.posted_to_webflow){
+    pr.textContent=activeRow.webflow_status==='live'?'Already posted live':'Already saved as draft';
+    pr.style.color=activeRow.webflow_status==='live'?'var(--green)':'var(--yellow)';
+  } else {
+    pr.textContent='';
+  }
+
+  selectPublishOpt('draft');
+  openFS();
 }
+
 async function handleImgUpload(input){
   const file=input.files[0]; if(!file)return;
   try{
@@ -449,26 +501,39 @@ async function handleImgUpload(input){
     showToast('Image uploaded!','success'); await fetchData();
   }catch(e){showToast('Failed: '+e.message,'error');}
 }
+
 async function handleFsToggle(){
   const checked=document.getElementById('fsToggleInput').checked;
   document.getElementById('fsToggleLabel').textContent=checked?'Approved':'Pending';
   document.getElementById('postBtn').disabled=!checked;
   await quickToggle(activeRow.id,checked,document.getElementById('fsToggle'));
 }
+
 async function quickToggle(id,checked,el){
+  if(!el){showToast('UI error — please refresh.','error');return;}
   el.classList.add('saving');
-  try{await updateRow(id,{designer_approved:checked});showToast(checked?'Approved!':'Removed.','success');activeRow.designer_approved=checked;await fetchData();}
-  catch(e){showToast('Failed: '+e.message,'error');}finally{el.classList.remove('saving');}
+  try{
+    await updateRow(id,{designer_approved:checked});
+    showToast(checked?'Approved!':'Removed.','success');
+    if(activeRow&&activeRow.id==id) activeRow.designer_approved=checked;
+    await fetchData();
+  }catch(e){showToast('Failed: '+e.message,'error');}
+  finally{el.classList.remove('saving');}
 }
+
 async function postToWebflow(){
-  if(!activeRow.designer_approved){showToast('Please approve first.','error');return;}
+  if(!activeRow||!activeRow.designer_approved){showToast('Please approve first.','error');return;}
   const btn=document.getElementById('postBtn');
   btn.disabled=true; btn.textContent='Posting to Webflow...';
   const resultEl=document.getElementById('postResult'); resultEl.textContent='';
   try{
     const res=await fetch(WEBFLOW_EDGE_URL,{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo','apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo'},
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo',
+        'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo'
+      },
       body:JSON.stringify({row:activeRow,publish_mode:publishMode})
     });
     const data=await res.json();
@@ -478,7 +543,8 @@ async function postToWebflow(){
       showToast(isLive?'Posted live on Webflow!':'Saved as draft on Webflow!','success');
       resultEl.textContent=isLive?'Live on website!':'Saved as draft in Webflow CMS';
       resultEl.style.color=isLive?'var(--green)':'var(--yellow)';
-      activeRow.posted_to_webflow=true; await fetchData();
+      activeRow.posted_to_webflow=true;
+      await fetchData();
     }else{
       const errMsg=data.error||JSON.stringify(data);
       showToast('Webflow error: '+errMsg,'error');
@@ -491,6 +557,8 @@ async function postToWebflow(){
     btn.disabled=false; btn.textContent='Post to Webflow';
   }
 }
+
 fetchData();
+
 </script>
 </body></html>
