@@ -285,129 +285,104 @@ const TABLE='content_approvals';
 const BUCKET='content-images';
 let allRows=[],currentFilter='all',activeRow=null,toastTimer=null,realtimeWS=null;
 
-// Fast fetch — no Prefer header on GETs, only on writes
-async function sbFetch(path, options={}) {
-  const isWrite = options.method && options.method !== 'GET';
-  const h = {
-    'apikey': SUPA_KEY,
-    'Authorization': 'Bearer ' + SUPA_KEY,
-    'Content-Type': 'application/json'
-  };
-  if (isWrite) h['Prefer'] = 'return=representation';
-  if (options.headers) Object.assign(h, options.headers);
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+async function sbFetch(path,options={}) {
+  const isWrite=options.method&&options.method!=='GET';
+  const h={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
+  if(isWrite) h['Prefer']='return=representation';
+  if(options.headers) Object.assign(h,options.headers);
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),10000);
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/' + path, {
-      ...options, headers: h, signal: controller.signal
-    });
-    clearTimeout(timeout);
-    if (!res.ok) throw new Error(await res.text());
-    const t = await res.text();
-    return t ? JSON.parse(t) : null;
-  } catch(e) {
-    clearTimeout(timeout);
-    throw e;
-  }
+    const res=await fetch(SUPA_URL+'/rest/v1/'+path,{...options,headers:h,signal:controller.signal});
+    clearTimeout(timer);
+    if(!res.ok) throw new Error(await res.text());
+    const t=await res.text(); return t?JSON.parse(t):null;
+  } catch(e) { clearTimeout(timer); throw e; }
+}
+async function getAll(){return await sbFetch(TABLE+'?order=created_at.asc&select=*');}
+async function insertRow(data){return await sbFetch(TABLE,{method:'POST',body:JSON.stringify(data)});}
+async function updateRow(id,data){return await sbFetch(TABLE+'?id=eq.'+id,{method:'PATCH',body:JSON.stringify(data)});}
+
+async function uploadImage(file){
+  const ext=file.name.split('.').pop();
+  const path='images/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
+  const res=await fetch(SUPA_STORAGE+'/object/'+BUCKET+'/'+path,{method:'POST',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type,'x-upsert':'true'},body:file});
+  if(!res.ok) throw new Error('Image upload failed');
+  return SUPA_STORAGE+'/object/public/'+BUCKET+'/'+path;
 }
 
-async function getAll() {
-  return await sbFetch(TABLE + '?order=created_at.asc&select=*');
-}
-async function insertRow(data) {
-  return await sbFetch(TABLE, { method: 'POST', body: JSON.stringify(data) });
-}
-async function updateRow(id, data) {
-  return await sbFetch(TABLE + '?id=eq.' + id, { method: 'PATCH', body: JSON.stringify(data) });
-}
-
-async function uploadImage(file) {
-  const ext = file.name.split('.').pop();
-  const path = 'images/' + Date.now() + '_' + Math.random().toString(36).slice(2) + '.' + ext;
-  const res = await fetch(SUPA_STORAGE + '/object/' + BUCKET + '/' + path, {
-    method: 'POST',
-    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': file.type, 'x-upsert': 'true' },
-    body: file
-  });
-  if (!res.ok) throw new Error('Image upload failed');
-  return SUPA_STORAGE + '/object/public/' + BUCKET + '/' + path;
-}
-
-// Realtime — starts AFTER first data load so it doesn't delay initial render
-function subscribeRealtime() {
-  if (realtimeWS) return;
+function subscribeRealtime(){
+  if(realtimeWS) return;
   try {
-    const ws = new WebSocket(SUPA_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPA_KEY + '&vsn=1.0.0');
-    ws.onopen = () => ws.send(JSON.stringify({ topic: 'realtime:public:' + TABLE, event: 'phx_join', payload: {}, ref: '1' }));
-    ws.onmessage = (e) => {
-      try {
-        const m = JSON.parse(e.data);
-        if (['INSERT','UPDATE','DELETE'].includes(m.event)) fetchData();
-      } catch(_) {}
-    };
-    ws.onerror = () => { realtimeWS = null; setTimeout(subscribeRealtime, 8000); };
-    ws.onclose = () => { realtimeWS = null; setTimeout(subscribeRealtime, 8000); };
-    realtimeWS = ws;
-  } catch(_) {
-    setTimeout(subscribeRealtime, 8000);
-  }
+    const ws=new WebSocket(SUPA_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPA_KEY+'&vsn=1.0.0');
+    ws.onopen=()=>ws.send(JSON.stringify({topic:'realtime:public:'+TABLE,event:'phx_join',payload:{},ref:'1'}));
+    ws.onmessage=(e)=>{try{const m=JSON.parse(e.data);if(['INSERT','UPDATE','DELETE'].includes(m.event))fetchData();}catch(_){}};
+    ws.onerror=()=>{realtimeWS=null;setTimeout(subscribeRealtime,8000);};
+    ws.onclose=()=>{realtimeWS=null;setTimeout(subscribeRealtime,8000);};
+    realtimeWS=ws;
+  } catch(_){setTimeout(subscribeRealtime,8000);}
 }
 
-function getStatus(row) {
-  if (row.posted_to_webflow) return 'posted';
-  if (row.designer_approved) return 'ready';
-  if (row.cmo_approved) return 'with-designer';
-  if (row.seo_approved) return 'with-cmo';
-  if (row.writer_approved) return 'with-seo';
-  if (row.content && row.content.trim()) return 'submitted';
+function getStatus(row){
+  if(row.posted_to_webflow) return 'posted';
+  if(row.designer_approved) return 'ready';
+  if(row.cmo_approved) return 'with-designer';
+  if(row.seo_approved) return 'with-cmo';
+  if(row.writer_approved) return 'with-seo';
+  if(row.content&&row.content.trim()) return 'submitted';
   return 'draft';
 }
-function badgeHTML(status) {
-  const map = { draft:['draft','Draft'], submitted:['submitted','Submitted'], 'with-seo':['with-seo','With SEO'], 'with-cmo':['with-cmo','With CMO'], 'with-designer':['with-designer','With Designer'], ready:['ready','CMO Approved'], posted:['posted','Posted'] };
-  const [cls, label] = map[status] || ['draft','Draft'];
-  return '<span class="badge ' + cls + '"><span class="badge-dot"></span>' + label + '</span>';
+function badgeHTML(s){
+  const m={draft:['draft','Draft'],submitted:['submitted','Submitted'],'with-seo':['with-seo','With SEO'],'with-cmo':['with-cmo','With CMO'],'with-designer':['with-designer','With Designer'],ready:['ready','CMO Approved'],posted:['posted','Posted']};
+  const[c,l]=m[s]||['draft','Draft'];
+  return `<span class="badge ${c}"><span class="badge-dot"></span>${l}</span>`;
 }
-function getTypeLabel(row) { return row.content_type === 'Other' ? (row.content_type_other || 'Other') : (row.content_type || ''); }
-function typePillHTML(row) {
-  const label = getTypeLabel(row);
-  if (!label) return '<span style="color:var(--border2);font-size:12px">-</span>';
-  const cls = { Blog:'blog', Whitepaper:'whitepaper', Newsletter:'newsletter', Other:'other' }[row.content_type] || 'other';
-  return '<span class="type-pill ' + cls + '">' + label + '</span>';
+function getTypeLabel(row){return row.content_type==='Other'?(row.content_type_other||'Other'):(row.content_type||'');}
+function typePillHTML(row){
+  const label=getTypeLabel(row); if(!label) return '<span style="color:var(--border2);font-size:12px">-</span>';
+  const cls={Blog:'blog',Whitepaper:'whitepaper',Newsletter:'newsletter',Other:'other'}[row.content_type]||'other';
+  return `<span class="type-pill ${cls}">${label}</span>`;
 }
-function formatDate(s) { if (!s) return '-'; return new Date(s).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }); }
-function slugify(t) { return t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
-function showToast(msg, type='success') {
-  const t = document.getElementById('toast');
-  document.getElementById('toastMsg').textContent = msg;
-  t.className = 'toast ' + type; t.classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+function formatDate(s){if(!s)return '-';return new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+function slugify(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
+function showToast(msg,type='success'){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.className='toast '+type; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
 }
-function filterRows(f, btn) {
-  currentFilter = f;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+function filterRows(f,btn){
+  currentFilter=f;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active'); renderTable(allRows);
 }
-function setLastUpdated() { const el = document.getElementById('lastUpdated'); if (el) el.textContent = 'Updated ' + new Date().toLocaleTimeString(); }
-function handleTypeChange(sel, wrapId) { document.getElementById(wrapId).classList.toggle('show', sel.value === 'Other'); }
-function downloadWord(content, title) {
-  const html = '<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:12pt;line-height:1.6;margin:40px;}h1{font-size:16pt;margin-bottom:20px;}</style></head><body><h1>' + title + '</h1><div>' + content.replace(/\n/g, '<br>') + '</div></body></html>';
-  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = slugify(title || 'content') + '.doc'; a.click(); URL.revokeObjectURL(a.href);
+function setLastUpdated(){const el=document.getElementById('lastUpdated');if(el)el.textContent='Updated '+new Date().toLocaleTimeString();}
+function handleTypeChange(sel,wrapId){document.getElementById(wrapId).classList.toggle('show',sel.value==='Other');}
+function downloadWord(content,title){
+  const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:12pt;line-height:1.6;margin:40px;}h1{font-size:16pt;margin-bottom:20px;}</style></head><body><h1>${title}</h1><div>${content.replace(/\n/g,'<br>')}</div></body></html>`;
+  const blob=new Blob(['\ufeff',html],{type:'application/msword'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=slugify(title||'content')+'.doc'; a.click(); URL.revokeObjectURL(a.href);
 }
-function readWordFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => { const div = document.createElement('div'); div.innerHTML = e.target.result; resolve(div.innerText || div.textContent || ''); };
-    reader.onerror = reject; reader.readAsText(file);
+function readWordFile(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{const div=document.createElement('div');div.innerHTML=e.target.result;resolve(div.innerText||div.textContent||'');};
+    reader.onerror=reject; reader.readAsText(file);
   });
 }
-function openFS() { document.getElementById('fsOverlay').classList.add('show'); document.body.style.overflow = 'hidden'; }
-function closeFS() { document.getElementById('fsOverlay').classList.remove('show'); document.body.style.overflow = ''; }
+function openFS(){document.getElementById('fsOverlay').classList.add('show');document.body.style.overflow='hidden';}
+function closeFS(){document.getElementById('fsOverlay').classList.remove('show');document.body.style.overflow='';}
+
 
 async function fetchData(){
-  try{allRows=await getAll()||[];updateStats(allRows);renderTable(allRows);setLastUpdated();}
-  catch(e){document.getElementById('tableContainer').innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div><div class="empty-sub">'+e.message+'</div></div>';}
+  try{
+    allRows=await getAll()||[];
+    updateStats(allRows); renderTable(allRows); setLastUpdated();
+    subscribeRealtime();
+  }catch(e){
+    document.getElementById('tableContainer').innerHTML=`<div class="empty-state"><div class="empty-title">Could not load</div><div class="empty-sub">${e.message}</div></div>`;
+  }
 }
 function updateStats(r){
   document.getElementById('s1').textContent=r.length;
@@ -420,29 +395,34 @@ function renderTable(rows){
   const c=document.getElementById('tableContainer');
   const fm={pending:r=>!r.writer_approved,review:r=>r.writer_approved&&!r.designer_approved,posted:r=>r.posted_to_webflow};
   const filtered=currentFilter==='all'?rows:rows.filter(fm[currentFilter]||Boolean);
-  if(!filtered.length){c.innerHTML='<div class="empty-state"><div class="empty-title">No submissions yet</div></div>';return;}
-  let h='<table><thead><tr><th>#</th><th>Title</th><th>Type</th><th>Image</th><th>Writer</th><th>Date</th><th>Approve</th><th>Status</th></tr></thead><tbody>';
+  if(!filtered.length){c.innerHTML='<div class="empty-state"><div class="empty-title">No submissions yet</div><div class="empty-sub">Add your first content above.</div></div>';return;}
+  let h=`<table><thead><tr><th>#</th><th>Title</th><th>Type</th><th>Image</th><th>Writer</th><th>Date</th><th>Approve</th><th>Status</th></tr></thead><tbody>`;
   filtered.forEach((row,i)=>{
-    h+='<tr onclick="openModal(''+row.id+'')">'
-      +'<td class="num-cell">'+(i+1)+'</td>'
-      +'<td style="font-weight:600">'+(row.title||'-')+'</td>'
-      +'<td>'+typePillHTML(row)+'</td>'
-      +'<td>'+(row.image_url?'<img class="img-thumb" src="'+row.image_url+'"/>':'-')+'</td>'
-      +'<td style="color:var(--muted)">'+(row.writer_name||'-')+'</td>'
-      +'<td class="date-cell">'+formatDate(row.created_at)+'</td>'
-      +'<td onclick="event.stopPropagation()">'
-        +'<div class="toggle-wrap"><label class="toggle" id="tog_'+row.id+'">'
-        +'<input type="checkbox" '+(row.writer_approved?'checked':'')+' onchange="quickToggle(''+row.id+'',this.checked,document.getElementById('tog_'+row.id+''))"/>'
-        +'<span class="toggle-slider"></span></label>'
-        +'<span class="toggle-label">'+(row.writer_approved?'Approved':'Pending')+'</span></div></td>'
-      +'<td>'+badgeHTML(getStatus(row))+'</td></tr>';
+    h+=`<tr onclick="openModal(${row.id})">
+      <td class="num-cell">${i+1}</td>
+      <td style="font-weight:600">${row.title||'-'}</td>
+      <td>${typePillHTML(row)}</td>
+      <td>${row.image_url?`<img class="img-thumb" src="${row.image_url}"/>`:'–'}</td>
+      <td style="color:var(--muted)">${row.writer_name||'-'}</td>
+      <td class="date-cell">${formatDate(row.created_at)}</td>
+      <td onclick="event.stopPropagation()">
+        <div class="toggle-wrap">
+          <label class="toggle" id="tog_${row.id}">
+            <input type="checkbox" ${row.writer_approved?'checked':''} onchange="quickToggle(${row.id},this.checked,document.getElementById('tog_${row.id}'))"/>
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label">${row.writer_approved?'Approved':'Pending'}</span>
+        </div>
+      </td>
+      <td>${badgeHTML(getStatus(row))}</td>
+    </tr>`;
   });
-  h+='</tbody></table>'; c.innerHTML=h;
+  h+=`</tbody></table>`; c.innerHTML=h;
 }
 function openModal(id){
   activeRow=allRows.find(r=>r.id==id); if(!activeRow)return;
   document.getElementById('fsTitle').textContent=activeRow.title||'Untitled';
-  document.getElementById('fsSubtitle').textContent='Written by '+(activeRow.writer_name||'-')+' · '+formatDate(activeRow.created_at);
+  document.getElementById('fsSubtitle').textContent=`Written by ${activeRow.writer_name||'-'} · ${formatDate(activeRow.created_at)}`;
   document.getElementById('fsWriter').textContent=activeRow.writer_name||'-';
   document.getElementById('fsDate').textContent=formatDate(activeRow.created_at);
   document.getElementById('fsTypeVal').innerHTML=typePillHTML(activeRow);
@@ -470,7 +450,8 @@ async function quickToggle(id,checked,el){
     await updateRow(id,data);
     showToast(checked?'Approved! SEO team will be notified.':'Removed.','success');
     await fetchData();
-  }catch(e){showToast('Failed: '+e.message,'error');}finally{el.classList.remove('saving');}
+  }catch(e){showToast('Failed: '+e.message,'error');}
+  finally{el.classList.remove('saving');}
 }
 function previewImg(input,previewId){
   const file=input.files[0]; if(!file)return;
@@ -492,7 +473,9 @@ async function submitNew(){
     let imageUrl=null;
     const imgFile=document.getElementById('fImageInput').files[0];
     if(imgFile){btn.textContent='Uploading image...';imageUrl=await uploadImage(imgFile);}
-    await insertRow({title,content,writer_name:writer,content_type:typeVal,content_type_other:typeVal==='Other'?typeOther:null,image_url:imageUrl,writer_approved:false,seo_approved:false,cmo_approved:false,designer_approved:false,posted_to_webflow:false});
+    await insertRow({title,content,writer_name:writer,content_type:typeVal,
+      content_type_other:typeVal==='Other'?typeOther:null,image_url:imageUrl,
+      writer_approved:false,seo_approved:false,cmo_approved:false,designer_approved:false,posted_to_webflow:false});
     showToast('Content added!','success');
     ['fTitle','fContent','fWriter'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('fType').value=''; document.getElementById('fTypeOther').value='';
@@ -502,6 +485,6 @@ async function submitNew(){
   }catch(e){showToast('Failed: '+e.message,'error');}
   finally{btn.disabled=false;btn.textContent='Add Content';}
 }
-fetchData(); subscribeRealtime();
+fetchData();
 </script>
 </body></html>
