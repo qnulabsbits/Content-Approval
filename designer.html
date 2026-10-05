@@ -227,6 +227,7 @@ td{padding:13px 16px;font-size:13px;vertical-align:middle;}
       <div class="fs-meta-item"><div class="fs-meta-label">Type</div><div class="fs-meta-value" id="fsTypeVal">-</div></div>
       <div class="fs-meta-item"><div class="fs-meta-label">Webflow Section</div><div class="fs-meta-value" id="fsSection" style="color:var(--blue)">-</div></div>
     </div>
+
     <div class="fs-grid">
       <div class="fs-card">
         <div class="fs-card-title">Featured Image
@@ -241,30 +242,50 @@ td{padding:13px 16px;font-size:13px;vertical-align:middle;}
         <div class="fs-content-box" id="fsContent" style="border-left:4px solid var(--blue);"></div>
       </div>
     </div>
-    <div class="approve-section" style="margin-bottom:20px;">
-      <div class="approve-inner blue">
-        <div><div class="approve-label blue">Step 1 — Designer Approval</div><div class="approve-sub">Toggle to approve this content before posting</div></div>
-        <div class="toggle-wrap">
-          <label class="toggle designer" id="fsToggle"><input type="checkbox" id="fsToggleInput" onchange="handleFsToggle()"/><span class="toggle-slider"></span></label>
-          <span class="toggle-label" id="fsToggleLabel">Pending</span>
+
+    <!-- PUBLISH MODE — always visible, prominent dropdown -->
+    <div class="fs-card" style="margin-top:24px;border:2px solid var(--blue);background:var(--blue-light);">
+      <div class="fs-card-title" style="color:var(--blue);font-size:13px;font-weight:700;margin-bottom:14px;">
+        How do you want to post this to Webflow?
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div id="optDraft" onclick="selectPublishOpt('draft')" style="background:#fff;border:3px solid var(--blue);border-radius:12px;padding:18px;cursor:pointer;transition:all 0.15s;">
+          <div style="font-size:15px;font-weight:700;color:var(--blue);margin-bottom:6px;">&#128196; Save as Draft</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.5;">Item appears in Webflow CMS but is NOT live on the website yet. You can review it in Webflow before publishing.</div>
+        </div>
+        <div id="optLive" onclick="selectPublishOpt('live')" style="background:#fff;border:3px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all 0.15s;">
+          <div style="font-size:15px;font-weight:700;color:var(--muted);margin-bottom:6px;">&#127758; Publish Live</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.5;">Item goes LIVE on the website immediately after posting. Make sure content is final before choosing this.</div>
+        </div>
+      </div>
+      <div id="publishModeLabel" style="margin-top:12px;font-size:13px;font-weight:600;color:var(--blue);padding:10px 14px;background:#fff;border-radius:8px;border:1px solid var(--blue-border);">
+        &#128204; Currently selected: <span id="publishModeText">Save as Draft</span>
+      </div>
+    </div>
+
+    <!-- DESIGNER APPROVAL TOGGLE — always visible -->
+    <div class="fs-card" style="margin-top:16px;border:2px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;">Designer Approval</div>
+          <div style="font-size:12px;color:var(--muted);">Toggle to approve this content. You must approve before posting to Webflow.</div>
+        </div>
+        <div class="toggle-wrap" style="flex-shrink:0;">
+          <label class="toggle designer" id="fsToggle" style="width:52px;height:28px;">
+            <input type="checkbox" id="fsToggleInput" onchange="handleFsToggle()"/>
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label" id="fsToggleLabel" style="font-size:14px;font-weight:600;">Pending</span>
         </div>
       </div>
     </div>
-    <div class="fs-card" style="margin-bottom:20px;">
-      <div class="fs-card-title">Step 2 — Choose how to post to Webflow</div>
-      <div class="publish-options">
-        <div class="publish-opt selected" id="optDraft" onclick="selectPublishOpt('draft')">
-          <div class="publish-opt-title">Save as Draft</div>
-          <div class="publish-opt-sub">Appears in Webflow CMS but not live on website yet</div>
-        </div>
-        <div class="publish-opt" id="optLive" onclick="selectPublishOpt('live')">
-          <div class="publish-opt-title">Publish Live</div>
-          <div class="publish-opt-sub">Goes live on the website immediately</div>
-        </div>
-      </div>
-    </div>
-    <button class="webflow-btn" id="postBtn" onclick="postToWebflow()" disabled>Post to Webflow</button>
+
+    <!-- POST BUTTON — always visible -->
+    <button class="webflow-btn" id="postBtn" onclick="postToWebflow()" disabled style="margin-top:16px;">
+      Post to Webflow
+    </button>
     <div class="post-result" id="postResult"></div>
+
   </div>
 </div>
 <div class="toast" id="toast"><div class="toast-dot"></div><span id="toastMsg"></span></div>
@@ -366,8 +387,21 @@ function selectPublishOpt(mode){
   publishMode=mode;
   const d=document.getElementById('optDraft');
   const l=document.getElementById('optLive');
-  if(d) d.classList.toggle('selected',mode==='draft');
-  if(l) l.classList.toggle('selected',mode==='live');
+  const lbl=document.getElementById('publishModeText');
+  if(!d||!l) return;
+  if(mode==='draft'){
+    d.style.border='3px solid var(--blue)';
+    d.querySelector('div').style.color='var(--blue)';
+    l.style.border='3px solid var(--border)';
+    l.querySelector('div').style.color='var(--muted)';
+    if(lbl) lbl.textContent='Save as Draft';
+  } else {
+    l.style.border='3px solid var(--green)';
+    l.querySelector('div').style.color='var(--green)';
+    d.style.border='3px solid var(--border)';
+    d.querySelector('div').style.color='var(--muted)';
+    if(lbl) lbl.textContent='Publish Live';
+  }
 }
 
 async function fetchData(){
