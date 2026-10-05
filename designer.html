@@ -241,8 +241,17 @@ td{padding:13px 16px;font-size:13px;vertical-align:middle;}
         <div class="fs-content-box" id="fsContent" style="border-left:4px solid var(--blue);"></div>
       </div>
     </div>
-    <div class="fs-card" style="margin:20px 0;">
-      <div class="fs-card-title">Choose how to post to Webflow</div>
+    <div class="approve-section" style="margin-bottom:20px;">
+      <div class="approve-inner blue">
+        <div><div class="approve-label blue">Step 1 — Designer Approval</div><div class="approve-sub">Toggle to approve this content before posting</div></div>
+        <div class="toggle-wrap">
+          <label class="toggle designer" id="fsToggle"><input type="checkbox" id="fsToggleInput" onchange="handleFsToggle()"/><span class="toggle-slider"></span></label>
+          <span class="toggle-label" id="fsToggleLabel">Pending</span>
+        </div>
+      </div>
+    </div>
+    <div class="fs-card" style="margin-bottom:20px;">
+      <div class="fs-card-title">Step 2 — Choose how to post to Webflow</div>
       <div class="publish-options">
         <div class="publish-opt selected" id="optDraft" onclick="selectPublishOpt('draft')">
           <div class="publish-opt-title">Save as Draft</div>
@@ -251,15 +260,6 @@ td{padding:13px 16px;font-size:13px;vertical-align:middle;}
         <div class="publish-opt" id="optLive" onclick="selectPublishOpt('live')">
           <div class="publish-opt-title">Publish Live</div>
           <div class="publish-opt-sub">Goes live on the website immediately</div>
-        </div>
-      </div>
-    </div>
-    <div class="approve-section" style="margin-bottom:20px;">
-      <div class="approve-inner blue">
-        <div><div class="approve-label blue">Designer Approval</div><div class="approve-sub">Approve content before posting to Webflow</div></div>
-        <div class="toggle-wrap">
-          <label class="toggle designer" id="fsToggle"><input type="checkbox" id="fsToggleInput" onchange="handleFsToggle()"/><span class="toggle-slider"></span></label>
-          <span class="toggle-label" id="fsToggleLabel">Pending</span>
         </div>
       </div>
     </div>
