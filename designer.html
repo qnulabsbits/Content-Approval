@@ -91,18 +91,24 @@ td{padding:13px 16px;font-size:13px;vertical-align:middle;}
 .type-pill.whitepaper{background:var(--purple-light);color:var(--purple);border:1px solid var(--purple-border);}
 .type-pill.newsletter{background:var(--green-light);color:var(--green);border:1px solid var(--green-border);}
 .type-pill.other{background:var(--yellow-light);color:var(--yellow);border:1px solid var(--yellow-border);}
-.toggle{position:relative;width:42px;height:24px;cursor:pointer;flex-shrink:0;}
-.toggle input{opacity:0;width:0;height:0;}
-.toggle-slider{position:absolute;inset:0;border-radius:24px;background:var(--border2);transition:0.2s;}
-.toggle-slider::before{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;left:2px;top:2px;transition:0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.2);}
+/* Toggle alignment fix */
+.toggle-wrap{display:flex;align-items:center;gap:8px;min-height:32px;}
+.toggle{position:relative;display:inline-block;width:42px;height:24px;cursor:pointer;flex-shrink:0;vertical-align:middle;}
+.toggle input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-slider{position:absolute;inset:0;border-radius:24px;background:var(--border2);transition:0.2s;cursor:pointer;}
+.toggle-slider::before{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;left:3px;top:3px;transition:0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);}
 .toggle input:checked + .toggle-slider{background:var(--accent);}
 .toggle input:checked + .toggle-slider::before{transform:translateX(18px);}
 .toggle.seo input:checked + .toggle-slider{background:var(--yellow);}
 .toggle.cmo input:checked + .toggle-slider{background:var(--purple);}
 .toggle.designer input:checked + .toggle-slider{background:var(--blue);}
 .toggle.saving{opacity:0.4;pointer-events:none;}
-.toggle-wrap{display:flex;align-items:center;gap:8px;}
-.toggle-label{font-size:12px;color:var(--muted);font-weight:500;}
+.toggle-label{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap;}
+/* Download bar */
+.download-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:var(--shadow);}
+.download-bar-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;white-space:nowrap;}
+.date-input{background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);outline:none;transition:border 0.15s;}
+.date-input:focus{border-color:var(--accent);}
 .fs-overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;overflow-y:auto;animation:fsIn 0.2s ease;}
 .fs-overlay.show{display:block;}
 @keyframes fsIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
@@ -215,474 +221,93 @@ td{padding:13px 16px;font-size:13px;vertical-align:middle;}
     <span class="last-updated" id="lastUpdated">Loading...</span>
     <div class="live-badge"><div class="live-dot"></div> Live</div>
     <div class="role-badge designer" id="userBadge">Designer View</div>
-    <a class="home-btn" href="index.html">&#8592; Home</a>
+    <a class="home-btn" href="index.html">Home</a>
     <button class="home-btn" onclick="logout()" style="color:var(--accent);border-color:var(--accent-border);">Sign Out</button>
   </div>
 </div>
-<script>
-const QNU_SESSION=(()=>{try{return JSON.parse(localStorage.getItem('qnu_session')||'null');}catch(_){return null;}})();
-function requireRole(...allowed){
-  if(!QNU_SESSION){window.location.href='login.html';return false;}
-  if(QNU_SESSION.expires_at&&Date.now()/1000>QNU_SESSION.expires_at){localStorage.removeItem('qnu_session');window.location.href='login.html';return false;}
-  if(!allowed.includes(QNU_SESSION.role)){window.location.href='login.html';return false;}
-  return true;
-}
-function logout(){localStorage.removeItem('qnu_session');window.location.href='login.html';}
-async function logActivity(action,details,rowId=null,rowTitle=null){
-  if(!QNU_SESSION) return;
-  try{
-    await fetch('https://imtoahbuliuywiljxvpg.supabase.co/rest/v1/activity_log',{
-      method:'POST',
-      headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo','Authorization':'Bearer '+QNU_SESSION.access_token,'Content-Type':'application/json'},
-      body:JSON.stringify({user_id:QNU_SESSION.user_id,user_email:QNU_SESSION.email,user_role:QNU_SESSION.role,action,details,row_id:rowId,row_title:rowTitle})
-    });
-  }catch(_){}
-}
-if(!requireRole('designer','admin')) throw new Error('Not authorized');
-
-const SUPA_URL='https://imtoahbuliuywiljxvpg.supabase.co';
-const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo';
-const SUPA_STORAGE=SUPA_URL+'/storage/v1';
-const TABLE='content_approvals';
-const BUCKET='content-images';
-let allRows=[],currentFilter='all',activeRow=null,toastTimer=null,realtimeWS=null;
-
-// ── COLLECTION FIELDS ──
-const COLLECTION_FIELDS={
-  Blog:[
-    {label:'Title (Name)',slug:'name',type:'text',required:true},
-    {label:'Meta Title',slug:'meta-title',type:'text'},
-    {label:'Meta Description',slug:'meta-description',type:'textarea'},
-    {label:'Author Name',slug:'author-name',type:'text'},
-    {label:'Blog Content',slug:'blog-content',type:'richtext'},
-    {label:'Blog Image',slug:'blog-Image',type:'image'},
-    {label:'Date',slug:'date-and-Time',type:'date'},
-    {label:'FAQ 1 Question',slug:'faq01',type:'text'},
-    {label:'FAQ 1 Answer',slug:'faqdes01',type:'textarea'},
-    {label:'FAQ 2 Question',slug:'faq02',type:'text'},
-    {label:'FAQ 2 Answer',slug:'faqdes02',type:'textarea'},
-  ],
-  Whitepaper:[
-    {label:'Title (Name)',slug:'name',type:'text',required:true},
-    {label:'Meta Title',slug:'meta-title',type:'text'},
-    {label:'Meta Description',slug:'meta-description',type:'textarea'},
-    {label:'Short Para',slug:'short-para',type:'textarea'},
-    {label:'Whitepaper Content',slug:'whitepaper-content',type:'richtext'},
-    {label:'Whitepaper Image',slug:'whitepaper-image',type:'image'},
-    {label:'Whitepaper Date',slug:'whitepaper-date',type:'date'},
-    {label:'FAQ 1 Question',slug:'faq01',type:'text'},
-    {label:'FAQ 1 Answer',slug:'faq-descp',type:'textarea'},
-    {label:'FAQ 2 Question',slug:'faq02',type:'text'},
-    {label:'FAQ 2 Answer',slug:'faq-descp2',type:'textarea'},
-    {label:'FAQ 3 Question',slug:'faq03',type:'text'},
-    {label:'FAQ 3 Answer',slug:'faq-descp3',type:'textarea'},
-    {label:'FAQ 4 Question',slug:'faq04',type:'text'},
-    {label:'FAQ 4 Answer',slug:'faq-descp4',type:'textarea'},
-  ],
-  Newsletter:[
-    {label:'Title (Name)',slug:'name',type:'text',required:true},
-    {label:'News PR Name',slug:'news-pr-name',type:'text'},
-    {label:'PR Description',slug:'pr-description',type:'textarea'},
-    {label:'PR Source Link',slug:'pr-source-link',type:'text'},
-    {label:'Description (Internal)',slug:'description---internal',type:'textarea'},
-    {label:'PR PDF Link',slug:'pr-pdf-link',type:'text'},
-    {label:'PR Published Date',slug:'pr-published-date',type:'date'},
-    {label:'PR Background Image',slug:'pr-bg-img',type:'image'},
-    {label:'FAQ 1 Question',slug:'faq1',type:'text'},
-    {label:'FAQ 1 Answer',slug:'faq-descp',type:'textarea'},
-    {label:'FAQ 2 Question',slug:'faq2',type:'text'},
-    {label:'FAQ 2 Answer',slug:'faq-descp2',type:'textarea'},
-  ],
-  Other:[
-    {label:'Title (Name)',slug:'name',type:'text',required:true},
-    {label:'Meta Title',slug:'meta-title',type:'text'},
-    {label:'Meta Description',slug:'meta-description',type:'textarea'},
-    {label:'Small Info',slug:'small-info',type:'text'},
-    {label:'Case Study Content',slug:'casestudy-content',type:'richtext'},
-    {label:'Case Study Image',slug:'whitepaper-image',type:'image'},
-    {label:'Case Study Date',slug:'whitepaper-date',type:'date'},
-    {label:'About the Client',slug:'about-the-client',type:'textarea'},
-    {label:'Testimonial',slug:'testimonial',type:'text'},
-    {label:'Testimonial Name',slug:'testimonial-name',type:'text'},
-    {label:'FAQ 1 Question',slug:'faq01',type:'text'},
-    {label:'FAQ 1 Answer',slug:'faq-t01',type:'textarea'},
-    {label:'FAQ 2 Question',slug:'faq02',type:'text'},
-    {label:'FAQ 2 Answer',slug:'faq-t02',type:'textarea'},
-  ]
-};
-
-// ── API ──
-async function sbFetch(path,options={}) {
-  const isWrite=options.method&&options.method!=='GET';
-  const h={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
-  if(isWrite) h['Prefer']='return=representation';
-  if(options.headers) Object.assign(h,options.headers);
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),12000);
-  try{
-    const res=await fetch(SUPA_URL+'/rest/v1/'+path,{...options,headers:h,signal:controller.signal});
-    clearTimeout(timer);
-    if(!res.ok) throw new Error(await res.text());
-    const t=await res.text(); return t?JSON.parse(t):null;
-  }catch(e){clearTimeout(timer);throw e;}
-}
-async function getAll(){return await sbFetch(TABLE+'?order=created_at.asc&select=*');}
-async function insertRow(data){return await sbFetch(TABLE,{method:'POST',body:JSON.stringify(data)});}
-async function updateRow(id,data){return await sbFetch(TABLE+'?id=eq.'+id,{method:'PATCH',body:JSON.stringify(data)});}
-
-async function uploadImage(file){
-  const ext=file.name.split('.').pop();
-  const path='images/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
-  const res=await fetch(SUPA_STORAGE+'/object/'+BUCKET+'/'+path,{
-    method:'POST',
-    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type,'x-upsert':'true'},
-    body:file
-  });
-  if(!res.ok) throw new Error('Image upload failed');
-  return SUPA_STORAGE+'/object/public/'+BUCKET+'/'+path;
-}
-
-function subscribeRealtime(){
-  if(realtimeWS) return;
-  try{
-    const ws=new WebSocket(SUPA_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPA_KEY+'&vsn=1.0.0');
-    ws.onopen=()=>ws.send(JSON.stringify({topic:'realtime:public:'+TABLE,event:'phx_join',payload:{},ref:'1'}));
-    ws.onmessage=(e)=>{try{const m=JSON.parse(e.data);if(['INSERT','UPDATE','DELETE'].includes(m.event))fetchData();}catch(_){}};
-    ws.onerror=()=>{realtimeWS=null;setTimeout(subscribeRealtime,8000);};
-    ws.onclose=()=>{realtimeWS=null;setTimeout(subscribeRealtime,8000);};
-    realtimeWS=ws;
-  }catch(_){setTimeout(subscribeRealtime,8000);}
-}
-
-// ── STATUS ──
-function getStatus(row){
-  if(row.posted_to_webflow) return 'posted';
-  if(row.designer_approved) return 'ready';
-  if(row.cmo_approved) return 'with-designer';
-  if(row.seo_approved) return 'with-cmo';
-  if(row.writer_approved) return 'with-seo';
-  if(row.content&&row.content.trim()) return 'submitted';
-  return 'draft';
-}
-function badgeHTML(s){
-  const m={draft:['draft','Draft'],submitted:['submitted','Submitted'],'with-seo':['with-seo','With SEO'],'with-cmo':['with-cmo','With CMO'],'with-designer':['with-designer','With Designer'],ready:['ready','CMO Approved'],posted:['posted','Posted']};
-  const[c,l]=m[s]||['draft','Draft'];
-  return `<span class="badge ${c}"><span class="badge-dot"></span>${l}</span>`;
-}
-function getTypeLabel(row){return row.content_type==='Other'?(row.content_type_other||'Case Study'):(row.content_type||'');}
-function typePillHTML(row){
-  const label=getTypeLabel(row);
-  if(!label) return '<span style="color:var(--border2);font-size:12px">-</span>';
-  const cls={Blog:'blog',Whitepaper:'whitepaper',Newsletter:'newsletter',Other:'other'}[row.content_type]||'other';
-  return `<span class="type-pill ${cls}">${label}</span>`;
-}
-function formatDate(s){if(!s)return '-';return new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
-function slugify(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
-
-// ── TOAST ──
-function showToast(msg,type='success'){
-  const t=document.getElementById('toast');
-  document.getElementById('toastMsg').textContent=msg;
-  t.className='toast '+type; t.classList.add('show');
-  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
-}
-
-// ── FILTER ──
-function filterRows(f,btn){
-  currentFilter=f;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  btn.classList.add('active'); renderTable(allRows);
-}
-function setLastUpdated(){const el=document.getElementById('lastUpdated');if(el)el.textContent='Updated '+new Date().toLocaleTimeString();}
-
-// ── OVERLAY ──
-function openFS(){document.getElementById('fsOverlay').classList.add('show');document.body.style.overflow='hidden';}
-function closeFS(){document.getElementById('fsOverlay').classList.remove('show');document.body.style.overflow='';}
-
-// ── RICH TEXT TOOLBAR ──
-function execRt(cmd,val=null){document.execCommand(cmd,false,val);document.getElementById('rtEditor')&&document.getElementById('rtEditor').focus();}
-function rtCmd(editorId,cmd,val=null){
-  const el=document.getElementById(editorId);
-  if(el) el.focus();
-  document.execCommand(cmd,false,val);
-}
-
-// ── FIELD FORM BUILDER ──
-function buildFieldForm(contentType,existingData={},readOnly=false){
-  const fields=COLLECTION_FIELDS[contentType]||COLLECTION_FIELDS['Blog'];
-  let html='';
-  let inFaqSection=false;
-
-  fields.forEach((f,idx)=>{
-    const isFaq=f.slug.startsWith('faq');
-    if(isFaq&&!inFaqSection){
-      html+='<div class="fs-section-title">FAQ Section</div><div class="faq-section">';
-      inFaqSection=true;
-    }
-    if(!isFaq&&inFaqSection){
-      html+='</div>';
-      inFaqSection=false;
-    }
-
-    const val=existingData[f.slug]||'';
-    const req=f.required?'<span class="req">*</span>':'';
-    const ro=readOnly?'readonly disabled':'';
-    const roStyle=readOnly?'opacity:0.7;':'';
-
-    if(f.type==='richtext'){
-      const edId='rtf_'+f.slug.replace(/[^a-z0-9]/g,'_');
-      html+=`<div class="field-group full" style="${roStyle}">
-        <div class="field-label">${f.label}${req}</div>
-        <div class="field-richtext-wrap">
-          ${!readOnly?`<div class="richtext-toolbar">
-            <button class="rt-btn" onclick="rtCmd('${edId}','bold')" title="Bold"><b>B</b></button>
-            <button class="rt-btn" onclick="rtCmd('${edId}','italic')" title="Italic"><i>I</i></button>
-            <button class="rt-btn" onclick="rtCmd('${edId}','underline')" title="Underline"><u>U</u></button>
-            <button class="rt-btn" onclick="rtCmd('${edId}','formatBlock','h2')" title="Heading">H2</button>
-            <button class="rt-btn" onclick="rtCmd('${edId}','insertUnorderedList')" title="Bullet list">&#8226; List</button>
-            <button class="rt-btn" onclick="rtCmd('${edId}','insertOrderedList')" title="Numbered list">1. List</button>
-            <button class="rt-btn" onclick="rtCmd('${edId}','removeFormat')" title="Clear formatting">Clear</button>
-          </div>`:''}
-          <div class="richtext-editor" id="${edId}" ${readOnly?'':'contenteditable="true"'} data-slug="${f.slug}" data-placeholder="Enter ${f.label}...">${val}</div>
+<div class="main">
+  <div class="page-header"><h2>Designer Publication Queue</h2><p>Review approved content and post directly to Webflow.</p></div>
+  <div class="download-bar">
+  <span class="download-bar-title">Bulk Download</span>
+  <label style="font-size:12px;color:var(--muted)">From</label>
+  <input type="date" class="date-input" id="dlFrom"/>
+  <label style="font-size:12px;color:var(--muted)">To</label>
+  <input type="date" class="date-input" id="dlTo"/>
+  <button class="action-btn secondary" style="padding:7px 14px;font-size:12px;" onclick="bulkDownloadWord()">Word</button>
+  <button class="action-btn secondary" style="padding:7px 14px;font-size:12px;" onclick="bulkDownloadPDF()">PDF</button>
+</div>
+  <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
+    <div class="stat-card s-blue"><div class="stat-label">Ready to Post</div><div class="stat-value" id="s1">-</div></div>
+    <div class="stat-card s-green"><div class="stat-label">Posted Live</div><div class="stat-value" id="s2">-</div></div>
+    <div class="stat-card s-yellow"><div class="stat-label">Draft</div><div class="stat-value" id="s3">-</div></div>
+    <div class="stat-card s-total"><div class="stat-label">Total</div><div class="stat-value" id="s4">-</div></div>
+  </div>
+  <div class="section-header">
+    <div class="section-title">Publication Queue</div>
+    <div class="filter-tabs">
+      <button class="tab active" onclick="filterRows('all',this)">All</button>
+      <button class="tab" onclick="filterRows('ready',this)">Ready to Post</button>
+      <button class="tab" onclick="filterRows('posted',this)">Posted</button>
+    </div>
+  </div>
+  <div class="table-wrap"><div id="tableContainer"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
+</div>
+<div class="fs-overlay" id="fsOverlay">
+  <div class="fs-topbar">
+    <div class="fs-topbar-left">
+      <button class="fs-back-btn" onclick="closeFS()">Back</button>
+      <div><div class="fs-title" id="fsTitle">-</div><div class="fs-subtitle" id="fsSubtitle">-</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;"><div id="fsStatus"></div><div id="fsType"></div></div>
+  </div>
+  <div class="fs-body">
+    <div class="fs-meta-row">
+      <div class="fs-meta-item"><div class="fs-meta-label">Writer</div><div class="fs-meta-value" id="fsWriter">-</div></div>
+      <div class="fs-meta-item"><div class="fs-meta-label">Date</div><div class="fs-meta-value" id="fsDate">-</div></div>
+      <div class="fs-meta-item"><div class="fs-meta-label">Type</div><div class="fs-meta-value" id="fsTypeVal">-</div></div>
+      <div class="fs-meta-item"><div class="fs-meta-label">Section</div><div class="fs-meta-value" id="fsSection" style="color:var(--blue)">-</div></div>
+    </div>
+    <div class="fs-card">
+      <div class="fs-card-title">All Webflow Fields (Read-only)</div>
+      <div class="field-grid" id="fsFields"></div>
+    </div>
+    <div class="fs-card" style="border:2px solid var(--blue);background:var(--blue-light);">
+      <div class="fs-card-title" style="color:var(--blue);">How to post to Webflow</div>
+      <div class="publish-options">
+        <div class="publish-opt selected-draft" id="optDraft" onclick="selectPublishOpt('draft')">
+          <div class="publish-opt-title">Save as Draft</div>
+          <div class="publish-opt-sub">Appears in Webflow CMS but not live on website</div>
         </div>
-      </div>`;
-    } else if(f.type==='textarea'){
-      html+=`<div class="field-group full" style="${roStyle}">
-        <div class="field-label">${f.label}${req}</div>
-        <textarea class="field-textarea" id="ff_${f.slug.replace(/[^a-z0-9]/g,'_')}" data-slug="${f.slug}" ${ro}>${val}</textarea>
-      </div>`;
-    } else if(f.type==='image'){
-      html+=`<div class="field-group full">
-        <div class="field-label">${f.label}</div>
-        ${existingData[f.slug]?`<img src="${existingData[f.slug]}" style="max-height:160px;border-radius:8px;object-fit:cover;max-width:100%;margin-bottom:8px;"/>`:'' }
-        ${!readOnly?`<div class="upload-area" onclick="document.getElementById('fimg_${f.slug.replace(/[^a-z0-9]/g,'_')}').click()">
-          <input type="file" id="fimg_${f.slug.replace(/[^a-z0-9]/g,'_')}" accept="image/*" data-slug="${f.slug}" onchange="handleFieldImage(this)" style="display:none"/>
-          <div class="upload-area-label">Click to <span>upload image</span></div>
-        </div>`:''}
-      </div>`;
-    } else if(f.type==='date'){
-      const dateVal=val?new Date(val).toISOString().split('T')[0]:'';
-      html+=`<div class="field-group" style="${roStyle}">
-        <div class="field-label">${f.label}${req}</div>
-        <input type="date" class="field-date" id="ff_${f.slug.replace(/[^a-z0-9]/g,'_')}" data-slug="${f.slug}" value="${dateVal}" ${ro}/>
-      </div>`;
-    } else {
-      // text
-      const isFullWidth=f.slug==='name'||f.slug.includes('title')||f.slug.includes('description');
-      html+=`<div class="field-group ${isFullWidth?'full':''}" style="${roStyle}">
-        <div class="field-label">${f.label}${req}</div>
-        <input type="text" class="field-input" id="ff_${f.slug.replace(/[^a-z0-9]/g,'_')}" data-slug="${f.slug}" value="${val.replace(/"/g,'&quot;')}" ${ro}/>
-      </div>`;
-    }
-  });
-
-  if(inFaqSection) html+='</div>';
-  return html;
-}
-
-// Collect all field values from a built form
-function collectFieldValues(contentType){
-  const fields=COLLECTION_FIELDS[contentType]||COLLECTION_FIELDS['Blog'];
-  const data={};
-  fields.forEach(f=>{
-    const safeSlug=f.slug.replace(/[^a-z0-9]/g,'_');
-    if(f.type==='richtext'){
-      const el=document.getElementById('rtf_'+safeSlug);
-      if(el) data[f.slug]=el.innerHTML;
-    } else if(f.type==='image'){
-      // images handled separately via handleFieldImage
-    } else {
-      const el=document.getElementById('ff_'+safeSlug);
-      if(el) data[f.slug]=el.value||'';
-    }
-  });
-  return data;
-}
-
-async function handleFieldImage(input){
-  const file=input.files[0]; if(!file||!activeRow) return;
-  const slug=input.getAttribute('data-slug');
-  try{
-    showToast('Uploading image...','success');
-    const url=await uploadImage(file);
-    // Save image url to extra_fields in supabase
-    const ef=JSON.parse(activeRow.extra_fields||'{}');
-    ef[slug]=url;
-    await updateRow(activeRow.id,{extra_fields:JSON.stringify(ef),image_url:url});
-    showToast('Image saved!','success');
-    await fetchData();
-  }catch(e){showToast('Upload failed: '+e.message,'error');}
-}
-
-// ── WORD ──
-function downloadWord(content,title){
-  const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:12pt;line-height:1.6;margin:40px;}h1{font-size:16pt;margin-bottom:20px;}</style></head><body><h1>${title}</h1><div>${content}</div></body></html>`;
-  const blob=new Blob(['\ufeff',html],{type:'application/msword'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=slugify(title||'content')+'.doc'; a.click(); URL.revokeObjectURL(a.href);
-}
-function readWordFile(file){
-  return new Promise((resolve,reject)=>{
-    const reader=new FileReader();
-    reader.onload=e=>{const div=document.createElement('div');div.innerHTML=e.target.result;resolve(div.innerText||div.textContent||'');};
-    reader.onerror=reject; reader.readAsText(file);
-  });
-}
-
-async function fetchData(){
-  try{allRows=await getAll()||[];updateStats(allRows);renderTable(allRows);setLastUpdated();subscribeRealtime();}
-  catch(e){document.getElementById('tableContainer').innerHTML=`<div class="empty-state"><div class="empty-title">Could not load</div><div class="empty-sub">${e.message}</div></div>`;}
-}
-function updateStats(r){
-  document.getElementById('s1').textContent=r.filter(x=>x.cmo_approved&&!x.posted_to_webflow).length;
-  document.getElementById('s2').textContent=r.filter(x=>x.posted_to_webflow&&x.webflow_status==='live').length;
-  document.getElementById('s3').textContent=r.filter(x=>x.posted_to_webflow&&x.webflow_status==='draft').length;
-  document.getElementById('s4').textContent=r.length;
-}
-function renderTable(rows){
-  const c=document.getElementById('tableContainer');
-  const fm={ready:r=>r.cmo_approved&&!r.posted_to_webflow,posted:r=>r.posted_to_webflow};
-  const filtered=currentFilter==='all'?rows:rows.filter(fm[currentFilter]||Boolean);
-  if(!filtered.length){c.innerHTML='<div class="empty-state"><div class="empty-title">Nothing here</div></div>';return;}
-  let h=`<table><thead><tr><th>#</th><th>Title</th><th>Type</th><th>Section</th><th>Designer Approve</th><th>Webflow</th><th>Status</th></tr></thead><tbody>`;
-  filtered.forEach((row,i)=>{
-    const can=row.cmo_approved;
-    const section=SECTION_NAMES[row.content_type]||'Case Studies';
-    h+=`<tr onclick="${can?`openModal(${row.id})`:''}">
-      <td class="num-cell">${i+1}</td>
-      <td style="font-weight:600">${row.title||'-'}</td>
-      <td>${typePillHTML(row)}</td>
-      <td style="font-size:12px;font-weight:600;color:var(--blue)">${section}</td>
-      <td onclick="event.stopPropagation()">${can?`
+        <div class="publish-opt" id="optLive" onclick="selectPublishOpt('live')">
+          <div class="publish-opt-title">Publish Live</div>
+          <div class="publish-opt-sub">Goes live on the website immediately</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:10px 14px;background:#fff;border-radius:8px;border:1px solid var(--blue-border);font-size:13px;font-weight:600;color:var(--blue);">
+        Selected: <span id="publishModeText">Save as Draft</span>
+      </div>
+    </div>
+    <div class="fs-card" style="border:2px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+        <div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Designer Approval</div>
+          <div style="font-size:12px;color:var(--muted);">Approve before posting to Webflow.</div>
+        </div>
         <div class="toggle-wrap">
-          <label class="toggle designer" id="dtog_${row.id}">
-            <input type="checkbox" ${row.designer_approved?'checked':''} data-id="${row.id}" onchange="handleTableToggle(this)"/>
-            <span class="toggle-slider"></span>
-          </label>
-          <span class="toggle-label">${row.designer_approved?'Approved':'Pending'}</span>
-        </div>`:'<span style="font-size:12px;color:var(--muted)">CMO pending</span>'}</td>
-      <td>${row.posted_to_webflow?`<span style="color:var(--green);font-size:12px;font-weight:600">${row.webflow_status==='live'?'Live':'Draft'}</span>`:'<span style="color:var(--muted);font-size:12px">Not posted</span>'}</td>
-      <td>${badgeHTML(getStatus(row))}</td>
-    </tr>`;
-  });
-  h+=`</tbody></table>`; c.innerHTML=h;
-}
-async function handleTableToggle(input){
-  const id=input.getAttribute('data-id');
-  const el=document.getElementById('dtog_'+id);
-  if(!el) return;
-  el.classList.add('saving');
-  try{
-    await updateRow(id,{designer_approved:input.checked});
-    showToast(input.checked?'Approved!':'Removed.','success');
-    if(activeRow&&activeRow.id==id) activeRow.designer_approved=input.checked;
-    await fetchData();
-  }catch(e){showToast('Failed: '+e.message,'error');}
-  finally{el.classList.remove('saving');}
-}
-function openModal(id){
-  activeRow=allRows.find(r=>r.id==id); if(!activeRow){showToast('Row not found.','error');return;}
-  document.getElementById('fsTitle').textContent=activeRow.title||'Untitled';
-  document.getElementById('fsSubtitle').textContent=`Written by ${activeRow.writer_name||'-'} · ${formatDate(activeRow.created_at)}`;
-  document.getElementById('fsWriter').textContent=activeRow.writer_name||'-';
-  document.getElementById('fsDate').textContent=formatDate(activeRow.created_at);
-  document.getElementById('fsTypeVal').innerHTML=typePillHTML(activeRow);
-  document.getElementById('fsStatus').innerHTML=badgeHTML(getStatus(activeRow));
-  document.getElementById('fsType').innerHTML=typePillHTML(activeRow);
-  document.getElementById('fsSection').textContent=SECTION_NAMES[activeRow.content_type]||'Case Studies';
-  const ef=JSON.parse(activeRow.extra_fields||'{}');
-  ef.name=activeRow.title||'';
-  if(activeRow.content_type==='Blog') ef['blog-content']=activeRow.content||'';
-  else if(activeRow.content_type==='Whitepaper') ef['whitepaper-content']=activeRow.content||'';
-  else if(activeRow.content_type==='Newsletter') ef['pr-description']=activeRow.content||'';
-  else ef['casestudy-content']=activeRow.content||'';
-  document.getElementById('fsFields').innerHTML=buildFieldForm(activeRow.content_type,ef,true);
-  const checked=!!activeRow.designer_approved;
-  document.getElementById('fsToggleInput').checked=checked;
-  document.getElementById('fsToggleLabel').textContent=checked?'Approved':'Pending';
-  const postBtn=document.getElementById('postBtn');
-  postBtn.disabled=!checked||!!activeRow.posted_to_webflow;
-  postBtn.textContent='Post to Webflow';
-  const pr=document.getElementById('postResult');
-  if(activeRow.posted_to_webflow){
-    pr.textContent=activeRow.webflow_status==='live'?'Already posted live':'Already saved as draft';
-    pr.style.color=activeRow.webflow_status==='live'?'var(--green)':'var(--yellow)';
-  }else pr.textContent='';
-  selectPublishOpt('draft'); openFS();
-}
-async function handleFsToggle(){
-  const checked=document.getElementById('fsToggleInput').checked;
-  document.getElementById('fsToggleLabel').textContent=checked?'Approved':'Pending';
-  document.getElementById('postBtn').disabled=!checked;
-  const el=document.getElementById('fsToggle');
-  el.classList.add('saving');
-  try{
-    await updateRow(activeRow.id,{designer_approved:checked});
-    activeRow.designer_approved=checked;
-    showToast(checked?'Approved!':'Removed.','success');
-    await fetchData();
-  }catch(e){showToast('Failed: '+e.message,'error');}
-  finally{el.classList.remove('saving');}
-}
-async function postToWebflow(){
-  if(!activeRow||!activeRow.designer_approved){showToast('Please approve first.','error');return;}
-  const btn=document.getElementById('postBtn');
-  btn.disabled=true; btn.textContent='Posting...';
-  const resultEl=document.getElementById('postResult'); resultEl.textContent='';
-  try{
-    // Build fieldData from extra_fields
-    const ef=JSON.parse(activeRow.extra_fields||'{}');
-    ef.name=activeRow.title||'Untitled';
-    if(activeRow.content_type==='Blog') ef['blog-content']=activeRow.content||'';
-    else if(activeRow.content_type==='Whitepaper') ef['whitepaper-content']=activeRow.content||'';
-    else if(activeRow.content_type==='Newsletter') ef['pr-description']=activeRow.content||'';
-    else ef['casestudy-content']=activeRow.content||'';
-    if(activeRow.image_url) {
-      const ct=activeRow.content_type;
-      const imgSlug=ct==='Blog'?'blog-Image':ct==='Newsletter'?'pr-bg-img':'whitepaper-image';
-      ef[imgSlug]={url:activeRow.image_url,alt:activeRow.title||''};
-    }
-    const res=await fetch(WEBFLOW_EDGE_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo','apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo'},
-      body:JSON.stringify({extra_fields:ef,row:{...activeRow,extra_fields:JSON.stringify(ef)},publish_mode:publishMode})
-    });
-    const data=await res.json();
-    if(data.success){
-      await updateRow(activeRow.id,{posted_to_webflow:true,webflow_item_id:data.item_id,webflow_status:data.status});
-      const isLive=data.status==='live';
-      showToast(isLive?'Posted live!':'Saved as draft!','success');
-      resultEl.textContent=isLive?'Live on website!':'Saved as draft in Webflow';
-      resultEl.style.color=isLive?'var(--green)':'var(--yellow)';
-      activeRow.posted_to_webflow=true; await fetchData();
-    }else{
-      showToast('Webflow error: '+data.error,'error');
-      resultEl.textContent='Error: '+data.error; resultEl.style.color='var(--accent)';
-      btn.disabled=false; btn.textContent='Post to Webflow';
-    }
-  }catch(e){
-    showToast('Failed: '+e.message,'error');
-    document.getElementById('postResult').textContent='Error: '+e.message;
-    btn.disabled=false; btn.textContent='Post to Webflow';
-  }
-}
-fetchData();
-e.message,'error');
-    document.getElementById('postResult').textContent='Error: '+e.message;
-    btn.disabled=false; btn.textContent='Post to Webflow';
-  }
-}
-fetchData();
-
-
-
-</script>
-</body></html
-
+          <label class="toggle designer" id="fsToggle"><input type="checkbox" id="fsToggleInput" onchange="handleFsToggle()"/><span class="toggle-slider"></span></label>
+          <span class="toggle-label" id="fsToggleLabel">Pending</span>
+        </div>
+      </div>
+    </div>
+    <button class="webflow-btn" id="postBtn" onclick="postToWebflow()" disabled>Post to Webflow</button>
+    <div class="post-result" id="postResult"></div>
+  </div>
+</div>
 <div class="toast" id="toast"><div class="toast-dot"></div><span id="toastMsg"></span></div>
 <script>
 const QNU_SESSION=(()=>{try{return JSON.parse(localStorage.getItem('qnu_session')||'null');}catch(_){return null;}})();
 function requireRole(...allowed){
-  if(!QNU_SESSION){window.location.href='login.html';return false;}
+  if(!QNU_SESSION||!QNU_SESSION.access_token){window.location.href='login.html';return false;}
   if(QNU_SESSION.expires_at&&Date.now()/1000>QNU_SESSION.expires_at){localStorage.removeItem('qnu_session');window.location.href='login.html';return false;}
   if(!allowed.includes(QNU_SESSION.role)){window.location.href='login.html';return false;}
   return true;
@@ -693,12 +318,13 @@ async function logActivity(action,details,rowId=null,rowTitle=null){
   try{
     await fetch('https://imtoahbuliuywiljxvpg.supabase.co/rest/v1/activity_log',{
       method:'POST',
-      headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo','Authorization':'Bearer '+QNU_SESSION.access_token,'Content-Type':'application/json'},
+      headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4cnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo','Authorization':'Bearer '+QNU_SESSION.access_token,'Content-Type':'application/json'},
       body:JSON.stringify({user_id:QNU_SESSION.user_id,user_email:QNU_SESSION.email,user_role:QNU_SESSION.role,action,details,row_id:rowId,row_title:rowTitle})
     });
   }catch(_){}
 }
-if(!requireRole('designer','admin')) throw new Error('Not authorized');
+if(!requireRole('designer','admin')){window.location.href='login.html';}
+
 
 const SUPA_URL='https://imtoahbuliuywiljxvpg.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo';
@@ -707,7 +333,6 @@ const TABLE='content_approvals';
 const BUCKET='content-images';
 let allRows=[],currentFilter='all',activeRow=null,toastTimer=null,realtimeWS=null;
 
-// ── COLLECTION FIELDS ──
 const COLLECTION_FIELDS={
   Blog:[
     {label:'Title (Name)',slug:'name',type:'text',required:true},
@@ -771,10 +396,10 @@ const COLLECTION_FIELDS={
   ]
 };
 
-// ── API ──
 async function sbFetch(path,options={}) {
   const isWrite=options.method&&options.method!=='GET';
-  const h={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
+  const token=(QNU_SESSION&&QNU_SESSION.access_token)?QNU_SESSION.access_token:SUPA_KEY;
+  const h={'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'};
   if(isWrite) h['Prefer']='return=representation';
   if(options.headers) Object.assign(h,options.headers);
   const controller=new AbortController();
@@ -793,9 +418,10 @@ async function updateRow(id,data){return await sbFetch(TABLE+'?id=eq.'+id,{metho
 async function uploadImage(file){
   const ext=file.name.split('.').pop();
   const path='images/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
+  const token=(QNU_SESSION&&QNU_SESSION.access_token)?QNU_SESSION.access_token:SUPA_KEY;
   const res=await fetch(SUPA_STORAGE+'/object/'+BUCKET+'/'+path,{
     method:'POST',
-    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type,'x-upsert':'true'},
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':file.type,'x-upsert':'true'},
     body:file
   });
   if(!res.ok) throw new Error('Image upload failed');
@@ -814,7 +440,6 @@ function subscribeRealtime(){
   }catch(_){setTimeout(subscribeRealtime,8000);}
 }
 
-// ── STATUS ──
 function getStatus(row){
   if(row.posted_to_webflow) return 'posted';
   if(row.designer_approved) return 'ready';
@@ -838,134 +463,91 @@ function typePillHTML(row){
 }
 function formatDate(s){if(!s)return '-';return new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
 function slugify(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
-
-// ── TOAST ──
 function showToast(msg,type='success'){
   const t=document.getElementById('toast');
   document.getElementById('toastMsg').textContent=msg;
   t.className='toast '+type; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
 }
-
-// ── FILTER ──
 function filterRows(f,btn){
   currentFilter=f;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active'); renderTable(allRows);
 }
 function setLastUpdated(){const el=document.getElementById('lastUpdated');if(el)el.textContent='Updated '+new Date().toLocaleTimeString();}
-
-// ── OVERLAY ──
 function openFS(){document.getElementById('fsOverlay').classList.add('show');document.body.style.overflow='hidden';}
 function closeFS(){document.getElementById('fsOverlay').classList.remove('show');document.body.style.overflow='';}
-
-// ── RICH TEXT TOOLBAR ──
-function execRt(cmd,val=null){document.execCommand(cmd,false,val);document.getElementById('rtEditor')&&document.getElementById('rtEditor').focus();}
 function rtCmd(editorId,cmd,val=null){
   const el=document.getElementById(editorId);
   if(el) el.focus();
   document.execCommand(cmd,false,val);
 }
-
-// ── FIELD FORM BUILDER ──
 function buildFieldForm(contentType,existingData={},readOnly=false){
   const fields=COLLECTION_FIELDS[contentType]||COLLECTION_FIELDS['Blog'];
   let html='';
   let inFaqSection=false;
-
   fields.forEach((f,idx)=>{
     const isFaq=f.slug.startsWith('faq');
-    if(isFaq&&!inFaqSection){
-      html+='<div class="fs-section-title">FAQ Section</div><div class="faq-section">';
-      inFaqSection=true;
-    }
-    if(!isFaq&&inFaqSection){
-      html+='</div>';
-      inFaqSection=false;
-    }
-
+    if(isFaq&&!inFaqSection){html+='<div class="fs-section-title">FAQ Section</div><div class="faq-section">';inFaqSection=true;}
+    if(!isFaq&&inFaqSection){html+='</div>';inFaqSection=false;}
     const val=existingData[f.slug]||'';
     const req=f.required?'<span class="req">*</span>':'';
     const ro=readOnly?'readonly disabled':'';
-    const roStyle=readOnly?'opacity:0.7;':'';
-
+    const roStyle=readOnly?'opacity:0.75;':'';
+    const safeSlug=f.slug.replace(/[^a-z0-9]/g,'_');
     if(f.type==='richtext'){
-      const edId='rtf_'+f.slug.replace(/[^a-z0-9]/g,'_');
       html+=`<div class="field-group full" style="${roStyle}">
         <div class="field-label">${f.label}${req}</div>
         <div class="field-richtext-wrap">
           ${!readOnly?`<div class="richtext-toolbar">
-            <button class="rt-btn" onclick="rtCmd('${edId}','bold')" title="Bold"><b>B</b></button>
-            <button class="rt-btn" onclick="rtCmd('${edId}','italic')" title="Italic"><i>I</i></button>
-            <button class="rt-btn" onclick="rtCmd('${edId}','underline')" title="Underline"><u>U</u></button>
-            <button class="rt-btn" onclick="rtCmd('${edId}','formatBlock','h2')" title="Heading">H2</button>
-            <button class="rt-btn" onclick="rtCmd('${edId}','insertUnorderedList')" title="Bullet list">&#8226; List</button>
-            <button class="rt-btn" onclick="rtCmd('${edId}','insertOrderedList')" title="Numbered list">1. List</button>
-            <button class="rt-btn" onclick="rtCmd('${edId}','removeFormat')" title="Clear formatting">Clear</button>
+            <button class="rt-btn" onclick="rtCmd('rtf_${safeSlug}','bold')"><b>B</b></button>
+            <button class="rt-btn" onclick="rtCmd('rtf_${safeSlug}','italic')"><i>I</i></button>
+            <button class="rt-btn" onclick="rtCmd('rtf_${safeSlug}','underline')"><u>U</u></button>
+            <button class="rt-btn" onclick="rtCmd('rtf_${safeSlug}','formatBlock','h2')">H2</button>
+            <button class="rt-btn" onclick="rtCmd('rtf_${safeSlug}','insertUnorderedList')">List</button>
+            <button class="rt-btn" onclick="rtCmd('rtf_${safeSlug}','removeFormat')">Clear</button>
           </div>`:''}
-          <div class="richtext-editor" id="${edId}" ${readOnly?'':'contenteditable="true"'} data-slug="${f.slug}" data-placeholder="Enter ${f.label}...">${val}</div>
+          <div class="richtext-editor" id="rtf_${safeSlug}" ${readOnly?'':'contenteditable="true"'} data-slug="${f.slug}" data-placeholder="Enter ${f.label}...">${val}</div>
         </div>
       </div>`;
     } else if(f.type==='textarea'){
-      html+=`<div class="field-group full" style="${roStyle}">
-        <div class="field-label">${f.label}${req}</div>
-        <textarea class="field-textarea" id="ff_${f.slug.replace(/[^a-z0-9]/g,'_')}" data-slug="${f.slug}" ${ro}>${val}</textarea>
-      </div>`;
+      html+=`<div class="field-group full" style="${roStyle}"><div class="field-label">${f.label}${req}</div><textarea class="field-textarea" id="ff_${safeSlug}" data-slug="${f.slug}" ${ro}>${val}</textarea></div>`;
     } else if(f.type==='image'){
-      html+=`<div class="field-group full">
-        <div class="field-label">${f.label}</div>
-        ${existingData[f.slug]?`<img src="${existingData[f.slug]}" style="max-height:160px;border-radius:8px;object-fit:cover;max-width:100%;margin-bottom:8px;"/>`:'' }
-        ${!readOnly?`<div class="upload-area" onclick="document.getElementById('fimg_${f.slug.replace(/[^a-z0-9]/g,'_')}').click()">
-          <input type="file" id="fimg_${f.slug.replace(/[^a-z0-9]/g,'_')}" accept="image/*" data-slug="${f.slug}" onchange="handleFieldImage(this)" style="display:none"/>
-          <div class="upload-area-label">Click to <span>upload image</span></div>
+      html+=`<div class="field-group full"><div class="field-label">${f.label}</div>
+        ${existingData[f.slug]?`<img src="${existingData[f.slug]}" style="max-height:160px;border-radius:8px;object-fit:cover;max-width:100%;margin-bottom:8px;"/>`:''}
+        ${!readOnly?`<div class="upload-area" onclick="document.getElementById('fimg_${safeSlug}').click()">
+          <input type="file" id="fimg_${safeSlug}" accept="image/*" data-slug="${f.slug}" onchange="handleFieldImage(this)" style="display:none"/>
+          <div class="upload-area-label">Click to upload image</div>
         </div>`:''}
       </div>`;
     } else if(f.type==='date'){
       const dateVal=val?new Date(val).toISOString().split('T')[0]:'';
-      html+=`<div class="field-group" style="${roStyle}">
-        <div class="field-label">${f.label}${req}</div>
-        <input type="date" class="field-date" id="ff_${f.slug.replace(/[^a-z0-9]/g,'_')}" data-slug="${f.slug}" value="${dateVal}" ${ro}/>
-      </div>`;
+      html+=`<div class="field-group" style="${roStyle}"><div class="field-label">${f.label}${req}</div><input type="date" class="field-date" id="ff_${safeSlug}" data-slug="${f.slug}" value="${dateVal}" ${ro}/></div>`;
     } else {
-      // text
       const isFullWidth=f.slug==='name'||f.slug.includes('title')||f.slug.includes('description');
-      html+=`<div class="field-group ${isFullWidth?'full':''}" style="${roStyle}">
-        <div class="field-label">${f.label}${req}</div>
-        <input type="text" class="field-input" id="ff_${f.slug.replace(/[^a-z0-9]/g,'_')}" data-slug="${f.slug}" value="${val.replace(/"/g,'&quot;')}" ${ro}/>
-      </div>`;
+      html+=`<div class="field-group ${isFullWidth?'full':''}" style="${roStyle}"><div class="field-label">${f.label}${req}</div><input type="text" class="field-input" id="ff_${safeSlug}" data-slug="${f.slug}" value="${val.replace(/"/g,'&quot;')}" ${ro}/></div>`;
     }
   });
-
   if(inFaqSection) html+='</div>';
   return html;
 }
-
-// Collect all field values from a built form
 function collectFieldValues(contentType){
   const fields=COLLECTION_FIELDS[contentType]||COLLECTION_FIELDS['Blog'];
   const data={};
   fields.forEach(f=>{
     const safeSlug=f.slug.replace(/[^a-z0-9]/g,'_');
-    if(f.type==='richtext'){
-      const el=document.getElementById('rtf_'+safeSlug);
-      if(el) data[f.slug]=el.innerHTML;
-    } else if(f.type==='image'){
-      // images handled separately via handleFieldImage
-    } else {
-      const el=document.getElementById('ff_'+safeSlug);
-      if(el) data[f.slug]=el.value||'';
-    }
+    if(f.type==='richtext'){const el=document.getElementById('rtf_'+safeSlug);if(el) data[f.slug]=el.innerHTML;}
+    else if(f.type==='image'){}
+    else{const el=document.getElementById('ff_'+safeSlug);if(el) data[f.slug]=el.value||'';}
   });
   return data;
 }
-
 async function handleFieldImage(input){
   const file=input.files[0]; if(!file||!activeRow) return;
   const slug=input.getAttribute('data-slug');
   try{
     showToast('Uploading image...','success');
     const url=await uploadImage(file);
-    // Save image url to extra_fields in supabase
     const ef=JSON.parse(activeRow.extra_fields||'{}');
     ef[slug]=url;
     await updateRow(activeRow.id,{extra_fields:JSON.stringify(ef),image_url:url});
@@ -973,11 +555,9 @@ async function handleFieldImage(input){
     await fetchData();
   }catch(e){showToast('Upload failed: '+e.message,'error');}
 }
-
-// ── WORD ──
 function downloadWord(content,title){
   const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:12pt;line-height:1.6;margin:40px;}h1{font-size:16pt;margin-bottom:20px;}</style></head><body><h1>${title}</h1><div>${content}</div></body></html>`;
-  const blob=new Blob(['\ufeff',html],{type:'application/msword'});
+  const blob=new Blob(['﻿',html],{type:'application/msword'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=slugify(title||'content')+'.doc'; a.click(); URL.revokeObjectURL(a.href);
 }
 function readWordFile(file){
@@ -986,6 +566,63 @@ function readWordFile(file){
     reader.onload=e=>{const div=document.createElement('div');div.innerHTML=e.target.result;resolve(div.innerText||div.textContent||'');};
     reader.onerror=reject; reader.readAsText(file);
   });
+}
+async function bulkDownloadWord(){
+  const from=document.getElementById('dlFrom').value;
+  const to=document.getElementById('dlTo').value;
+  let rows=allRows;
+  if(from) rows=rows.filter(r=>new Date(r.created_at)>=new Date(from));
+  if(to) rows=rows.filter(r=>new Date(r.created_at)<=new Date(to+'T23:59:59'));
+  if(!rows.length){showToast('No content in that date range.','error');return;}
+  let html='<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:11pt;margin:30px;}h1{font-size:16pt;color:#E8450A;border-bottom:2px solid #E8450A;padding-bottom:8px;}h2{font-size:13pt;margin-top:24px;}label{font-size:9pt;font-weight:bold;color:#666;text-transform:uppercase;display:block;margin-top:14px;}p{margin:4px 0;font-size:11pt;line-height:1.6;}hr{border:none;border-top:1px solid #ddd;margin:24px 0;}</style></head><body>';
+  html+='<h1>QNu Labs Content Export ('+rows.length+' items)</h1>';
+  rows.forEach((row,i)=>{
+    const ef=JSON.parse(row.extra_fields||'{}');
+    html+=`<h2>${i+1}. ${row.title||'Untitled'} (${row.content_type||''})</h2>`;
+    html+=`<label>Writer</label><p>${row.writer_name||'-'}</p>`;
+    html+=`<label>Date</label><p>${new Date(row.created_at).toLocaleDateString('en-IN')}</p>`;
+    const fields=COLLECTION_FIELDS[row.content_type]||[];
+    fields.forEach(f=>{
+      if(f.type==='image') return;
+      const val=ef[f.slug]||'';
+      if(val) html+=`<label>${f.label}</label><p>${typeof val==='string'?val.replace(/</g,'&lt;').replace(/>/g,'&gt;'):JSON.stringify(val)}</p>`;
+    });
+    html+='<hr>';
+  });
+  html+='</body></html>';
+  const blob=new Blob(['﻿',html],{type:'application/msword'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='QNu_Export_'+new Date().toISOString().split('T')[0]+'.doc';
+  a.click(); URL.revokeObjectURL(a.href);
+  showToast('Downloaded '+rows.length+' items!','success');
+}
+async function bulkDownloadPDF(){
+  const from=document.getElementById('dlFrom').value;
+  const to=document.getElementById('dlTo').value;
+  let rows=allRows;
+  if(from) rows=rows.filter(r=>new Date(r.created_at)>=new Date(from));
+  if(to) rows=rows.filter(r=>new Date(r.created_at)<=new Date(to+'T23:59:59'));
+  if(!rows.length){showToast('No content in that date range.','error');return;}
+  let html='<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:11pt;margin:30px;}h1{font-size:16pt;color:#E8450A;}h2{font-size:13pt;margin-top:20px;}label{font-size:8pt;font-weight:bold;color:#666;text-transform:uppercase;display:block;margin-top:12px;}p{margin:3px 0;font-size:10pt;line-height:1.5;}hr{border:none;border-top:1px solid #ccc;margin:20px 0;}</style></head><body>';
+  html+='<h1>QNu Labs Content Export</h1><p style="color:#666;font-size:10pt">Generated: '+new Date().toLocaleString('en-IN')+'</p><hr>';
+  rows.forEach((row,i)=>{
+    const ef=JSON.parse(row.extra_fields||'{}');
+    html+=`<h2>${i+1}. ${row.title||'Untitled'}</h2>`;
+    html+=`<label>Type</label><p>${row.content_type||'-'}</p>`;
+    html+=`<label>Writer</label><p>${row.writer_name||'-'}</p>`;
+    const fields=COLLECTION_FIELDS[row.content_type]||[];
+    fields.forEach(f=>{
+      if(f.type==='image') return;
+      const val=ef[f.slug]||'';
+      if(val) html+=`<label>${f.label}</label><p>${typeof val==='string'?val.replace(/</g,'&lt;').replace(/>/g,'&gt;'):JSON.stringify(val)}</p>`;
+    });
+    html+='<hr>';
+  });
+  html+='</body></html>';
+  const w=window.open('','_blank');
+  w.document.write(html); w.document.close();
+  setTimeout(()=>w.print(),500);
+  showToast('Opening print dialog...','success');
 }
 
 
@@ -999,21 +636,28 @@ function selectPublishOpt(mode){
   const l=document.getElementById('optLive');
   const lbl=document.getElementById('publishModeText');
   if(!d||!l) return;
-  if(mode==='draft'){
-    d.className='publish-opt selected-draft'; l.className='publish-opt';
-    d.querySelector('.publish-opt-title').style.color='var(--blue)';
-    l.querySelector('.publish-opt-title').style.color='var(--text)';
-    if(lbl) lbl.textContent='Save as Draft';
-  }else{
-    l.className='publish-opt selected-live'; d.className='publish-opt';
-    l.querySelector('.publish-opt-title').style.color='var(--green)';
-    d.querySelector('.publish-opt-title').style.color='var(--text)';
-    if(lbl) lbl.textContent='Publish Live';
-  }
+  d.className='publish-opt'+(mode==='draft'?' selected-draft':'');
+  l.className='publish-opt'+(mode==='live'?' selected-live':'');
+  d.querySelector('.publish-opt-title').style.color=mode==='draft'?'var(--blue)':'var(--text)';
+  l.querySelector('.publish-opt-title').style.color=mode==='live'?'var(--green)':'var(--text)';
+  if(lbl) lbl.textContent=mode==='draft'?'Save as Draft':'Publish Live';
+}
+function singleDownloadWord(row){
+  if(!row) return;
+  const ef=JSON.parse(row.extra_fields||'{}');
+  const fields=COLLECTION_FIELDS[row.content_type]||[];
+  let content='';
+  fields.forEach(f=>{
+    if(f.type==='image') return;
+    const val=ef[f.slug]||'';
+    if(val) content+=f.label.toUpperCase()+':\n'+val+'\n\n';
+  });
+  downloadWord(content,row.title||'content');
+  showToast('Downloaded!','success');
 }
 async function fetchData(){
   try{allRows=await getAll()||[];updateStats(allRows);renderTable(allRows);setLastUpdated();subscribeRealtime();}
-  catch(e){document.getElementById('tableContainer').innerHTML=`<div class="empty-state"><div class="empty-title">Could not load</div><div class="empty-sub">${e.message}</div></div>`;}
+  catch(e){document.getElementById('tableContainer').innerHTML=`<div class="empty-state"><div class="empty-title">Could not load data</div><div class="empty-sub">${e.message}</div></div>`;}
 }
 function updateStats(r){
   document.getElementById('s1').textContent=r.filter(x=>x.cmo_approved&&!x.posted_to_webflow).length;
@@ -1026,7 +670,7 @@ function renderTable(rows){
   const fm={ready:r=>r.cmo_approved&&!r.posted_to_webflow,posted:r=>r.posted_to_webflow};
   const filtered=currentFilter==='all'?rows:rows.filter(fm[currentFilter]||Boolean);
   if(!filtered.length){c.innerHTML='<div class="empty-state"><div class="empty-title">Nothing here</div></div>';return;}
-  let h=`<table><thead><tr><th>#</th><th>Title</th><th>Type</th><th>Section</th><th>Designer Approve</th><th>Webflow</th><th>Status</th></tr></thead><tbody>`;
+  let h=`<table><thead><tr><th>#</th><th>Title</th><th>Type</th><th>Section</th><th>Approve</th><th>Download</th><th>Webflow</th><th>Status</th></tr></thead><tbody>`;
   filtered.forEach((row,i)=>{
     const can=row.cmo_approved;
     const section=SECTION_NAMES[row.content_type]||'Case Studies';
@@ -1043,6 +687,7 @@ function renderTable(rows){
           </label>
           <span class="toggle-label">${row.designer_approved?'Approved':'Pending'}</span>
         </div>`:'<span style="font-size:12px;color:var(--muted)">CMO pending</span>'}</td>
+      <td onclick="event.stopPropagation()"><button class="action-btn secondary" style="padding:4px 10px;font-size:11px;" onclick="singleDownloadWord(allRows.find(r=>r.id==${row.id}))">Word</button></td>
       <td>${row.posted_to_webflow?`<span style="color:var(--green);font-size:12px;font-weight:600">${row.webflow_status==='live'?'Live':'Draft'}</span>`:'<span style="color:var(--muted);font-size:12px">Not posted</span>'}</td>
       <td>${badgeHTML(getStatus(row))}</td>
     </tr>`;
@@ -1057,14 +702,14 @@ async function handleTableToggle(input){
   try{
     await updateRow(id,{designer_approved:input.checked});
     showToast(input.checked?'Approved!':'Removed.','success');
-    await logActivity(input.checked?'approved':'unapproved','Designer approval changed',parseInt(id));
+    await logActivity(input.checked?'approved':'unapproved','Designer approval',parseInt(id));
     if(activeRow&&activeRow.id==id) activeRow.designer_approved=input.checked;
     await fetchData();
   }catch(e){showToast('Failed: '+e.message,'error');}
   finally{el.classList.remove('saving');}
 }
 function openModal(id){
-  activeRow=allRows.find(r=>r.id==id); if(!activeRow){showToast('Row not found.','error');return;}
+  activeRow=allRows.find(r=>r.id==id); if(!activeRow) return;
   document.getElementById('fsTitle').textContent=activeRow.title||'Untitled';
   document.getElementById('fsSubtitle').textContent=`Written by ${activeRow.writer_name||'-'} · ${formatDate(activeRow.created_at)}`;
   document.getElementById('fsWriter').textContent=activeRow.writer_name||'-';
@@ -1102,7 +747,7 @@ async function handleFsToggle(){
     await updateRow(activeRow.id,{designer_approved:checked});
     activeRow.designer_approved=checked;
     showToast(checked?'Approved!':'Removed.','success');
-    await logActivity(checked?'approved':'unapproved','Designer approved content',activeRow.id,activeRow.title);
+    await logActivity(checked?'approved':'unapproved','Designer approved',activeRow.id,activeRow.title);
     await fetchData();
   }catch(e){showToast('Failed: '+e.message,'error');}
   finally{el.classList.remove('saving');}
@@ -1126,7 +771,7 @@ async function postToWebflow(){
     }
     const res=await fetch(WEBFLOW_EDGE_URL,{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo','apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo'},
+      headers:{'Content-Type':'application/json','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4cnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo','apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4cnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo'},
       body:JSON.stringify({extra_fields:ef,row:{...activeRow,extra_fields:JSON.stringify(ef)},publish_mode:publishMode})
     });
     const data=await res.json();
@@ -1136,7 +781,7 @@ async function postToWebflow(){
       showToast(isLive?'Posted live!':'Saved as draft!','success');
       resultEl.textContent=isLive?'Live on website!':'Saved as draft in Webflow';
       resultEl.style.color=isLive?'var(--green)':'var(--yellow)';
-      await logActivity('posted',`Posted to Webflow as ${data.status}`,activeRow.id,activeRow.title);
+      await logActivity('posted','Posted to Webflow as '+data.status,activeRow.id,activeRow.title);
       activeRow.posted_to_webflow=true; await fetchData();
     }else{
       showToast('Webflow error: '+data.error,'error');
