@@ -5,8 +5,19 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>SEO Dashboard – QNu Labs</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-<style>
-:root{--bg:#F5F0E8;--surface:#FFFFFF;--surface2:#FAF7F2;--border:#E8DDD0;--border2:#D9CCBA;--text:#1A1A1A;--muted:#7A6E63;--accent:#E8450A;--accent-light:#FDF0EB;--accent-border:#F5C4B0;--green:#1A7A4A;--green-light:#EBF7F1;--green-border:#A8DFC1;--yellow:#B87A00;--yellow-light:#FDF8EB;--yellow-border:#EDD98A;--purple:#7A3AAA;--purple-light:#F0EBF7;--purple-border:#D4B8EE;--blue:#1A5FAA;--blue-light:#EBF3FF;--blue-border:#B8D4F5;--shadow:0 1px 4px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);--shadow-lg:0 8px 32px rgba(0,0,0,0.12);--radius:14px;}
+<style>:root{
+  --bg:#F5F0E8;--surface:#FFFFFF;--surface2:#FAF7F2;
+  --border:#E8DDD0;--border2:#D9CCBA;
+  --text:#1A1A1A;--muted:#7A6E63;
+  --accent:#E8450A;--accent-light:#FDF0EB;--accent-border:#F5C4B0;
+  --green:#1A7A4A;--green-light:#EBF7F1;--green-border:#A8DFC1;
+  --yellow:#B87A00;--yellow-light:#FDF8EB;--yellow-border:#EDD98A;
+  --purple:#7A3AAA;--purple-light:#F0EBF7;--purple-border:#D4B8EE;
+  --blue:#1A5FAA;--blue-light:#EBF3FF;--blue-border:#B8D4F5;
+  --shadow:0 1px 4px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.12);
+  --radius:14px;
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh;}
 .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(0,0,0,0.06);}
@@ -25,14 +36,14 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 .last-updated{font-size:11px;color:var(--muted);}
-.refresh-btn,.home-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;font-weight:500;text-decoration:none;transition:background 0.15s;}
+.refresh-btn,.home-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;font-weight:500;text-decoration:none;transition:background 0.15s;display:inline-flex;align-items:center;gap:6px;}
 .refresh-btn:hover,.home-btn:hover{background:var(--border);}
-.home-btn{color:var(--muted);display:flex;align-items:center;gap:6px;}
+.home-btn{color:var(--muted);}
 .main{max-width:1100px;margin:0 auto;padding:36px 24px;}
 .page-header{margin-bottom:28px;}
 .page-header h2{font-size:22px;font-weight:700;letter-spacing:-0.4px;margin-bottom:4px;}
 .page-header p{color:var(--muted);font-size:13px;}
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:32px;}
+.stats-row{display:grid;gap:12px;margin-bottom:32px;}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);transition:transform 0.15s;}
 .stat-card:hover{transform:translateY(-2px);}
 .stat-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px;}
@@ -43,21 +54,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .stat-card.s-purple .stat-value{color:var(--purple);}
 .stat-card.s-blue .stat-value{color:var(--blue);}
 .stat-card.s-total .stat-value{color:var(--text);}
-.form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow);margin-bottom:28px;}
-.form-card-title{font-size:15px;font-weight:700;margin-bottom:20px;}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
-.form-group{display:flex;flex-direction:column;gap:6px;}
-.form-group.full{grid-column:1/-1;}
-.form-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;}
-.form-input,.form-textarea,.form-select{background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-size:14px;font-family:'Inter',sans-serif;color:var(--text);outline:none;width:100%;transition:border 0.15s,background 0.15s;}
-.form-input:focus,.form-textarea:focus,.form-select:focus{border-color:var(--accent);background:#fff;}
-.form-textarea{min-height:130px;resize:vertical;line-height:1.6;}
-.form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237A6E63' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;cursor:pointer;}
-.other-input-wrap{margin-top:8px;display:none;}
-.other-input-wrap.show{display:block;}
-.submit-btn{background:var(--accent);color:#fff;border:none;padding:11px 28px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity 0.15s;}
-.submit-btn:hover{opacity:0.88;}
-.submit-btn:disabled{opacity:0.5;cursor:not-allowed;}
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .section-title{font-size:15px;font-weight:700;}
 .filter-tabs{display:flex;gap:6px;flex-wrap:wrap;}
@@ -88,7 +84,7 @@ td{padding:13px 16px;font-size:13px;vertical-align:middle;}
 .badge.with-designer .badge-dot{background:var(--blue);}
 .badge.ready{background:var(--green-light);color:var(--green);border:1px solid var(--green-border);}
 .badge.ready .badge-dot{background:var(--green);}
-.badge.posted{background:#1A1A1A;color:#fff;border:1px solid #1A1A1A;}
+.badge.posted{background:#1A1A1A;color:#fff;}
 .badge.posted .badge-dot{background:#fff;}
 .type-pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
 .type-pill.blog{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border);}
@@ -109,27 +105,63 @@ td{padding:13px 16px;font-size:13px;vertical-align:middle;}
 .toggle-label{font-size:12px;color:var(--muted);font-weight:500;}
 .fs-overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;overflow-y:auto;animation:fsIn 0.2s ease;}
 .fs-overlay.show{display:block;}
-@keyframes fsIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fsIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .fs-topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 40px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;box-shadow:0 1px 6px rgba(0,0,0,0.06);}
 .fs-topbar-left{display:flex;align-items:center;gap:16px;}
 .fs-title{font-size:16px;font-weight:700;letter-spacing:-0.3px;}
 .fs-subtitle{font-size:12px;color:var(--muted);margin-top:2px;}
 .fs-back-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;font-weight:500;display:flex;align-items:center;gap:6px;transition:background 0.15s;}
 .fs-back-btn:hover{background:var(--border);}
-.fs-body{max-width:1200px;margin:0 auto;padding:32px 40px;}
-.fs-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;}
-.fs-grid.single{grid-template-columns:1fr;}
-.fs-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);}
-.fs-card-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
-.fs-content-box{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:16px;font-size:14px;line-height:1.8;white-space:pre-wrap;color:var(--text);min-height:200px;overflow-y:auto;max-height:60vh;}
-.fs-content-edit{background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:16px;font-size:14px;line-height:1.8;color:var(--text);min-height:300px;width:100%;resize:vertical;font-family:'Inter',sans-serif;outline:none;display:block;}
-.fs-content-edit:focus{border-color:var(--accent);}
+.fs-body{max-width:1300px;margin:0 auto;padding:32px 40px;}
 .fs-meta-row{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);}
 .fs-meta-item{display:flex;flex-direction:column;gap:4px;}
 .fs-meta-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;}
 .fs-meta-value{font-size:14px;font-weight:600;}
+.fs-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:20px;}
+.fs-card-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.fs-section-title{font-size:14px;font-weight:700;color:var(--text);padding:12px 0 8px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.field-group{display:flex;flex-direction:column;gap:6px;}
+.field-group.full{grid-column:1/-1;}
+.field-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;display:flex;align-items:center;gap:4px;}
+.field-label .req{color:var(--accent);font-size:13px;}
+.field-input,.field-textarea,.field-select,.field-date{background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-size:14px;font-family:'Inter',sans-serif;color:var(--text);outline:none;width:100%;transition:border 0.15s,background 0.15s;}
+.field-input:focus,.field-textarea:focus,.field-date:focus{border-color:var(--accent);background:#fff;}
+.field-textarea{min-height:100px;resize:vertical;line-height:1.6;}
+.field-richtext-wrap{border:1.5px solid var(--border);border-radius:8px;overflow:hidden;background:#fff;}
+.field-richtext-wrap:focus-within{border-color:var(--accent);}
+.richtext-toolbar{background:var(--surface2);border-bottom:1px solid var(--border);padding:6px 10px;display:flex;gap:4px;flex-wrap:wrap;}
+.rt-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 9px;cursor:pointer;font-size:12px;font-family:'Inter',sans-serif;color:var(--text);transition:all 0.15s;font-weight:500;}
+.rt-btn:hover{background:var(--border);}
+.rt-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.richtext-editor{min-height:200px;padding:14px;font-size:14px;line-height:1.75;outline:none;color:var(--text);}
+.richtext-editor:empty:before{content:attr(data-placeholder);color:var(--muted);pointer-events:none;}
+.richtext-editor h2{font-size:18px;font-weight:700;margin:12px 0 6px;}
+.richtext-editor ul{padding-left:20px;margin:6px 0;}
+.richtext-editor ol{padding-left:20px;margin:6px 0;}
+.richtext-editor p{margin:4px 0;}
+.faq-section{margin-top:4px;}
+.faq-pair{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:16px;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);}
+.faq-pair-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+.upload-area{border:2px dashed var(--border);border-radius:10px;padding:18px;text-align:center;cursor:pointer;transition:border 0.15s,background 0.15s;}
+.upload-area:hover{border-color:var(--accent);background:var(--accent-light);}
+.upload-area input[type=file]{display:none;}
+.upload-area-label{font-size:13px;color:var(--muted);}
+.upload-area-label span{color:var(--accent);font-weight:600;}
+.img-preview-fs{width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:8px;display:none;}
+.img-preview-fs.show{display:block;}
+.img-thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--border);}
+.action-btn{border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity 0.15s;display:inline-flex;align-items:center;gap:6px;}
+.action-btn:hover{opacity:0.88;}
+.action-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.action-btn.primary{background:var(--accent);color:#fff;}
+.action-btn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.action-btn.yellow{background:var(--yellow);color:#fff;}
+.action-btn.purple{background:var(--purple);color:#fff;}
+.action-btn.blue{background:var(--blue);color:#fff;}
+.action-btn.green{background:var(--green);color:#fff;}
 .approve-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-top:20px;}
-.approve-inner{display:flex;align-items:center;justify-content:space-between;border-radius:10px;padding:16px 20px;}
+.approve-inner{display:flex;align-items:center;justify-content:space-between;border-radius:10px;padding:16px 20px;flex-wrap:wrap;gap:12px;}
 .approve-inner.accent{background:var(--accent-light);border:1px solid var(--accent-border);}
 .approve-inner.yellow{background:var(--yellow-light);border:1px solid var(--yellow-border);}
 .approve-inner.purple{background:var(--purple-light);border:1px solid var(--purple-border);}
@@ -140,27 +172,13 @@ td{padding:13px 16px;font-size:13px;vertical-align:middle;}
 .approve-label.purple{color:var(--purple);}
 .approve-label.blue{color:var(--blue);}
 .approve-sub{font-size:12px;color:var(--muted);margin-top:4px;}
-.action-btn{border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity 0.15s;display:inline-flex;align-items:center;gap:6px;}
-.action-btn:hover{opacity:0.88;}
-.action-btn:disabled{opacity:0.4;cursor:not-allowed;}
-.action-btn.primary{background:var(--accent);color:#fff;}
-.action-btn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
-.action-btn.blue{background:var(--blue);color:#fff;}
-.upload-area{border:2px dashed var(--border);border-radius:10px;padding:18px;text-align:center;cursor:pointer;transition:border 0.15s,background 0.15s;}
-.upload-area:hover{border-color:var(--accent);background:var(--accent-light);}
-.upload-area input[type=file]{display:none;}
-.upload-area-label{font-size:13px;color:var(--muted);}
-.upload-area-label span{color:var(--accent);font-weight:600;}
-.img-preview-fs{width:100%;max-height:240px;object-fit:cover;border-radius:8px;margin-top:8px;display:none;}
-.img-preview-fs.show{display:block;}
-.img-thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--border);}
-.publish-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;}
-.publish-opt{border:2px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:all 0.15s;}
+.publish-options{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px;}
+.publish-opt{border:3px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all 0.15s;background:#fff;}
 .publish-opt:hover{border-color:var(--blue);}
-.publish-opt.selected{border-color:var(--blue);background:var(--blue-light);}
+.publish-opt.selected-draft{border-color:var(--blue);background:var(--blue-light);}
+.publish-opt.selected-live{border-color:var(--green);background:var(--green-light);}
 .publish-opt-title{font-size:14px;font-weight:700;margin-bottom:4px;}
 .publish-opt-sub{font-size:12px;color:var(--muted);}
-.publish-opt.selected .publish-opt-title{color:var(--blue);}
 .webflow-btn{background:var(--blue);color:#fff;border:none;padding:13px 28px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;width:100%;margin-top:14px;transition:opacity 0.15s;}
 .webflow-btn:hover{opacity:0.88;}
 .webflow-btn:disabled{opacity:0.4;cursor:not-allowed;}
@@ -177,93 +195,50 @@ td{padding:13px 16px;font-size:13px;vertical-align:middle;}
 .spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-row{display:flex;align-items:center;justify-content:center;gap:10px;padding:48px;color:var(--muted);font-size:13px;}
-@media(max-width:900px){.stats-row{grid-template-columns:repeat(2,1fr);}.form-grid{grid-template-columns:1fr;}.fs-grid{grid-template-columns:1fr;}.topbar,.fs-topbar{padding:0 16px;}.main,.fs-body{padding:20px 16px;}.publish-options{grid-template-columns:1fr;}}
+.save-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px;}
+@media(max-width:900px){
+  .field-grid{grid-template-columns:1fr;}
+  .publish-options{grid-template-columns:1fr;}
+  .fs-topbar,.topbar{padding:0 16px;}
+  .fs-body,.main{padding:20px 16px;}
+}
 </style>
 </head>
 <body>
 <div class="topbar">
   <div class="topbar-left">
-    <img class="logo" src="logo.png" alt="QNu Labs"/>
+    <img class="logo" src="logo.png" alt="QNu Labs" onclick="window.location.href='index.html'" style="cursor:pointer;"/>
     <div class="divider-v"></div>
     <div class="topbar-title"><span>QNu Labs</span><span>Corporate Marketing</span></div>
   </div>
   <div class="topbar-right">
     <span class="last-updated" id="lastUpdated">Loading...</span>
     <div class="live-badge"><div class="live-dot"></div> Live</div>
-    <div class="role-badge seo">SEO View</div>
+    <div class="role-badge seo" id="userBadge">SEO View</div>
     <a class="home-btn" href="index.html">&#8592; Home</a>
+    <button class="home-btn" onclick="logout()" style="color:var(--accent);border-color:var(--accent-border);">Sign Out</button>
   </div>
 </div>
-<div class="main">
-  <div class="page-header"><h2>SEO Review Queue</h2><p>Click any row to open the full screen editor. Download or upload Word files and approve for CMO.</p></div>
-  <div class="stats-row">
-    <div class="stat-card s-accent"><div class="stat-label">Needs Review</div><div class="stat-value" id="s1">-</div></div>
-    <div class="stat-card s-yellow"><div class="stat-label">Approved</div><div class="stat-value" id="s2">-</div></div>
-    <div class="stat-card s-green"><div class="stat-label">Posted</div><div class="stat-value" id="s3">-</div></div>
-    <div class="stat-card s-total"><div class="stat-label">Total</div><div class="stat-value" id="s4">-</div></div>
-  </div>
-  <div class="section-header">
-    <div class="section-title">Content Queue</div>
-    <div class="filter-tabs">
-      <button class="tab active" onclick="filterRows('all',this)">All</button>
-      <button class="tab" onclick="filterRows('needs',this)">Needs Review</button>
-      <button class="tab" onclick="filterRows('approved',this)">Approved</button>
-    </div>
-  </div>
-  <div class="table-wrap"><div id="tableContainer"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
-</div>
-<div class="fs-overlay" id="fsOverlay">
-  <div class="fs-topbar">
-    <div class="fs-topbar-left">
-      <button class="fs-back-btn" onclick="closeFS()">&#8592; Back to list</button>
-      <div><div class="fs-title" id="fsTitle">-</div><div class="fs-subtitle" id="fsSubtitle">-</div></div>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px;"><div id="fsStatus"></div><div id="fsType"></div></div>
-  </div>
-  <div class="fs-body">
-    <div class="fs-meta-row">
-      <div class="fs-meta-item"><div class="fs-meta-label">Written by</div><div class="fs-meta-value" id="fsWriter">-</div></div>
-      <div class="fs-meta-item"><div class="fs-meta-label">Date</div><div class="fs-meta-value" id="fsDate">-</div></div>
-      <div class="fs-meta-item"><div class="fs-meta-label">Type</div><div class="fs-meta-value" id="fsTypeVal">-</div></div>
-    </div>
-    <div class="fs-card" style="margin-bottom:20px;">
-      <div class="fs-card-title">Featured Image
-        <button class="action-btn secondary" onclick="document.getElementById('fsImgInput').click()">&#8593; Replace Image</button>
-        <input type="file" id="fsImgInput" accept="image/*" style="display:none" onchange="handleImgUpload(this)"/>
-      </div>
-      <img id="fsImg" class="img-preview-fs" src="" alt=""/>
-      <div id="fsNoImg" style="font-size:13px;color:var(--muted)">No image uploaded yet. Click Replace Image to add one.</div>
-    </div>
-    <div class="fs-grid">
-      <div class="fs-card">
-        <div class="fs-card-title" style="color:var(--muted)">Original Content — Writer Version</div>
-        <div class="fs-content-box" id="fsOriginal" style="border-left:4px solid var(--border2);"></div>
-      </div>
-      <div class="fs-card">
-        <div class="fs-card-title">Edit Content
-          <div style="display:flex;gap:6px;">
-            <button class="action-btn secondary" style="padding:6px 12px;font-size:11px;" onclick="downloadWordFile()">&#8595; Word</button>
-            <button class="action-btn secondary" style="padding:6px 12px;font-size:11px;" onclick="document.getElementById('fsWordInput').click()">&#8593; Word</button>
-            <input type="file" id="fsWordInput" accept=".doc,.docx" style="display:none" onchange="handleWordUpload(this)"/>
-          </div>
-        </div>
-        <textarea class="fs-content-edit" id="fsEditable" placeholder="Edit content here..."></textarea>
-        <button class="action-btn primary" style="margin-top:10px;" onclick="saveEdits()">Save Edits</button>
-      </div>
-    </div>
-    <div class="approve-section">
-      <div class="approve-inner yellow">
-        <div><div class="approve-label yellow">Approve for CMO Review</div><div class="approve-sub">Save your edits first, then toggle to approve. CMO will be notified.</div></div>
-        <div class="toggle-wrap">
-          <label class="toggle seo" id="fsToggle"><input type="checkbox" id="fsToggleInput" onchange="handleFsToggle()"/><span class="toggle-slider"></span></label>
-          <span class="toggle-label" id="fsToggleLabel">Pending</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-<div class="toast" id="toast"><div class="toast-dot"></div><span id="toastMsg"></span></div>
 <script>
+const QNU_SESSION=(()=>{try{return JSON.parse(localStorage.getItem('qnu_session')||'null');}catch(_){return null;}})();
+function requireRole(...allowed){
+  if(!QNU_SESSION){window.location.href='login.html';return false;}
+  if(QNU_SESSION.expires_at&&Date.now()/1000>QNU_SESSION.expires_at){localStorage.removeItem('qnu_session');window.location.href='login.html';return false;}
+  if(!allowed.includes(QNU_SESSION.role)){window.location.href='login.html';return false;}
+  return true;
+}
+function logout(){localStorage.removeItem('qnu_session');window.location.href='login.html';}
+async function logActivity(action,details,rowId=null,rowTitle=null){
+  if(!QNU_SESSION) return;
+  try{
+    await fetch('https://imtoahbuliuywiljxvpg.supabase.co/rest/v1/activity_log',{
+      method:'POST',
+      headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo','Authorization':'Bearer '+QNU_SESSION.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({user_id:QNU_SESSION.user_id,user_email:QNU_SESSION.email,user_role:QNU_SESSION.role,action,details,row_id:rowId,row_title:rowTitle})
+    });
+  }catch(_){}
+}
+if(!requireRole('seo','admin')) throw new Error('Not authorized');
 
 const SUPA_URL='https://imtoahbuliuywiljxvpg.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo';
@@ -272,19 +247,84 @@ const TABLE='content_approvals';
 const BUCKET='content-images';
 let allRows=[],currentFilter='all',activeRow=null,toastTimer=null,realtimeWS=null;
 
+// ── COLLECTION FIELDS ──
+const COLLECTION_FIELDS={
+  Blog:[
+    {label:'Title (Name)',slug:'name',type:'text',required:true},
+    {label:'Meta Title',slug:'meta-title',type:'text'},
+    {label:'Meta Description',slug:'meta-description',type:'textarea'},
+    {label:'Author Name',slug:'author-name',type:'text'},
+    {label:'Blog Content',slug:'blog-content',type:'richtext'},
+    {label:'Blog Image',slug:'blog-Image',type:'image'},
+    {label:'Date',slug:'date-and-Time',type:'date'},
+    {label:'FAQ 1 Question',slug:'faq01',type:'text'},
+    {label:'FAQ 1 Answer',slug:'faqdes01',type:'textarea'},
+    {label:'FAQ 2 Question',slug:'faq02',type:'text'},
+    {label:'FAQ 2 Answer',slug:'faqdes02',type:'textarea'},
+  ],
+  Whitepaper:[
+    {label:'Title (Name)',slug:'name',type:'text',required:true},
+    {label:'Meta Title',slug:'meta-title',type:'text'},
+    {label:'Meta Description',slug:'meta-description',type:'textarea'},
+    {label:'Short Para',slug:'short-para',type:'textarea'},
+    {label:'Whitepaper Content',slug:'whitepaper-content',type:'richtext'},
+    {label:'Whitepaper Image',slug:'whitepaper-image',type:'image'},
+    {label:'Whitepaper Date',slug:'whitepaper-date',type:'date'},
+    {label:'FAQ 1 Question',slug:'faq01',type:'text'},
+    {label:'FAQ 1 Answer',slug:'faq-descp',type:'textarea'},
+    {label:'FAQ 2 Question',slug:'faq02',type:'text'},
+    {label:'FAQ 2 Answer',slug:'faq-descp2',type:'textarea'},
+    {label:'FAQ 3 Question',slug:'faq03',type:'text'},
+    {label:'FAQ 3 Answer',slug:'faq-descp3',type:'textarea'},
+    {label:'FAQ 4 Question',slug:'faq04',type:'text'},
+    {label:'FAQ 4 Answer',slug:'faq-descp4',type:'textarea'},
+  ],
+  Newsletter:[
+    {label:'Title (Name)',slug:'name',type:'text',required:true},
+    {label:'News PR Name',slug:'news-pr-name',type:'text'},
+    {label:'PR Description',slug:'pr-description',type:'textarea'},
+    {label:'PR Source Link',slug:'pr-source-link',type:'text'},
+    {label:'Description (Internal)',slug:'description---internal',type:'textarea'},
+    {label:'PR PDF Link',slug:'pr-pdf-link',type:'text'},
+    {label:'PR Published Date',slug:'pr-published-date',type:'date'},
+    {label:'PR Background Image',slug:'pr-bg-img',type:'image'},
+    {label:'FAQ 1 Question',slug:'faq1',type:'text'},
+    {label:'FAQ 1 Answer',slug:'faq-descp',type:'textarea'},
+    {label:'FAQ 2 Question',slug:'faq2',type:'text'},
+    {label:'FAQ 2 Answer',slug:'faq-descp2',type:'textarea'},
+  ],
+  Other:[
+    {label:'Title (Name)',slug:'name',type:'text',required:true},
+    {label:'Meta Title',slug:'meta-title',type:'text'},
+    {label:'Meta Description',slug:'meta-description',type:'textarea'},
+    {label:'Small Info',slug:'small-info',type:'text'},
+    {label:'Case Study Content',slug:'casestudy-content',type:'richtext'},
+    {label:'Case Study Image',slug:'whitepaper-image',type:'image'},
+    {label:'Case Study Date',slug:'whitepaper-date',type:'date'},
+    {label:'About the Client',slug:'about-the-client',type:'textarea'},
+    {label:'Testimonial',slug:'testimonial',type:'text'},
+    {label:'Testimonial Name',slug:'testimonial-name',type:'text'},
+    {label:'FAQ 1 Question',slug:'faq01',type:'text'},
+    {label:'FAQ 1 Answer',slug:'faq-t01',type:'textarea'},
+    {label:'FAQ 2 Question',slug:'faq02',type:'text'},
+    {label:'FAQ 2 Answer',slug:'faq-t02',type:'textarea'},
+  ]
+};
+
+// ── API ──
 async function sbFetch(path,options={}) {
   const isWrite=options.method&&options.method!=='GET';
   const h={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
   if(isWrite) h['Prefer']='return=representation';
   if(options.headers) Object.assign(h,options.headers);
   const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),10000);
-  try {
+  const timer=setTimeout(()=>controller.abort(),12000);
+  try{
     const res=await fetch(SUPA_URL+'/rest/v1/'+path,{...options,headers:h,signal:controller.signal});
     clearTimeout(timer);
     if(!res.ok) throw new Error(await res.text());
     const t=await res.text(); return t?JSON.parse(t):null;
-  } catch(e) { clearTimeout(timer); throw e; }
+  }catch(e){clearTimeout(timer);throw e;}
 }
 async function getAll(){return await sbFetch(TABLE+'?order=created_at.asc&select=*');}
 async function insertRow(data){return await sbFetch(TABLE,{method:'POST',body:JSON.stringify(data)});}
@@ -293,24 +333,28 @@ async function updateRow(id,data){return await sbFetch(TABLE+'?id=eq.'+id,{metho
 async function uploadImage(file){
   const ext=file.name.split('.').pop();
   const path='images/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
-  const res=await fetch(SUPA_STORAGE+'/object/'+BUCKET+'/'+path,{method:'POST',
-    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type,'x-upsert':'true'},body:file});
+  const res=await fetch(SUPA_STORAGE+'/object/'+BUCKET+'/'+path,{
+    method:'POST',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type,'x-upsert':'true'},
+    body:file
+  });
   if(!res.ok) throw new Error('Image upload failed');
   return SUPA_STORAGE+'/object/public/'+BUCKET+'/'+path;
 }
 
 function subscribeRealtime(){
   if(realtimeWS) return;
-  try {
+  try{
     const ws=new WebSocket(SUPA_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPA_KEY+'&vsn=1.0.0');
     ws.onopen=()=>ws.send(JSON.stringify({topic:'realtime:public:'+TABLE,event:'phx_join',payload:{},ref:'1'}));
     ws.onmessage=(e)=>{try{const m=JSON.parse(e.data);if(['INSERT','UPDATE','DELETE'].includes(m.event))fetchData();}catch(_){}};
     ws.onerror=()=>{realtimeWS=null;setTimeout(subscribeRealtime,8000);};
     ws.onclose=()=>{realtimeWS=null;setTimeout(subscribeRealtime,8000);};
     realtimeWS=ws;
-  } catch(_){setTimeout(subscribeRealtime,8000);}
+  }catch(_){setTimeout(subscribeRealtime,8000);}
 }
 
+// ── STATUS ──
 function getStatus(row){
   if(row.posted_to_webflow) return 'posted';
   if(row.designer_approved) return 'ready';
@@ -325,29 +369,154 @@ function badgeHTML(s){
   const[c,l]=m[s]||['draft','Draft'];
   return `<span class="badge ${c}"><span class="badge-dot"></span>${l}</span>`;
 }
-function getTypeLabel(row){return row.content_type==='Other'?(row.content_type_other||'Other'):(row.content_type||'');}
+function getTypeLabel(row){return row.content_type==='Other'?(row.content_type_other||'Case Study'):(row.content_type||'');}
 function typePillHTML(row){
-  const label=getTypeLabel(row); if(!label) return '<span style="color:var(--border2);font-size:12px">-</span>';
+  const label=getTypeLabel(row);
+  if(!label) return '<span style="color:var(--border2);font-size:12px">-</span>';
   const cls={Blog:'blog',Whitepaper:'whitepaper',Newsletter:'newsletter',Other:'other'}[row.content_type]||'other';
   return `<span class="type-pill ${cls}">${label}</span>`;
 }
 function formatDate(s){if(!s)return '-';return new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
 function slugify(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
+
+// ── TOAST ──
 function showToast(msg,type='success'){
   const t=document.getElementById('toast');
   document.getElementById('toastMsg').textContent=msg;
   t.className='toast '+type; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
 }
+
+// ── FILTER ──
 function filterRows(f,btn){
   currentFilter=f;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active'); renderTable(allRows);
 }
 function setLastUpdated(){const el=document.getElementById('lastUpdated');if(el)el.textContent='Updated '+new Date().toLocaleTimeString();}
-function handleTypeChange(sel,wrapId){document.getElementById(wrapId).classList.toggle('show',sel.value==='Other');}
+
+// ── OVERLAY ──
+function openFS(){document.getElementById('fsOverlay').classList.add('show');document.body.style.overflow='hidden';}
+function closeFS(){document.getElementById('fsOverlay').classList.remove('show');document.body.style.overflow='';}
+
+// ── RICH TEXT TOOLBAR ──
+function execRt(cmd,val=null){document.execCommand(cmd,false,val);document.getElementById('rtEditor')&&document.getElementById('rtEditor').focus();}
+function rtCmd(editorId,cmd,val=null){
+  const el=document.getElementById(editorId);
+  if(el) el.focus();
+  document.execCommand(cmd,false,val);
+}
+
+// ── FIELD FORM BUILDER ──
+function buildFieldForm(contentType,existingData={},readOnly=false){
+  const fields=COLLECTION_FIELDS[contentType]||COLLECTION_FIELDS['Blog'];
+  let html='';
+  let inFaqSection=false;
+
+  fields.forEach((f,idx)=>{
+    const isFaq=f.slug.startsWith('faq');
+    if(isFaq&&!inFaqSection){
+      html+='<div class="fs-section-title">FAQ Section</div><div class="faq-section">';
+      inFaqSection=true;
+    }
+    if(!isFaq&&inFaqSection){
+      html+='</div>';
+      inFaqSection=false;
+    }
+
+    const val=existingData[f.slug]||'';
+    const req=f.required?'<span class="req">*</span>':'';
+    const ro=readOnly?'readonly disabled':'';
+    const roStyle=readOnly?'opacity:0.7;':'';
+
+    if(f.type==='richtext'){
+      const edId='rtf_'+f.slug.replace(/[^a-z0-9]/g,'_');
+      html+=`<div class="field-group full" style="${roStyle}">
+        <div class="field-label">${f.label}${req}</div>
+        <div class="field-richtext-wrap">
+          ${!readOnly?`<div class="richtext-toolbar">
+            <button class="rt-btn" onclick="rtCmd('${edId}','bold')" title="Bold"><b>B</b></button>
+            <button class="rt-btn" onclick="rtCmd('${edId}','italic')" title="Italic"><i>I</i></button>
+            <button class="rt-btn" onclick="rtCmd('${edId}','underline')" title="Underline"><u>U</u></button>
+            <button class="rt-btn" onclick="rtCmd('${edId}','formatBlock','h2')" title="Heading">H2</button>
+            <button class="rt-btn" onclick="rtCmd('${edId}','insertUnorderedList')" title="Bullet list">&#8226; List</button>
+            <button class="rt-btn" onclick="rtCmd('${edId}','insertOrderedList')" title="Numbered list">1. List</button>
+            <button class="rt-btn" onclick="rtCmd('${edId}','removeFormat')" title="Clear formatting">Clear</button>
+          </div>`:''}
+          <div class="richtext-editor" id="${edId}" ${readOnly?'':'contenteditable="true"'} data-slug="${f.slug}" data-placeholder="Enter ${f.label}...">${val}</div>
+        </div>
+      </div>`;
+    } else if(f.type==='textarea'){
+      html+=`<div class="field-group full" style="${roStyle}">
+        <div class="field-label">${f.label}${req}</div>
+        <textarea class="field-textarea" id="ff_${f.slug.replace(/[^a-z0-9]/g,'_')}" data-slug="${f.slug}" ${ro}>${val}</textarea>
+      </div>`;
+    } else if(f.type==='image'){
+      html+=`<div class="field-group full">
+        <div class="field-label">${f.label}</div>
+        ${existingData[f.slug]?`<img src="${existingData[f.slug]}" style="max-height:160px;border-radius:8px;object-fit:cover;max-width:100%;margin-bottom:8px;"/>`:'' }
+        ${!readOnly?`<div class="upload-area" onclick="document.getElementById('fimg_${f.slug.replace(/[^a-z0-9]/g,'_')}').click()">
+          <input type="file" id="fimg_${f.slug.replace(/[^a-z0-9]/g,'_')}" accept="image/*" data-slug="${f.slug}" onchange="handleFieldImage(this)" style="display:none"/>
+          <div class="upload-area-label">Click to <span>upload image</span></div>
+        </div>`:''}
+      </div>`;
+    } else if(f.type==='date'){
+      const dateVal=val?new Date(val).toISOString().split('T')[0]:'';
+      html+=`<div class="field-group" style="${roStyle}">
+        <div class="field-label">${f.label}${req}</div>
+        <input type="date" class="field-date" id="ff_${f.slug.replace(/[^a-z0-9]/g,'_')}" data-slug="${f.slug}" value="${dateVal}" ${ro}/>
+      </div>`;
+    } else {
+      // text
+      const isFullWidth=f.slug==='name'||f.slug.includes('title')||f.slug.includes('description');
+      html+=`<div class="field-group ${isFullWidth?'full':''}" style="${roStyle}">
+        <div class="field-label">${f.label}${req}</div>
+        <input type="text" class="field-input" id="ff_${f.slug.replace(/[^a-z0-9]/g,'_')}" data-slug="${f.slug}" value="${val.replace(/"/g,'&quot;')}" ${ro}/>
+      </div>`;
+    }
+  });
+
+  if(inFaqSection) html+='</div>';
+  return html;
+}
+
+// Collect all field values from a built form
+function collectFieldValues(contentType){
+  const fields=COLLECTION_FIELDS[contentType]||COLLECTION_FIELDS['Blog'];
+  const data={};
+  fields.forEach(f=>{
+    const safeSlug=f.slug.replace(/[^a-z0-9]/g,'_');
+    if(f.type==='richtext'){
+      const el=document.getElementById('rtf_'+safeSlug);
+      if(el) data[f.slug]=el.innerHTML;
+    } else if(f.type==='image'){
+      // images handled separately via handleFieldImage
+    } else {
+      const el=document.getElementById('ff_'+safeSlug);
+      if(el) data[f.slug]=el.value||'';
+    }
+  });
+  return data;
+}
+
+async function handleFieldImage(input){
+  const file=input.files[0]; if(!file||!activeRow) return;
+  const slug=input.getAttribute('data-slug');
+  try{
+    showToast('Uploading image...','success');
+    const url=await uploadImage(file);
+    // Save image url to extra_fields in supabase
+    const ef=JSON.parse(activeRow.extra_fields||'{}');
+    ef[slug]=url;
+    await updateRow(activeRow.id,{extra_fields:JSON.stringify(ef),image_url:url});
+    showToast('Image saved!','success');
+    await fetchData();
+  }catch(e){showToast('Upload failed: '+e.message,'error');}
+}
+
+// ── WORD ──
 function downloadWord(content,title){
-  const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:12pt;line-height:1.6;margin:40px;}h1{font-size:16pt;margin-bottom:20px;}</style></head><body><h1>${title}</h1><div>${content.replace(/\n/g,'<br>')}</div></body></html>`;
+  const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:12pt;line-height:1.6;margin:40px;}h1{font-size:16pt;margin-bottom:20px;}</style></head><body><h1>${title}</h1><div>${content}</div></body></html>`;
   const blob=new Blob(['\ufeff',html],{type:'application/msword'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=slugify(title||'content')+'.doc'; a.click(); URL.revokeObjectURL(a.href);
 }
@@ -358,8 +527,441 @@ function readWordFile(file){
     reader.onerror=reject; reader.readAsText(file);
   });
 }
+
+async function fetchData(){
+  try{allRows=await getAll()||[];updateStats(allRows);renderTable(allRows);setLastUpdated();subscribeRealtime();}
+  catch(e){document.getElementById('tableContainer').innerHTML=`<div class="empty-state"><div class="empty-title">Could not load</div><div class="empty-sub">${e.message}</div></div>`;}
+}
+function updateStats(r){
+  document.getElementById('s1').textContent=r.filter(x=>x.writer_approved&&!x.seo_approved).length;
+  document.getElementById('s2').textContent=r.filter(x=>x.seo_approved).length;
+  document.getElementById('s3').textContent=r.filter(x=>x.posted_to_webflow).length;
+  document.getElementById('s4').textContent=r.length;
+}
+function renderTable(rows){
+  const c=document.getElementById('tableContainer');
+  const fm={needs:r=>r.writer_approved&&!r.seo_approved,approved:r=>r.seo_approved};
+  const filtered=currentFilter==='all'?rows:rows.filter(fm[currentFilter]||Boolean);
+  if(!filtered.length){c.innerHTML='<div class="empty-state"><div class="empty-title">Nothing here</div></div>';return;}
+  let h=`<table><thead><tr><th>#</th><th>Title</th><th>Type</th><th>Writer</th><th>Date</th><th>SEO Approve</th><th>Status</th></tr></thead><tbody>`;
+  filtered.forEach((row,i)=>{
+    const can=row.writer_approved;
+    h+=`<tr onclick="${can?`openModal(${row.id})`:''}" style="${can?'':'opacity:0.5;cursor:default'}">
+      <td class="num-cell">${i+1}</td>
+      <td style="font-weight:600">${row.title||'-'}</td>
+      <td>${typePillHTML(row)}</td>
+      <td style="color:var(--muted)">${row.writer_name||'-'}</td>
+      <td class="date-cell">${formatDate(row.created_at)}</td>
+      <td onclick="event.stopPropagation()">${can?`
+        <div class="toggle-wrap">
+          <label class="toggle seo" id="stog_${row.id}">
+            <input type="checkbox" ${row.seo_approved?'checked':''} data-id="${row.id}" onchange="handleTableToggle(this)"/>
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label">${row.seo_approved?'Approved':'Pending'}</span>
+        </div>`:'<span style="font-size:12px;color:var(--muted)">Awaiting writer</span>'}</td>
+      <td>${badgeHTML(getStatus(row))}</td>
+    </tr>`;
+  });
+  h+=`</tbody></table>`; c.innerHTML=h;
+}
+async function handleTableToggle(input){
+  const id=input.getAttribute('data-id');
+  const el=document.getElementById('stog_'+id);
+  await quickToggle(id,input.checked,el,'seo_approved',null);
+}
+function openModal(id){
+  activeRow=allRows.find(r=>r.id==id); if(!activeRow) return;
+  document.getElementById('fsTitle').textContent=activeRow.title||'Untitled';
+  document.getElementById('fsSubtitle').textContent=`Written by ${activeRow.writer_name||'-'} · ${formatDate(activeRow.created_at)}`;
+  document.getElementById('fsWriter').textContent=activeRow.writer_name||'-';
+  document.getElementById('fsDate').textContent=formatDate(activeRow.created_at);
+  document.getElementById('fsTypeVal').innerHTML=typePillHTML(activeRow);
+  document.getElementById('fsStatus').innerHTML=badgeHTML(getStatus(activeRow));
+  document.getElementById('fsType').innerHTML=typePillHTML(activeRow);
+  const ef=JSON.parse(activeRow.extra_fields||'{}');
+  ef.name=activeRow.title||'';
+  if(activeRow.content_type==='Blog') ef['blog-content']=activeRow.content||'';
+  else if(activeRow.content_type==='Whitepaper') ef['whitepaper-content']=activeRow.content||'';
+  else if(activeRow.content_type==='Newsletter') ef['pr-description']=activeRow.content||'';
+  else ef['casestudy-content']=activeRow.content||'';
+  document.getElementById('fsFields').innerHTML=buildFieldForm(activeRow.content_type,ef,false);
+  document.getElementById('fsToggleInput').checked=activeRow.seo_approved;
+  document.getElementById('fsToggleLabel').textContent=activeRow.seo_approved?'Approved':'Pending';
+  openFS();
+}
+async function saveEdits(){
+  if(!activeRow) return;
+  const ef=collectFieldValues(activeRow.content_type);
+  const mainContent=ef['blog-content']||ef['whitepaper-content']||ef['pr-description']||ef['casestudy-content']||'';
+  const title=ef['name']||activeRow.title||'';
+  try{
+    await updateRow(activeRow.id,{title,content:mainContent,extra_fields:JSON.stringify(ef)});
+    showToast('Edits saved!','success');
+    activeRow.content=mainContent; activeRow.title=title; activeRow.extra_fields=JSON.stringify(ef);
+    await fetchData();
+  }catch(e){showToast('Save failed: '+e.message,'error');}
+}
+async function saveAndClose(){await saveEdits();closeFS();}
+function downloadWordSEO(){
+  const ef=collectFieldValues(activeRow.content_type);
+  const c=ef['blog-content']||ef['whitepaper-content']||ef['pr-description']||ef['casestudy-content']||activeRow.content||'';
+  downloadWord(c,activeRow.title||'content'); showToast('Downloaded!','success');
+}
+async function handleWordUpload(input){
+  const file=input.files[0]; if(!file) return;
+  try{
+    showToast('Reading Word file...','success');
+    const text=await readWordFile(file);
+    // Put into main content richtext
+    const ct=activeRow.content_type;
+    const rtSlug=ct==='Blog'?'blog-content':ct==='Whitepaper'?'whitepaper-content':ct==='Newsletter'?'pr-description':'casestudy-content';
+    const safeSlug=rtSlug.replace(/[^a-z0-9]/g,'_');
+    const el=document.getElementById('rtf_'+safeSlug);
+    if(el) el.innerHTML=text;
+    await updateRow(activeRow.id,{content:text});
+    showToast('Content loaded from Word!','success');
+  }catch(e){showToast('Failed: '+e.message,'error');}
+}
+async function handleFsToggle(){
+  const checked=document.getElementById('fsToggleInput').checked;
+  document.getElementById('fsToggleLabel').textContent=checked?'Approved':'Pending';
+  await saveEdits();
+  await quickToggle(activeRow.id,checked,document.getElementById('fsToggle'),'seo_approved',null);
+}
+async function quickToggle(id,checked,el,field,snapshotField){
+  if(!el) return;
+  el.classList.add('saving');
+  try{
+    const data={[field]:checked};
+    await updateRow(id,data);
+    showToast(checked?'Approved! Next team notified.':'Removed.','success');
+    await fetchData();
+  }catch(e){showToast('Failed: '+e.message,'error');}
+  finally{el.classList.remove('saving');}
+}
+fetchData();
+team notified.':'Removed.','success');
+    await fetchData();
+  }catch(e){showToast('Failed: '+e.message,'error');}
+  finally{el.classList.remove('saving');}
+}
+fetchData();
+
+
+
+</script>
+</body></html
+
+<div class="toast" id="toast"><div class="toast-dot"></div><span id="toastMsg"></span></div>
+<script>
+const QNU_SESSION=(()=>{try{return JSON.parse(localStorage.getItem('qnu_session')||'null');}catch(_){return null;}})();
+function requireRole(...allowed){
+  if(!QNU_SESSION){window.location.href='login.html';return false;}
+  if(QNU_SESSION.expires_at&&Date.now()/1000>QNU_SESSION.expires_at){localStorage.removeItem('qnu_session');window.location.href='login.html';return false;}
+  if(!allowed.includes(QNU_SESSION.role)){window.location.href='login.html';return false;}
+  return true;
+}
+function logout(){localStorage.removeItem('qnu_session');window.location.href='login.html';}
+async function logActivity(action,details,rowId=null,rowTitle=null){
+  if(!QNU_SESSION) return;
+  try{
+    await fetch('https://imtoahbuliuywiljxvpg.supabase.co/rest/v1/activity_log',{
+      method:'POST',
+      headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo','Authorization':'Bearer '+QNU_SESSION.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({user_id:QNU_SESSION.user_id,user_email:QNU_SESSION.email,user_role:QNU_SESSION.role,action,details,row_id:rowId,row_title:rowTitle})
+    });
+  }catch(_){}
+}
+if(!requireRole('seo','admin')) throw new Error('Not authorized');
+
+const SUPA_URL='https://imtoahbuliuywiljxvpg.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo';
+const SUPA_STORAGE=SUPA_URL+'/storage/v1';
+const TABLE='content_approvals';
+const BUCKET='content-images';
+let allRows=[],currentFilter='all',activeRow=null,toastTimer=null,realtimeWS=null;
+
+// ── COLLECTION FIELDS ──
+const COLLECTION_FIELDS={
+  Blog:[
+    {label:'Title (Name)',slug:'name',type:'text',required:true},
+    {label:'Meta Title',slug:'meta-title',type:'text'},
+    {label:'Meta Description',slug:'meta-description',type:'textarea'},
+    {label:'Author Name',slug:'author-name',type:'text'},
+    {label:'Blog Content',slug:'blog-content',type:'richtext'},
+    {label:'Blog Image',slug:'blog-Image',type:'image'},
+    {label:'Date',slug:'date-and-Time',type:'date'},
+    {label:'FAQ 1 Question',slug:'faq01',type:'text'},
+    {label:'FAQ 1 Answer',slug:'faqdes01',type:'textarea'},
+    {label:'FAQ 2 Question',slug:'faq02',type:'text'},
+    {label:'FAQ 2 Answer',slug:'faqdes02',type:'textarea'},
+  ],
+  Whitepaper:[
+    {label:'Title (Name)',slug:'name',type:'text',required:true},
+    {label:'Meta Title',slug:'meta-title',type:'text'},
+    {label:'Meta Description',slug:'meta-description',type:'textarea'},
+    {label:'Short Para',slug:'short-para',type:'textarea'},
+    {label:'Whitepaper Content',slug:'whitepaper-content',type:'richtext'},
+    {label:'Whitepaper Image',slug:'whitepaper-image',type:'image'},
+    {label:'Whitepaper Date',slug:'whitepaper-date',type:'date'},
+    {label:'FAQ 1 Question',slug:'faq01',type:'text'},
+    {label:'FAQ 1 Answer',slug:'faq-descp',type:'textarea'},
+    {label:'FAQ 2 Question',slug:'faq02',type:'text'},
+    {label:'FAQ 2 Answer',slug:'faq-descp2',type:'textarea'},
+    {label:'FAQ 3 Question',slug:'faq03',type:'text'},
+    {label:'FAQ 3 Answer',slug:'faq-descp3',type:'textarea'},
+    {label:'FAQ 4 Question',slug:'faq04',type:'text'},
+    {label:'FAQ 4 Answer',slug:'faq-descp4',type:'textarea'},
+  ],
+  Newsletter:[
+    {label:'Title (Name)',slug:'name',type:'text',required:true},
+    {label:'News PR Name',slug:'news-pr-name',type:'text'},
+    {label:'PR Description',slug:'pr-description',type:'textarea'},
+    {label:'PR Source Link',slug:'pr-source-link',type:'text'},
+    {label:'Description (Internal)',slug:'description---internal',type:'textarea'},
+    {label:'PR PDF Link',slug:'pr-pdf-link',type:'text'},
+    {label:'PR Published Date',slug:'pr-published-date',type:'date'},
+    {label:'PR Background Image',slug:'pr-bg-img',type:'image'},
+    {label:'FAQ 1 Question',slug:'faq1',type:'text'},
+    {label:'FAQ 1 Answer',slug:'faq-descp',type:'textarea'},
+    {label:'FAQ 2 Question',slug:'faq2',type:'text'},
+    {label:'FAQ 2 Answer',slug:'faq-descp2',type:'textarea'},
+  ],
+  Other:[
+    {label:'Title (Name)',slug:'name',type:'text',required:true},
+    {label:'Meta Title',slug:'meta-title',type:'text'},
+    {label:'Meta Description',slug:'meta-description',type:'textarea'},
+    {label:'Small Info',slug:'small-info',type:'text'},
+    {label:'Case Study Content',slug:'casestudy-content',type:'richtext'},
+    {label:'Case Study Image',slug:'whitepaper-image',type:'image'},
+    {label:'Case Study Date',slug:'whitepaper-date',type:'date'},
+    {label:'About the Client',slug:'about-the-client',type:'textarea'},
+    {label:'Testimonial',slug:'testimonial',type:'text'},
+    {label:'Testimonial Name',slug:'testimonial-name',type:'text'},
+    {label:'FAQ 1 Question',slug:'faq01',type:'text'},
+    {label:'FAQ 1 Answer',slug:'faq-t01',type:'textarea'},
+    {label:'FAQ 2 Question',slug:'faq02',type:'text'},
+    {label:'FAQ 2 Answer',slug:'faq-t02',type:'textarea'},
+  ]
+};
+
+// ── API ──
+async function sbFetch(path,options={}) {
+  const isWrite=options.method&&options.method!=='GET';
+  const h={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
+  if(isWrite) h['Prefer']='return=representation';
+  if(options.headers) Object.assign(h,options.headers);
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),12000);
+  try{
+    const res=await fetch(SUPA_URL+'/rest/v1/'+path,{...options,headers:h,signal:controller.signal});
+    clearTimeout(timer);
+    if(!res.ok) throw new Error(await res.text());
+    const t=await res.text(); return t?JSON.parse(t):null;
+  }catch(e){clearTimeout(timer);throw e;}
+}
+async function getAll(){return await sbFetch(TABLE+'?order=created_at.asc&select=*');}
+async function insertRow(data){return await sbFetch(TABLE,{method:'POST',body:JSON.stringify(data)});}
+async function updateRow(id,data){return await sbFetch(TABLE+'?id=eq.'+id,{method:'PATCH',body:JSON.stringify(data)});}
+
+async function uploadImage(file){
+  const ext=file.name.split('.').pop();
+  const path='images/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
+  const res=await fetch(SUPA_STORAGE+'/object/'+BUCKET+'/'+path,{
+    method:'POST',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type,'x-upsert':'true'},
+    body:file
+  });
+  if(!res.ok) throw new Error('Image upload failed');
+  return SUPA_STORAGE+'/object/public/'+BUCKET+'/'+path;
+}
+
+function subscribeRealtime(){
+  if(realtimeWS) return;
+  try{
+    const ws=new WebSocket(SUPA_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPA_KEY+'&vsn=1.0.0');
+    ws.onopen=()=>ws.send(JSON.stringify({topic:'realtime:public:'+TABLE,event:'phx_join',payload:{},ref:'1'}));
+    ws.onmessage=(e)=>{try{const m=JSON.parse(e.data);if(['INSERT','UPDATE','DELETE'].includes(m.event))fetchData();}catch(_){}};
+    ws.onerror=()=>{realtimeWS=null;setTimeout(subscribeRealtime,8000);};
+    ws.onclose=()=>{realtimeWS=null;setTimeout(subscribeRealtime,8000);};
+    realtimeWS=ws;
+  }catch(_){setTimeout(subscribeRealtime,8000);}
+}
+
+// ── STATUS ──
+function getStatus(row){
+  if(row.posted_to_webflow) return 'posted';
+  if(row.designer_approved) return 'ready';
+  if(row.cmo_approved) return 'with-designer';
+  if(row.seo_approved) return 'with-cmo';
+  if(row.writer_approved) return 'with-seo';
+  if(row.content&&row.content.trim()) return 'submitted';
+  return 'draft';
+}
+function badgeHTML(s){
+  const m={draft:['draft','Draft'],submitted:['submitted','Submitted'],'with-seo':['with-seo','With SEO'],'with-cmo':['with-cmo','With CMO'],'with-designer':['with-designer','With Designer'],ready:['ready','CMO Approved'],posted:['posted','Posted']};
+  const[c,l]=m[s]||['draft','Draft'];
+  return `<span class="badge ${c}"><span class="badge-dot"></span>${l}</span>`;
+}
+function getTypeLabel(row){return row.content_type==='Other'?(row.content_type_other||'Case Study'):(row.content_type||'');}
+function typePillHTML(row){
+  const label=getTypeLabel(row);
+  if(!label) return '<span style="color:var(--border2);font-size:12px">-</span>';
+  const cls={Blog:'blog',Whitepaper:'whitepaper',Newsletter:'newsletter',Other:'other'}[row.content_type]||'other';
+  return `<span class="type-pill ${cls}">${label}</span>`;
+}
+function formatDate(s){if(!s)return '-';return new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+function slugify(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
+
+// ── TOAST ──
+function showToast(msg,type='success'){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.className='toast '+type; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ── FILTER ──
+function filterRows(f,btn){
+  currentFilter=f;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active'); renderTable(allRows);
+}
+function setLastUpdated(){const el=document.getElementById('lastUpdated');if(el)el.textContent='Updated '+new Date().toLocaleTimeString();}
+
+// ── OVERLAY ──
 function openFS(){document.getElementById('fsOverlay').classList.add('show');document.body.style.overflow='hidden';}
 function closeFS(){document.getElementById('fsOverlay').classList.remove('show');document.body.style.overflow='';}
+
+// ── RICH TEXT TOOLBAR ──
+function execRt(cmd,val=null){document.execCommand(cmd,false,val);document.getElementById('rtEditor')&&document.getElementById('rtEditor').focus();}
+function rtCmd(editorId,cmd,val=null){
+  const el=document.getElementById(editorId);
+  if(el) el.focus();
+  document.execCommand(cmd,false,val);
+}
+
+// ── FIELD FORM BUILDER ──
+function buildFieldForm(contentType,existingData={},readOnly=false){
+  const fields=COLLECTION_FIELDS[contentType]||COLLECTION_FIELDS['Blog'];
+  let html='';
+  let inFaqSection=false;
+
+  fields.forEach((f,idx)=>{
+    const isFaq=f.slug.startsWith('faq');
+    if(isFaq&&!inFaqSection){
+      html+='<div class="fs-section-title">FAQ Section</div><div class="faq-section">';
+      inFaqSection=true;
+    }
+    if(!isFaq&&inFaqSection){
+      html+='</div>';
+      inFaqSection=false;
+    }
+
+    const val=existingData[f.slug]||'';
+    const req=f.required?'<span class="req">*</span>':'';
+    const ro=readOnly?'readonly disabled':'';
+    const roStyle=readOnly?'opacity:0.7;':'';
+
+    if(f.type==='richtext'){
+      const edId='rtf_'+f.slug.replace(/[^a-z0-9]/g,'_');
+      html+=`<div class="field-group full" style="${roStyle}">
+        <div class="field-label">${f.label}${req}</div>
+        <div class="field-richtext-wrap">
+          ${!readOnly?`<div class="richtext-toolbar">
+            <button class="rt-btn" onclick="rtCmd('${edId}','bold')" title="Bold"><b>B</b></button>
+            <button class="rt-btn" onclick="rtCmd('${edId}','italic')" title="Italic"><i>I</i></button>
+            <button class="rt-btn" onclick="rtCmd('${edId}','underline')" title="Underline"><u>U</u></button>
+            <button class="rt-btn" onclick="rtCmd('${edId}','formatBlock','h2')" title="Heading">H2</button>
+            <button class="rt-btn" onclick="rtCmd('${edId}','insertUnorderedList')" title="Bullet list">&#8226; List</button>
+            <button class="rt-btn" onclick="rtCmd('${edId}','insertOrderedList')" title="Numbered list">1. List</button>
+            <button class="rt-btn" onclick="rtCmd('${edId}','removeFormat')" title="Clear formatting">Clear</button>
+          </div>`:''}
+          <div class="richtext-editor" id="${edId}" ${readOnly?'':'contenteditable="true"'} data-slug="${f.slug}" data-placeholder="Enter ${f.label}...">${val}</div>
+        </div>
+      </div>`;
+    } else if(f.type==='textarea'){
+      html+=`<div class="field-group full" style="${roStyle}">
+        <div class="field-label">${f.label}${req}</div>
+        <textarea class="field-textarea" id="ff_${f.slug.replace(/[^a-z0-9]/g,'_')}" data-slug="${f.slug}" ${ro}>${val}</textarea>
+      </div>`;
+    } else if(f.type==='image'){
+      html+=`<div class="field-group full">
+        <div class="field-label">${f.label}</div>
+        ${existingData[f.slug]?`<img src="${existingData[f.slug]}" style="max-height:160px;border-radius:8px;object-fit:cover;max-width:100%;margin-bottom:8px;"/>`:'' }
+        ${!readOnly?`<div class="upload-area" onclick="document.getElementById('fimg_${f.slug.replace(/[^a-z0-9]/g,'_')}').click()">
+          <input type="file" id="fimg_${f.slug.replace(/[^a-z0-9]/g,'_')}" accept="image/*" data-slug="${f.slug}" onchange="handleFieldImage(this)" style="display:none"/>
+          <div class="upload-area-label">Click to <span>upload image</span></div>
+        </div>`:''}
+      </div>`;
+    } else if(f.type==='date'){
+      const dateVal=val?new Date(val).toISOString().split('T')[0]:'';
+      html+=`<div class="field-group" style="${roStyle}">
+        <div class="field-label">${f.label}${req}</div>
+        <input type="date" class="field-date" id="ff_${f.slug.replace(/[^a-z0-9]/g,'_')}" data-slug="${f.slug}" value="${dateVal}" ${ro}/>
+      </div>`;
+    } else {
+      // text
+      const isFullWidth=f.slug==='name'||f.slug.includes('title')||f.slug.includes('description');
+      html+=`<div class="field-group ${isFullWidth?'full':''}" style="${roStyle}">
+        <div class="field-label">${f.label}${req}</div>
+        <input type="text" class="field-input" id="ff_${f.slug.replace(/[^a-z0-9]/g,'_')}" data-slug="${f.slug}" value="${val.replace(/"/g,'&quot;')}" ${ro}/>
+      </div>`;
+    }
+  });
+
+  if(inFaqSection) html+='</div>';
+  return html;
+}
+
+// Collect all field values from a built form
+function collectFieldValues(contentType){
+  const fields=COLLECTION_FIELDS[contentType]||COLLECTION_FIELDS['Blog'];
+  const data={};
+  fields.forEach(f=>{
+    const safeSlug=f.slug.replace(/[^a-z0-9]/g,'_');
+    if(f.type==='richtext'){
+      const el=document.getElementById('rtf_'+safeSlug);
+      if(el) data[f.slug]=el.innerHTML;
+    } else if(f.type==='image'){
+      // images handled separately via handleFieldImage
+    } else {
+      const el=document.getElementById('ff_'+safeSlug);
+      if(el) data[f.slug]=el.value||'';
+    }
+  });
+  return data;
+}
+
+async function handleFieldImage(input){
+  const file=input.files[0]; if(!file||!activeRow) return;
+  const slug=input.getAttribute('data-slug');
+  try{
+    showToast('Uploading image...','success');
+    const url=await uploadImage(file);
+    // Save image url to extra_fields in supabase
+    const ef=JSON.parse(activeRow.extra_fields||'{}');
+    ef[slug]=url;
+    await updateRow(activeRow.id,{extra_fields:JSON.stringify(ef),image_url:url});
+    showToast('Image saved!','success');
+    await fetchData();
+  }catch(e){showToast('Upload failed: '+e.message,'error');}
+}
+
+// ── WORD ──
+function downloadWord(content,title){
+  const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:12pt;line-height:1.6;margin:40px;}h1{font-size:16pt;margin-bottom:20px;}</style></head><body><h1>${title}</h1><div>${content}</div></body></html>`;
+  const blob=new Blob(['\ufeff',html],{type:'application/msword'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=slugify(title||'content')+'.doc'; a.click(); URL.revokeObjectURL(a.href);
+}
+function readWordFile(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{const div=document.createElement('div');div.innerHTML=e.target.result;resolve(div.innerText||div.textContent||'');};
+    reader.onerror=reject; reader.readAsText(file);
+  });
+}
 
 
 async function fetchData(){
@@ -377,20 +979,19 @@ function renderTable(rows){
   const fm={needs:r=>r.writer_approved&&!r.seo_approved,approved:r=>r.seo_approved};
   const filtered=currentFilter==='all'?rows:rows.filter(fm[currentFilter]||Boolean);
   if(!filtered.length){c.innerHTML='<div class="empty-state"><div class="empty-title">Nothing here</div></div>';return;}
-  let h=`<table><thead><tr><th>#</th><th>Title</th><th>Type</th><th>Image</th><th>Writer</th><th>Date</th><th>SEO Approve</th><th>Status</th></tr></thead><tbody>`;
+  let h=`<table><thead><tr><th>#</th><th>Title</th><th>Type</th><th>Writer</th><th>Date</th><th>SEO Approve</th><th>Status</th></tr></thead><tbody>`;
   filtered.forEach((row,i)=>{
     const can=row.writer_approved;
     h+=`<tr onclick="${can?`openModal(${row.id})`:''}" style="${can?'':'opacity:0.5;cursor:default'}">
       <td class="num-cell">${i+1}</td>
       <td style="font-weight:600">${row.title||'-'}</td>
       <td>${typePillHTML(row)}</td>
-      <td>${row.image_url?`<img class="img-thumb" src="${row.image_url}"/>`:'–'}</td>
       <td style="color:var(--muted)">${row.writer_name||'-'}</td>
       <td class="date-cell">${formatDate(row.created_at)}</td>
       <td onclick="event.stopPropagation()">${can?`
         <div class="toggle-wrap">
           <label class="toggle seo" id="stog_${row.id}">
-            <input type="checkbox" ${row.seo_approved?'checked':''} onchange="quickToggle(${row.id},this.checked,document.getElementById('stog_${row.id}'))"/>
+            <input type="checkbox" ${row.seo_approved?'checked':''} data-id="${row.id}" onchange="handleTableToggle(this)"/>
             <span class="toggle-slider"></span>
           </label>
           <span class="toggle-label">${row.seo_approved?'Approved':'Pending'}</span>
@@ -400,8 +1001,21 @@ function renderTable(rows){
   });
   h+=`</tbody></table>`; c.innerHTML=h;
 }
+async function handleTableToggle(input){
+  const id=input.getAttribute('data-id');
+  const el=document.getElementById('stog_'+id);
+  if(!el) return;
+  el.classList.add('saving');
+  try{
+    await updateRow(id,{seo_approved:input.checked});
+    showToast(input.checked?'Approved! CMO notified.':'Removed.','success');
+    await logActivity(input.checked?'approved':'unapproved','SEO approval changed',parseInt(id));
+    await fetchData();
+  }catch(e){showToast('Failed: '+e.message,'error');}
+  finally{el.classList.remove('saving');}
+}
 function openModal(id){
-  activeRow=allRows.find(r=>r.id==id); if(!activeRow)return;
+  activeRow=allRows.find(r=>r.id==id); if(!activeRow) return;
   document.getElementById('fsTitle').textContent=activeRow.title||'Untitled';
   document.getElementById('fsSubtitle').textContent=`Written by ${activeRow.writer_name||'-'} · ${formatDate(activeRow.created_at)}`;
   document.getElementById('fsWriter').textContent=activeRow.writer_name||'-';
@@ -409,52 +1023,63 @@ function openModal(id){
   document.getElementById('fsTypeVal').innerHTML=typePillHTML(activeRow);
   document.getElementById('fsStatus').innerHTML=badgeHTML(getStatus(activeRow));
   document.getElementById('fsType').innerHTML=typePillHTML(activeRow);
-  document.getElementById('fsOriginal').textContent=activeRow.original_content||activeRow.content||'No content.';
-  document.getElementById('fsEditable').value=activeRow.content||'';
-  const img=document.getElementById('fsImg'); const noImg=document.getElementById('fsNoImg');
-  if(activeRow.image_url){img.src=activeRow.image_url;img.classList.add('show');noImg.style.display='none';}
-  else{img.classList.remove('show');noImg.style.display='block';}
+  const ef=JSON.parse(activeRow.extra_fields||'{}');
+  ef.name=activeRow.title||'';
+  const ct=activeRow.content_type;
+  if(ct==='Blog') ef['blog-content']=activeRow.content||'';
+  else if(ct==='Whitepaper') ef['whitepaper-content']=activeRow.content||'';
+  else if(ct==='Newsletter') ef['pr-description']=activeRow.content||'';
+  else ef['casestudy-content']=activeRow.content||'';
+  document.getElementById('fsFields').innerHTML=buildFieldForm(ct,ef,false);
   document.getElementById('fsToggleInput').checked=activeRow.seo_approved;
   document.getElementById('fsToggleLabel').textContent=activeRow.seo_approved?'Approved':'Pending';
   openFS();
 }
-async function handleImgUpload(input){
-  const file=input.files[0]; if(!file)return;
+async function saveEdits(){
+  if(!activeRow) return;
+  const ef=collectFieldValues(activeRow.content_type);
+  const mainContent=ef['blog-content']||ef['whitepaper-content']||ef['pr-description']||ef['casestudy-content']||'';
+  const title=ef['name']||activeRow.title||'';
   try{
-    showToast('Uploading image...','success');
-    const url=await uploadImage(file);
-    await updateRow(activeRow.id,{image_url:url});
-    const img=document.getElementById('fsImg'); img.src=url; img.classList.add('show');
-    document.getElementById('fsNoImg').style.display='none';
-    showToast('Image uploaded!','success'); await fetchData();
-  }catch(e){showToast('Failed: '+e.message,'error');}
+    await updateRow(activeRow.id,{title,content:mainContent,extra_fields:JSON.stringify(ef)});
+    showToast('Edits saved!','success');
+    await logActivity('edited','SEO edited content',activeRow.id,activeRow.title);
+    activeRow.content=mainContent; activeRow.title=title; activeRow.extra_fields=JSON.stringify(ef);
+    await fetchData();
+  }catch(e){showToast('Save failed: '+e.message,'error');}
 }
-function downloadWordFile(){downloadWord(document.getElementById('fsEditable').value||activeRow.content||'',activeRow.title||'content');showToast('Word file downloaded!','success');}
+async function saveAndClose(){await saveEdits();closeFS();}
+function downloadWordFile(){
+  const ef=collectFieldValues(activeRow.content_type);
+  const c=ef['blog-content']||ef['whitepaper-content']||ef['pr-description']||ef['casestudy-content']||activeRow.content||'';
+  downloadWord(c,activeRow.title||'content'); showToast('Downloaded!','success');
+}
 async function handleWordUpload(input){
-  const file=input.files[0]; if(!file)return;
+  const file=input.files[0]; if(!file) return;
   try{
     showToast('Reading Word file...','success');
     const text=await readWordFile(file);
-    document.getElementById('fsEditable').value=text;
+    const ct=activeRow.content_type;
+    const rtSlug=ct==='Blog'?'blog-content':ct==='Whitepaper'?'whitepaper-content':ct==='Newsletter'?'pr-description':'casestudy-content';
+    const el=document.getElementById('rtf_'+rtSlug.replace(/[^a-z0-9]/g,'_'));
+    if(el) el.innerHTML=text;
     await updateRow(activeRow.id,{content:text});
-    showToast('Word content saved!','success'); activeRow.content=text; await fetchData();
+    showToast('Content loaded!','success');
   }catch(e){showToast('Failed: '+e.message,'error');}
-}
-async function saveEdits(){
-  const val=document.getElementById('fsEditable').value.trim();
-  if(!val){showToast('Content cannot be empty.','error');return;}
-  try{await updateRow(activeRow.id,{content:val});showToast('Edits saved!','success');activeRow.content=val;await fetchData();}
-  catch(e){showToast('Save failed: '+e.message,'error');}
 }
 async function handleFsToggle(){
   const checked=document.getElementById('fsToggleInput').checked;
   document.getElementById('fsToggleLabel').textContent=checked?'Approved':'Pending';
-  await quickToggle(activeRow.id,checked,document.getElementById('fsToggle'));
-}
-async function quickToggle(id,checked,el){
+  await saveEdits();
+  const el=document.getElementById('fsToggle');
   el.classList.add('saving');
-  try{await updateRow(id,{seo_approved:checked});showToast(checked?'Approved! CMO will be notified.':'Removed.','success');await fetchData();}
-  catch(e){showToast('Failed: '+e.message,'error');}finally{el.classList.remove('saving');}
+  try{
+    await updateRow(activeRow.id,{seo_approved:checked});
+    showToast(checked?'Approved! CMO notified.':'Removed.','success');
+    await logActivity(checked?'approved':'unapproved','SEO approved content',activeRow.id,activeRow.title);
+    await fetchData();
+  }catch(e){showToast('Failed: '+e.message,'error');}
+  finally{el.classList.remove('saving');}
 }
 fetchData();
 </script>
