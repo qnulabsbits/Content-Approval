@@ -273,7 +273,7 @@ td{padding:13px 16px;font-size:13px;vertical-align:middle;}
     <div class="admin-nav-item active" onclick="showSection('dashboard',this)"><span class="admin-nav-icon">&#128202;</span> Dashboard</div>
     <div class="admin-nav-item" onclick="showSection('users',this)"><span class="admin-nav-icon">&#128101;</span> User Management</div>
     <div class="admin-nav-item" onclick="showSection('activity',this)"><span class="admin-nav-icon">&#128336;</span> Activity Log</div>
-    <div class="admin-nav-item" onclick="showSection('content',this)"><span class="admin-nav-icon">&#128196;</span> All Content</div>
+    <div class="admin-nav-item" onclick="showSection('content',this)"><span class="admin-nav-icon"></span> All Content</div>
     <div style="margin-top:auto;padding:20px 24px 0;border-top:1px solid var(--border);margin-top:20px;">
       <div style="font-size:11px;color:var(--muted);margin-bottom:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Role Dashboards</div>
       <a href="writer.html" style="display:block;padding:8px 0;font-size:13px;color:var(--accent);text-decoration:none;font-weight:500;">&#9998; Writer</a>
@@ -357,6 +357,30 @@ td{padding:13px 16px;font-size:13px;vertical-align:middle;}
   </div>
 </div>
 
+
+<div class="modal-overlay" id="editUserModal">
+  <div class="modal-box">
+    <div class="modal-title">Edit User</div>
+    <div class="modal-sub">Update name, email or role for this user</div>
+    <input type="hidden" id="editUserId"/>
+    <div class="modal-group"><label class="modal-label">Full Name</label><input class="modal-input" id="editFullName" placeholder="Full name"/></div>
+    <div class="modal-group"><label class="modal-label">Email Address</label><input class="modal-input" type="email" id="editEmail" placeholder="email@qnulabs.com"/></div>
+    <div class="modal-group">
+      <label class="modal-label">Role</label>
+      <select class="modal-select" id="editRole">
+        <option value="writer">Writer</option>
+        <option value="seo">SEO Team</option>
+        <option value="cmo">CMO</option>
+        <option value="designer">Designer</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" id="editUserBtn" onclick="saveEditUser()">Save Changes</button>
+    </div>
+  </div>
+</div>
 <!-- RESET PASSWORD MODAL -->
 <div class="modal-overlay" id="resetModal">
   <div class="modal-box">
@@ -468,6 +492,7 @@ async function loadUsers(){
       </div>
       <div class="user-actions">
         <span style="background:${roleColors[u.role]||'var(--muted)'};color:#fff;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;">${u.role.toUpperCase()}</span>
+        <button class="btn-secondary" style="padding:6px 14px;font-size:12px;" onclick="openEditUser('${u.id}','${u.full_name||''}','${u.email}','${u.role}')">Edit</button>
         <button class="btn-secondary" style="padding:6px 14px;font-size:12px;" onclick="openResetPassword('${u.id}','${u.email}')">Reset Password</button>
         <button class="btn-secondary" style="padding:6px 14px;font-size:12px;color:var(--accent);border-color:var(--accent-border);" onclick="deleteUser('${u.id}','${u.email}')">Delete</button>
       </div>
@@ -606,9 +631,34 @@ async function deleteUser(userId, email){
   }catch(e){showToast('Error: '+e.message,'error');}
 }
 
+
+function openEditUser(userId, fullName, email, role){
+  document.getElementById('editUserId').value=userId;
+  document.getElementById('editFullName').value=fullName||'';
+  document.getElementById('editEmail').value=email||'';
+  document.getElementById('editRole').value=role||'writer';
+  document.getElementById('editUserModal').classList.add('show');
+}
+async function saveEditUser(){
+  const userId=document.getElementById('editUserId').value;
+  const fullName=document.getElementById('editFullName').value.trim();
+  const email=document.getElementById('editEmail').value.trim();
+  const role=document.getElementById('editRole').value;
+  if(!fullName||!email){showToast('Name and email are required.','error');return;}
+  const btn=document.getElementById('editUserBtn'); btn.disabled=true; btn.textContent='Saving...';
+  try{
+    await apiFetch('user_profiles?id=eq.'+userId,{method:'PATCH',body:JSON.stringify({full_name:fullName,email,role})});
+    showToast('User updated successfully!','success');
+    closeModal(); await loadUsers();
+    await logActivity('user_edited','Updated user: '+email+' role: '+role);
+  }catch(e){showToast('Error: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Save Changes';}
+}
+
 function closeModal(){
   document.getElementById('createUserModal').classList.remove('show');
   document.getElementById('resetModal').classList.remove('show');
+  document.getElementById('editUserModal').classList.remove('show');
 }
 
 // Init
