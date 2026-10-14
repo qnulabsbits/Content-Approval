@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>QNu Labs – Content Approval</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>:root{
+  --bg:#F5F0E8;--surface:#FFFFFF;--surface2:#FAF7F2;
+  --border:#E8DDD0;--border2:#D9CCBA;
+  --text:#1A1A1A;--muted:#7A6E63;
+  --accent:#E8450A;--accent-light:#FDF0EB;--accent-border:#F5C4B0;
+  --green:#1A7A4A;--green-light:#EBF7F1;--green-border:#A8DFC1;
+  --yellow:#B87A00;--yellow-light:#FDF8EB;--yellow-border:#EDD98A;
+  --purple:#7A3AAA;--purple-light:#F0EBF7;--purple-border:#D4B8EE;
+  --blue:#1A5FAA;--blue-light:#EBF3FF;--blue-border:#B8D4F5;
+  --shadow:0 1px 4px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.12);
+  --radius:14px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh;}
+/* ── VIEWS ── */
+.view{display:none;}.view.active{display:block;}
+/* ── LOGIN ── */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:48px 40px;width:100%;max-width:420px;box-shadow:var(--shadow-lg);}
+.login-logo{height:44px;display:block;margin:0 auto 24px;cursor:pointer;}
+.login-title{font-size:22px;font-weight:700;text-align:center;margin-bottom:4px;letter-spacing:-0.3px;}
+.login-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:28px;}
+.login-group{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+.login-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;}
+.login-input{background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-size:14px;font-family:'Inter',sans-serif;color:var(--text);outline:none;width:100%;transition:border 0.15s;}
+.login-input:focus{border-color:var(--accent);background:#fff;}
+.login-btn{background:var(--accent);color:#fff;border:none;padding:13px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;width:100%;margin-top:8px;transition:opacity 0.15s;}
+.login-btn:hover{opacity:0.88;}
+.login-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.login-error{background:var(--accent-light);border:1px solid var(--accent-border);color:var(--accent);padding:10px 14px;border-radius:8px;font-size:13px;margin-top:12px;display:none;}
+.login-error.show{display:block;}
+.pw-wrap{position:relative;}
+.pw-wrap .login-input{padding-right:44px;}
+.eye-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:4px;font-family:'Inter',sans-serif;font-weight:500;}
+/* ── TOPBAR ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 6px rgba(0,0,0,0.05);}
+.topbar-left{display:flex;align-items:center;gap:14px;}
+.logo{height:34px;width:auto;object-fit:contain;cursor:pointer;}
+.divider-v{width:1px;height:26px;background:var(--border2);}
+.topbar-title span:first-child{display:block;font-size:13px;font-weight:700;}
+.topbar-title span:last-child{display:block;font-size:11px;color:var(--muted);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.role-badge{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;}
+.role-badge.writer{background:var(--accent-light);border:1px solid var(--accent-border);color:var(--accent);}
+.role-badge.seo{background:var(--yellow-light);border:1px solid var(--yellow-border);color:var(--yellow);}
+.role-badge.cmo{background:var(--purple-light);border:1px solid var(--purple-border);color:var(--purple);}
+.role-badge.designer{background:var(--blue-light);border:1px solid var(--blue-border);color:var(--blue);}
+.role-badge.admin{background:#1A1A1A;color:#fff;}
+.live-badge{display:flex;align-items:center;gap:5px;background:var(--green-light);border:1px solid var(--green-border);color:var(--green);padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.last-updated{font-size:11px;color:var(--muted);}
+.topbar-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-family:'Inter',sans-serif;font-weight:500;transition:background 0.15s;}
+.topbar-btn:hover{background:var(--border);}
+.topbar-btn.danger{color:var(--accent);border-color:var(--accent-border);}
+/* ── MAIN ── */
+.main{max-width:1100px;margin:0 auto;padding:32px 24px;}
+.page-header{margin-bottom:24px;}
+.page-header h2{font-size:22px;font-weight:700;letter-spacing:-0.4px;margin-bottom:4px;}
+.page-header p{color:var(--muted);font-size:13px;}
+/* ── STATS ── */
+.stats-row{display:grid;gap:12px;margin-bottom:28px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);}
+.stat-label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;}
+.stat-value{font-size:30px;font-weight:700;}
+.stat-card.s-accent .stat-value{color:var(--accent);}
+.stat-card.s-green .stat-value{color:var(--green);}
+.stat-card.s-yellow .stat-value{color:var(--yellow);}
+.stat-card.s-purple .stat-value{color:var(--purple);}
+.stat-card.s-blue .stat-value{color:var(--blue);}
+.stat-card.s-total .stat-value{color:var(--text);}
+/* ── SECTION HEADER ── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
+.section-title{font-size:15px;font-weight:700;}
+.filter-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+.tab{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all 0.15s;font-family:'Inter',sans-serif;}
+.tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+/* ── TABLE ── */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:var(--surface2);border-bottom:1px solid var(--border);}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;white-space:nowrap;}
+tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s;cursor:pointer;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--surface2);}
+td{padding:11px 14px;font-size:13px;vertical-align:middle;}
+.num-cell{color:var(--muted);font-size:12px;width:36px;}
+.date-cell{color:var(--muted);font-size:11px;white-space:nowrap;}
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+.badge-dot{width:5px;height:5px;border-radius:50%;}
+.badge.draft{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+.badge.draft .badge-dot{background:var(--muted);}
+.badge.submitted{background:var(--accent-light);color:var(--accent);border:1px solid var(--accent-border);}
+.badge.submitted .badge-dot{background:var(--accent);}
+.badge.with-seo{background:var(--yellow-light);color:var(--yellow);border:1px solid var(--yellow-border);}
+.badge.with-seo .badge-dot{background:var(--yellow);}
+.badge.with-cmo{background:var(--purple-light);color:var(--purple);border:1px solid var(--purple-border);}
+.badge.with-cmo .badge-dot{background:var(--purple);}
+.badge.with-designer{background:var(--blue-light);color:var(--blue);border:1px solid var(--blue-border);}
+.badge.with-designer .badge-dot{background:var(--blue);}
+.badge.ready{background:var(--green-light);color:var(--green);border:1px solid var(--green-border);}
+.badge.ready .badge-dot{background:var(--green);}
+.badge.posted{background:#1A1A1A;color:#fff;}
+.badge.posted .badge-dot{background:#fff;}
+/* ── TYPE PILLS ── */
+.type-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+.type-pill.blog{background:var(--blue-light);color:var(--blue);}
+.type-pill.whitepaper{background:var(--purple-light);color:var(--purple);}
+.type-pill.newsletter{background:var(--green-light);color:var(--green);}
+.type-pill.other{background:var(--yellow-light);color:var(--yellow);}
+/* ── TOGGLE ── */
+.toggle-wrap{display:flex;align-items:center;gap:8px;min-height:28px;}
+.toggle{position:relative;display:inline-block;width:42px;height:24px;cursor:pointer;flex-shrink:0;vertical-align:middle;}
+.toggle input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-slider{position:absolute;inset:0;border-radius:24px;background:var(--border2);transition:0.2s;cursor:pointer;}
+.toggle-slider::before{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;left:3px;top:3px;transition:0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);}
+.toggle input:checked + .toggle-slider{background:var(--accent);}
+.toggle input:checked + .toggle-slider::before{transform:translateX(18px);}
+.toggle.seo input:checked + .toggle-slider{background:var(--yellow);}
+.toggle.cmo input:checked + .toggle-slider{background:var(--purple);}
+.toggle.designer input:checked + .toggle-slider{background:var(--blue);}
+.toggle.saving{opacity:0.4;pointer-events:none;}
+.toggle-label{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap;}
+/* ── CARDS ── */
+.fs-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);margin-bottom:18px;}
+.fs-card-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.fs-section-title{font-size:13px;font-weight:700;padding:10px 0 8px;border-bottom:1px solid var(--border);margin-bottom:14px;}
+/* ── FIELDS ── */
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.field-group{display:flex;flex-direction:column;gap:5px;}
+.field-group.full{grid-column:1/-1;}
+.field-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;display:flex;align-items:center;gap:3px;}
+.req{color:var(--accent);font-size:13px;}
+.field-input,.field-textarea,.field-date{background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);outline:none;width:100%;transition:border 0.15s;}
+.field-input:focus,.field-textarea:focus,.field-date:focus{border-color:var(--accent);background:#fff;}
+.field-input[disabled],.field-textarea[disabled]{opacity:0.7;cursor:default;}
+.field-textarea{min-height:90px;resize:vertical;line-height:1.6;}
+.field-richtext-wrap{border:1.5px solid var(--border);border-radius:8px;overflow:hidden;background:#fff;}
+.field-richtext-wrap:focus-within{border-color:var(--accent);}
+.richtext-toolbar{background:var(--surface2);border-bottom:1px solid var(--border);padding:5px 8px;display:flex;gap:4px;flex-wrap:wrap;}
+.rt-btn{background:transparent;border:1px solid var(--border);border-radius:5px;padding:3px 8px;cursor:pointer;font-size:12px;font-family:'Inter',sans-serif;color:var(--text);transition:all 0.15s;font-weight:500;}
+.rt-btn:hover{background:var(--border);}
+.richtext-editor{min-height:180px;padding:12px;font-size:13px;line-height:1.75;outline:none;color:var(--text);}
+.richtext-editor h2{font-size:17px;font-weight:700;margin:10px 0 5px;}
+.richtext-editor ul,.richtext-editor ol{padding-left:18px;margin:5px 0;}
+.faq-section{margin-bottom:8px;}
+.faq-pair{padding:12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);margin-bottom:10px;display:grid;gap:8px;}
+.upload-area{border:2px dashed var(--border);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:all 0.15s;}
+.upload-area:hover{border-color:var(--accent);background:var(--accent-light);}
+.upload-area input[type=file]{display:none;}
+.upload-area-label{font-size:12px;color:var(--muted);}
+.upload-area-label span{color:var(--accent);font-weight:600;}
+/* ── FULLSCREEN OVERLAY ── */
+.fs-overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;overflow-y:auto;animation:fsIn 0.18s ease;}
+.fs-overlay.show{display:block;}
+@keyframes fsIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.fs-topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+.fs-back-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;font-weight:500;display:flex;align-items:center;gap:5px;transition:background 0.15s;}
+.fs-back-btn:hover{background:var(--border);}
+.fs-title{font-size:15px;font-weight:700;letter-spacing:-0.2px;}
+.fs-subtitle{font-size:11px;color:var(--muted);margin-top:1px;}
+.fs-body{max-width:1200px;margin:0 auto;padding:28px 32px;}
+.fs-meta-row{display:flex;gap:20px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow);margin-bottom:18px;}
+.fs-meta-item{display:flex;flex-direction:column;gap:3px;}
+.fs-meta-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;}
+.fs-meta-value{font-size:14px;font-weight:600;}
+/* ── APPROVE SECTION ── */
+.approve-section{margin-top:18px;}
+.approve-inner{display:flex;align-items:center;justify-content:space-between;border-radius:12px;padding:16px 20px;flex-wrap:wrap;gap:12px;}
+.approve-inner.accent{background:var(--accent-light);border:1px solid var(--accent-border);}
+.approve-inner.yellow{background:var(--yellow-light);border:1px solid var(--yellow-border);}
+.approve-inner.purple{background:var(--purple-light);border:1px solid var(--purple-border);}
+.approve-inner.blue{background:var(--blue-light);border:1px solid var(--blue-border);}
+.approve-label{font-size:14px;font-weight:700;}
+.approve-label.accent{color:var(--accent);}
+.approve-label.yellow{color:var(--yellow);}
+.approve-label.purple{color:var(--purple);}
+.approve-label.blue{color:var(--blue);}
+.approve-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+/* ── PUBLISH OPTIONS ── */
+.publish-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;}
+.publish-opt{border:2px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all 0.15s;background:#fff;}
+.publish-opt:hover{border-color:var(--blue);}
+.publish-opt.selected-draft{border-color:var(--blue);background:var(--blue-light);}
+.publish-opt.selected-live{border-color:var(--green);background:var(--green-light);}
+.publish-opt-title{font-size:13px;font-weight:700;margin-bottom:3px;}
+.publish-opt-sub{font-size:11px;color:var(--muted);}
+.webflow-btn{background:var(--blue);color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;width:100%;margin-top:14px;transition:opacity 0.15s;}
+.webflow-btn:hover{opacity:0.88;}
+.webflow-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.post-result{margin-top:8px;font-size:13px;font-weight:600;text-align:center;}
+/* ── BUTTONS ── */
+.action-btn{border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity 0.15s;display:inline-flex;align-items:center;gap:5px;}
+.action-btn:hover{opacity:0.88;}
+.action-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.action-btn.primary{background:var(--accent);color:#fff;}
+.action-btn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.action-btn.green{background:var(--green);color:#fff;}
+.action-btn.blue{background:var(--blue);color:#fff;}
+.bell-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px;color:var(--muted);transition:all 0.15s;font-family:'Inter',sans-serif;}
+.bell-btn:hover{border-color:var(--yellow);color:var(--yellow);background:var(--yellow-light);}
+/* ── DOWNLOAD BAR ── */
+.download-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:var(--shadow);}
+.download-bar-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;white-space:nowrap;}
+.date-input{background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;font-family:'Inter',sans-serif;color:var(--text);outline:none;transition:border 0.15s;}
+.date-input:focus{border-color:var(--accent);}
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:12px 16px;border-radius:12px;font-size:13px;z-index:9999;transform:translateY(80px);opacity:0;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-lg);font-weight:500;max-width:340px;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{border-color:var(--green-border);}
+.toast.error{border-color:var(--accent-border);}
+.toast-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.toast.error .toast-dot{background:var(--accent);}
+/* ── MISC ── */
+.empty-state{text-align:center;padding:48px 24px;}
+.empty-title{font-size:15px;font-weight:600;margin-bottom:6px;}
+.empty-sub{font-size:13px;color:var(--muted);}
+.loading-row{display:flex;align-items:center;justify-content:center;gap:8px;padding:40px;color:var(--muted);font-size:13px;}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.save-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;}
+.img-thumb{width:34px;height:34px;border-radius:6px;object-fit:cover;border:1px solid var(--border);}
+/* ── ADMIN ── */
+.admin-grid{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 60px);}
+.admin-sidebar{background:var(--surface);border-right:1px solid var(--border);padding:16px 0;}
+.admin-nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);border-left:3px solid transparent;transition:all 0.15s;}
+.admin-nav-item:hover{background:var(--surface2);color:var(--text);}
+.admin-nav-item.active{background:var(--accent-light);color:var(--accent);border-left-color:var(--accent);font-weight:600;}
+.admin-content{padding:28px;overflow-y:auto;}
+.admin-section{display:none;}
+.admin-section.active{display:block;}
+.admin-section-title{font-size:18px;font-weight:700;margin-bottom:4px;}
+.admin-section-sub{font-size:13px;color:var(--muted);margin-bottom:22px;}
+.user-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;box-shadow:var(--shadow);flex-wrap:wrap;gap:10px;}
+.user-name{font-size:14px;font-weight:700;}
+.user-email{font-size:12px;color:var(--muted);}
+.user-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+.log-row{display:grid;grid-template-columns:140px 130px 90px 1fr;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;align-items:center;}
+.log-header{background:var(--surface2);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;font-size:10px;}
+.log-action{padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap;display:inline-block;}
+.log-action.login{background:var(--green-light);color:var(--green);}
+.log-action.approved{background:var(--accent-light);color:var(--accent);}
+.log-action.edited{background:var(--yellow-light);color:var(--yellow);}
+.log-action.posted{background:var(--blue-light);color:var(--blue);}
+.log-action.reminder{background:var(--purple-light);color:var(--purple);}
+.log-action.created{background:var(--green-light);color:var(--green);}
+.stats-mini{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:22px;}
+.stat-mini{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;box-shadow:var(--shadow);}
+.stat-mini-val{font-size:22px;font-weight:700;margin-bottom:3px;}
+.stat-mini-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600;letter-spacing:0.4px;}
+/* ── MODALS ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:400;align-items:center;justify-content:center;padding:24px;}
+.modal-overlay.show{display:flex;}
+.modal-box{background:var(--surface);border-radius:16px;padding:28px;width:100%;max-width:440px;box-shadow:var(--shadow-lg);}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:4px;}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:20px;}
+.modal-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.modal-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;}
+.modal-input,.modal-select{background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);outline:none;width:100%;transition:border 0.15s;}
+.modal-input:focus{border-color:var(--accent);background:#fff;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
+.btn-primary{background:var(--accent);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
+@media(max-width:900px){
+  .admin-grid{grid-template-columns:1fr;}
+  .admin-sidebar{border-right:none;border-bottom:1px solid var(--border);}
+  .field-grid{grid-template-columns:1fr;}
+  .publish-options{grid-template-columns:1fr;}
+  .stats-mini{grid-template-columns:repeat(3,1fr);}
+  .log-row{grid-template-columns:1fr 1fr;}
+  .topbar,.fs-topbar{padding:0 16px;}
+  .main,.fs-body,.admin-content{padding:18px 16px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     LOGIN VIEW
+══════════════════════════════════════════════════ -->
+<div class="view active" id="v-login">
+  <div class="login-wrap">
+    <div class="login-card">
+      <img class="login-logo" src="logo.png" alt="QNu Labs"/>
+      <div class="login-title">Content Approval System</div>
+      <div class="login-sub">QNu Labs — Corporate Marketing</div>
+      <div class="login-group">
+        <label class="login-label">Email Address</label>
+        <input class="login-input" type="email" id="loginEmail" placeholder="your@qnulabs.com" autocomplete="email"/>
+      </div>
+      <div class="login-group">
+        <label class="login-label">Password</label>
+        <div class="pw-wrap">
+          <input class="login-input" type="password" id="loginPw" placeholder="Enter your password" autocomplete="current-password"/>
+          <button class="eye-btn" type="button" id="eyeBtn" onclick="togglePw()">Show</button>
+        </div>
+      </div>
+      <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
+      <div class="login-error" id="loginErr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SHARED TOPBAR (hidden in login)
+══════════════════════════════════════════════════ -->
+<div id="mainTopbar" style="display:none;">
+  <div class="topbar">
+    <div class="topbar-left">
+      <img class="logo" src="logo.png" alt="QNu Labs" onclick="goHome()"/>
+      <div class="divider-v"></div>
+      <div class="topbar-title"><span>QNu Labs</span><span>Corporate Marketing</span></div>
+    </div>
+    <div class="topbar-right">
+      <span class="last-updated" id="lastUpdated">Loading...</span>
+      <div class="live-badge"><div class="live-dot"></div> Live</div>
+      <div class="role-badge" id="topUserBadge">-</div>
+      <button class="topbar-btn danger" onclick="logout()">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     WRITER VIEW
+══════════════════════════════════════════════════ -->
+<div class="view" id="v-writer">
+  <div class="main">
+    <div class="page-header"><h2>Content Submission</h2><p>Submit new content with all Webflow fields and approve for SEO review.</p></div>
+    <div class="download-bar">
+      <span class="download-bar-title">Bulk Download</span>
+      <label style="font-size:12px;color:var(--muted)">From</label><input type="date" class="date-input" id="dlFrom"/>
+      <label style="font-size:12px;color:var(--muted)">To</label><input type="date" class="date-input" id="dlTo"/>
+      <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadWord()">Word</button>
+      <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadPDF()">PDF</button>
+    </div>
+    <div class="stats-row" style="grid-template-columns:repeat(5,1fr)">
+      <div class="stat-card s-total"><div class="stat-label">Total</div><div class="stat-value" id="s1">-</div></div>
+      <div class="stat-card s-accent"><div class="stat-label">With SEO</div><div class="stat-value" id="s2">-</div></div>
+      <div class="stat-card s-yellow"><div class="stat-label">With CMO</div><div class="stat-value" id="s3">-</div></div>
+      <div class="stat-card s-blue"><div class="stat-label">With Designer</div><div class="stat-value" id="s4">-</div></div>
+      <div class="stat-card s-green"><div class="stat-label">Posted</div><div class="stat-value" id="s5">-</div></div>
+    </div>
+    <div class="fs-card" style="margin-bottom:22px;">
+      <div class="fs-card-title">Add New Content</div>
+      <div class="field-grid">
+        <div class="field-group"><div class="field-label">Content Type <span class="req">*</span></div>
+          <select class="field-input" id="newType" onchange="onTypeChange()">
+            <option value="">Select type...</option>
+            <option value="Blog">Blog</option>
+            <option value="Whitepaper">Whitepaper</option>
+            <option value="Newsletter">Newsletter</option>
+            <option value="Other">Other (Case Study)</option>
+          </select>
+        </div>
+        <div class="field-group"><div class="field-label">Your Name <span class="req">*</span></div><input type="text" class="field-input" id="newWriter" placeholder="Your full name"/></div>
+      </div>
+      <div id="dynamicFields" style="margin-top:12px;display:none;"><div class="field-grid" id="dynamicFieldsInner"></div></div>
+      <div class="save-bar"><button class="action-btn primary" id="submitBtn" onclick="submitNew()">Add Content</button></div>
+    </div>
+    <div class="section-header">
+      <div class="section-title">All Submissions</div>
+      <div class="filter-tabs">
+        <button class="tab active" onclick="filterRows('all',this)">All</button>
+        <button class="tab" onclick="filterRows('pending',this)">Pending</button>
+        <button class="tab" onclick="filterRows('review',this)">In Review</button>
+        <button class="tab" onclick="filterRows('posted',this)">Posted</button>
+      </div>
+    </div>
+    <div class="table-wrap"><div id="tableContainer"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SEO VIEW
+══════════════════════════════════════════════════ -->
+<div class="view" id="v-seo">
+  <div class="main">
+    <div class="page-header"><h2>SEO Review Queue</h2><p>Click any row to open full-screen editor with all Webflow fields.</p></div>
+    <div class="download-bar">
+      <span class="download-bar-title">Bulk Download</span>
+      <label style="font-size:12px;color:var(--muted)">From</label><input type="date" class="date-input" id="dlFrom"/>
+      <label style="font-size:12px;color:var(--muted)">To</label><input type="date" class="date-input" id="dlTo"/>
+      <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadWord()">Word</button>
+      <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadPDF()">PDF</button>
+    </div>
+    <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat-card s-accent"><div class="stat-label">Needs Review</div><div class="stat-value" id="s1">-</div></div>
+      <div class="stat-card s-yellow"><div class="stat-label">Approved</div><div class="stat-value" id="s2">-</div></div>
+      <div class="stat-card s-green"><div class="stat-label">Posted</div><div class="stat-value" id="s3">-</div></div>
+      <div class="stat-card s-total"><div class="stat-label">Total</div><div class="stat-value" id="s4">-</div></div>
+    </div>
+    <div class="section-header">
+      <div class="section-title">Content Queue</div>
+      <div class="filter-tabs">
+        <button class="tab active" onclick="filterRows('all',this)">All</button>
+        <button class="tab" onclick="filterRows('needs',this)">Needs Review</button>
+        <button class="tab" onclick="filterRows('approved',this)">Approved</button>
+      </div>
+    </div>
+    <div class="table-wrap"><div id="tableContainer"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     CMO VIEW
+══════════════════════════════════════════════════ -->
+<div class="view" id="v-cmo">
+  <div class="main">
+    <div class="page-header"><h2>CMO Final Approval</h2><p>Review SEO content, edit all fields and approve for Designer.</p></div>
+    <div class="download-bar">
+      <span class="download-bar-title">Bulk Download</span>
+      <label style="font-size:12px;color:var(--muted)">From</label><input type="date" class="date-input" id="dlFrom"/>
+      <label style="font-size:12px;color:var(--muted)">To</label><input type="date" class="date-input" id="dlTo"/>
+      <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadWord()">Word</button>
+      <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadPDF()">PDF</button>
+    </div>
+    <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat-card s-purple"><div class="stat-label">Awaiting Approval</div><div class="stat-value" id="s1">-</div></div>
+      <div class="stat-card s-green"><div class="stat-label">Approved</div><div class="stat-value" id="s2">-</div></div>
+      <div class="stat-card s-blue"><div class="stat-label">Posted</div><div class="stat-value" id="s3">-</div></div>
+      <div class="stat-card s-total"><div class="stat-label">Total</div><div class="stat-value" id="s4">-</div></div>
+    </div>
+    <div class="section-header">
+      <div class="section-title">Content for Final Approval</div>
+      <div class="filter-tabs">
+        <button class="tab active" onclick="filterRows('all',this)">All</button>
+        <button class="tab" onclick="filterRows('needs',this)">Needs Approval</button>
+        <button class="tab" onclick="filterRows('approved',this)">Approved</button>
+      </div>
+    </div>
+    <div class="table-wrap"><div id="tableContainer"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     DESIGNER VIEW
+══════════════════════════════════════════════════ -->
+<div class="view" id="v-designer">
+  <div class="main">
+    <div class="page-header"><h2>Designer Publication Queue</h2><p>Review approved content and post directly to Webflow.</p></div>
+    <div class="download-bar">
+      <span class="download-bar-title">Bulk Download</span>
+      <label style="font-size:12px;color:var(--muted)">From</label><input type="date" class="date-input" id="dlFrom"/>
+      <label style="font-size:12px;color:var(--muted)">To</label><input type="date" class="date-input" id="dlTo"/>
+      <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadWord()">Word</button>
+      <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadPDF()">PDF</button>
+    </div>
+    <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat-card s-blue"><div class="stat-label">Ready to Post</div><div class="stat-value" id="s1">-</div></div>
+      <div class="stat-card s-green"><div class="stat-label">Posted Live</div><div class="stat-value" id="s2">-</div></div>
+      <div class="stat-card s-yellow"><div class="stat-label">Draft</div><div class="stat-value" id="s3">-</div></div>
+      <div class="stat-card s-total"><div class="stat-label">Total</div><div class="stat-value" id="s4">-</div></div>
+    </div>
+    <div class="section-header">
+      <div class="section-title">Publication Queue</div>
+      <div class="filter-tabs">
+        <button class="tab active" onclick="filterRows('all',this)">All</button>
+        <button class="tab" onclick="filterRows('ready',this)">Ready to Post</button>
+        <button class="tab" onclick="filterRows('posted',this)">Posted</button>
+      </div>
+    </div>
+    <div class="table-wrap"><div id="tableContainer"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     ADMIN VIEW
+══════════════════════════════════════════════════ -->
+<div class="view" id="v-admin">
+  <div class="admin-grid">
+    <div class="admin-sidebar">
+      <div style="padding:0 20px 16px;border-bottom:1px solid var(--border);margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:700;" id="topUserName">Admin</div>
+        <div style="font-size:11px;color:var(--muted);">Administrator</div>
+      </div>
+      <div class="admin-nav-item active" onclick="adminShowSection('dashboard',this)">Dashboard</div>
+      <div class="admin-nav-item" onclick="adminShowSection('users',this)">User Management</div>
+      <div class="admin-nav-item" onclick="adminShowSection('activity',this)">Activity Log</div>
+      <div class="admin-nav-item" onclick="adminShowSection('content',this)">All Content</div>
+      <div style="padding:16px 20px 0;border-top:1px solid var(--border);margin-top:16px;">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Role Dashboards</div>
+        <a href="#" onclick="QNU_SESSION.role='writer';goHome();fetchData();return false;" style="display:block;padding:7px 0;font-size:13px;color:var(--accent);text-decoration:none;font-weight:500;">Writer</a>
+        <a href="#" onclick="QNU_SESSION.role='seo';goHome();fetchData();return false;" style="display:block;padding:7px 0;font-size:13px;color:var(--yellow);text-decoration:none;font-weight:500;">SEO Team</a>
+        <a href="#" onclick="QNU_SESSION.role='cmo';goHome();fetchData();return false;" style="display:block;padding:7px 0;font-size:13px;color:var(--purple);text-decoration:none;font-weight:500;">CMO</a>
+        <a href="#" onclick="QNU_SESSION.role='designer';goHome();fetchData();return false;" style="display:block;padding:7px 0;font-size:13px;color:var(--blue);text-decoration:none;font-weight:500;">Designer</a>
+        <a href="#" onclick="QNU_SESSION.role='admin';goHome();loadAdminDashboard();return false;" style="display:block;padding:7px 0;font-size:13px;color:#1A1A1A;text-decoration:none;font-weight:500;">Back to Admin</a>
+      </div>
+    </div>
+    <div class="admin-content">
+      <div class="admin-section active" id="asec-dashboard">
+        <div class="admin-section-title">Dashboard Overview</div>
+        <div class="admin-section-sub">Live pipeline stats and recent activity</div>
+        <div class="stats-mini">
+          <div class="stat-mini"><div class="stat-mini-val" id="ads0">-</div><div class="stat-mini-lbl">Total</div></div>
+          <div class="stat-mini"><div class="stat-mini-val" style="color:var(--accent)" id="ads1">-</div><div class="stat-mini-lbl">In Progress</div></div>
+          <div class="stat-mini"><div class="stat-mini-val" style="color:var(--yellow)" id="ads2">-</div><div class="stat-mini-lbl">With SEO</div></div>
+          <div class="stat-mini"><div class="stat-mini-val" style="color:var(--purple)" id="ads3">-</div><div class="stat-mini-lbl">With CMO</div></div>
+          <div class="stat-mini"><div class="stat-mini-val" style="color:var(--blue)" id="ads4">-</div><div class="stat-mini-lbl">With Designer</div></div>
+          <div class="stat-mini"><div class="stat-mini-val" style="color:var(--green)" id="ads5">-</div><div class="stat-mini-lbl">Posted</div></div>
+        </div>
+        <div class="section-title" style="margin-bottom:10px;font-size:13px;">Recent Activity</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+          <div class="log-row log-header"><div>Time</div><div>User</div><div>Action</div><div>Details</div></div>
+          <div id="recentActList"></div>
+        </div>
+      </div>
+      <div class="admin-section" id="asec-users">
+        <div class="admin-section-title">User Management</div>
+        <div class="admin-section-sub">Create, edit and manage team accounts</div>
+        <button class="btn-primary" onclick="openCreateUser()" style="margin-bottom:18px;">+ Create New User</button>
+        <div id="userList"><div class="loading-row"><span class="spinner"></span> Loading...</div></div>
+      </div>
+      <div class="admin-section" id="asec-activity">
+        <div class="admin-section-title">Activity Log</div>
+        <div class="admin-section-sub">Full audit trail of all user actions</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+          <div class="log-row log-header"><div>Time</div><div>User</div><div>Action</div><div>Details</div></div>
+          <div id="activityList"><div class="loading-row"><span class="spinner"></span> Loading...</div></div>
+        </div>
+      </div>
+      <div class="admin-section" id="asec-content">
+        <div class="admin-section-title">All Content</div>
+        <div class="admin-section-sub">Full view of every piece of content</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+          <div id="contentList"><div class="loading-row"><span class="spinner"></span> Loading...</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SHARED FULLSCREEN OVERLAY (all roles)
+══════════════════════════════════════════════════ -->
+<div class="fs-overlay" id="fsOverlay">
+  <div class="fs-topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="fs-back-btn" onclick="saveAndClose()">Back</button>
+      <div>
+        <div class="fs-title" id="fsTitle">-</div>
+        <div class="fs-subtitle" id="fsSubtitle">-</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div id="fsMeta1"></div>
+      <div id="fsMeta2"></div>
+      <!-- Word buttons for non-designer roles -->
+      <button class="action-btn secondary" style="padding:5px 12px;font-size:12px;" onclick="downloadActiveWordFile()">Word</button>
+      <button class="action-btn secondary" style="padding:5px 12px;font-size:12px;" onclick="document.getElementById('fsWordInput').click()">Upload Word</button>
+      <input type="file" id="fsWordInput" accept=".doc,.docx,.txt" style="display:none" onchange="handleWordUpload(this)"/>
+    </div>
+  </div>
+  <div class="fs-body">
+    <!-- Designer section name -->
+    <div id="fsDesignerSection" style="display:none;margin-bottom:14px;">
+      <span style="font-size:13px;font-weight:600;color:var(--blue);">Webflow Section: </span>
+      <span id="fsSection" style="font-size:13px;font-weight:700;color:var(--blue);">-</span>
+    </div>
+    <!-- Fields -->
+    <div class="fs-card">
+      <div class="fs-card-title" id="fsFieldsTitle">Content Fields
+        <button class="action-btn primary" style="padding:5px 12px;font-size:12px;" onclick="saveEdits()">Save</button>
+      </div>
+      <div class="field-grid" id="fsFieldsWrap"></div>
+    </div>
+    <!-- Approval toggle -->
+    <div id="fsApproveSection" class="approve-section">
+      <div class="approve-inner accent" id="fsApproveInner">
+        <div>
+          <div class="approve-label accent" id="fsApproveLabel">Approve</div>
+          <div class="approve-sub" id="fsApproveSub">Triggers notification to next team</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle" id="fsToggle"><input type="checkbox" id="fsToggleInput" onchange="handleFsToggle()"/><span class="toggle-slider"></span></label>
+          <span class="toggle-label" id="fsToggleLabel">Pending</span>
+        </div>
+      </div>
+    </div>
+    <!-- Designer: Webflow post section -->
+    <div id="fsPostSection" style="display:none;">
+      <div class="fs-card" style="border:2px solid var(--blue);background:var(--blue-light);margin-top:16px;">
+        <div class="fs-card-title" style="color:var(--blue);">How to post to Webflow</div>
+        <div class="publish-options">
+          <div class="publish-opt selected-draft" id="optDraft" onclick="selectPublishOpt('draft')">
+            <div class="publish-opt-title">Save as Draft</div>
+            <div class="publish-opt-sub">In Webflow CMS but not live on website</div>
+          </div>
+          <div class="publish-opt" id="optLive" onclick="selectPublishOpt('live')">
+            <div class="publish-opt-title">Publish Live</div>
+            <div class="publish-opt-sub">Goes live immediately</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid var(--blue-border);font-size:12px;font-weight:600;color:var(--blue);">
+          Selected: <span id="publishModeText">Save as Draft</span>
+        </div>
+      </div>
+      <button class="webflow-btn" id="postBtn" onclick="postToWebflow()" disabled>Post to Webflow</button>
+      <div class="post-result" id="postResult"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     ADMIN MODALS
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="createUserModal">
+  <div class="modal-box">
+    <div class="modal-title">Create New User</div>
+    <div class="modal-sub">User will be able to log in with these credentials</div>
+    <div class="modal-group"><label class="modal-label">Full Name</label><input class="modal-input" id="newFullName" placeholder="e.g. Priya Sharma"/></div>
+    <div class="modal-group"><label class="modal-label">Email</label><input class="modal-input" type="email" id="newEmail" placeholder="priya@qnulabs.com"/></div>
+    <div class="modal-group"><label class="modal-label">Password</label><input class="modal-input" type="password" id="newPassword" placeholder="Min 6 characters"/></div>
+    <div class="modal-group"><label class="modal-label">Role</label>
+      <select class="modal-select" id="newRole">
+        <option value="writer">Writer</option><option value="seo">SEO Team</option>
+        <option value="cmo">CMO</option><option value="designer">Designer</option><option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+      <button class="btn-primary" id="createUserBtn" onclick="createUser()">Create User</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="editUserModal">
+  <div class="modal-box">
+    <div class="modal-title">Edit User</div>
+    <div class="modal-sub">Update name, email or role</div>
+    <input type="hidden" id="editUserId"/>
+    <div class="modal-group"><label class="modal-label">Full Name</label><input class="modal-input" id="editFullName"/></div>
+    <div class="modal-group"><label class="modal-label">Email</label><input class="modal-input" type="email" id="editEmail"/></div>
+    <div class="modal-group"><label class="modal-label">Role</label>
+      <select class="modal-select" id="editRole">
+        <option value="writer">Writer</option><option value="seo">SEO Team</option>
+        <option value="cmo">CMO</option><option value="designer">Designer</option><option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+      <button class="btn-primary" id="editUserBtn" onclick="saveEditUser()">Save</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="resetPwModal">
+  <div class="modal-box">
+    <div class="modal-title">Reset Password</div>
+    <div class="modal-sub" id="resetPwSub">Set a new password</div>
+    <div class="modal-group"><label class="modal-label">New Password</label><input class="modal-input" type="password" id="resetPwInput" placeholder="Min 6 characters"/></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeAdminModal()">Cancel</button>
+      <button class="btn-primary" id="resetPwBtn" onclick="doResetPw()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     TOAST
+══════════════════════════════════════════════════ -->
+<div class="toast" id="toast"><div class="toast-dot"></div><span id="toastMsg"></span></div>
+
+<script>
+
+// ════════════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════════════
+const SUPA_URL='https://imtoahbuliuywiljxvpg.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo';
+const SUPA_STORAGE=SUPA_URL+'/storage/v1';
+const TABLE='content_approvals';
+const BUCKET='content-images';
+const WEBFLOW_EDGE='https://imtoahbuliuywiljxvpg.supabase.co/functions/v1/post-to-webflow';
+const SECTION_NAMES={Blog:'Blogs',Whitepaper:'Whitepapers',Newsletter:'Newsroom',Other:'Case Studies'};
+
+// ════════════════════════════════════════════════════
+// SESSION
+// ════════════════════════════════════════════════════
+let QNU_SESSION=(()=>{try{return JSON.parse(localStorage.getItem('qnu_session')||'null');}catch(_){return null;}})();
+
+function logout(){
+  localStorage.removeItem('qnu_session');
+  QNU_SESSION=null;
+  showView('login');
+}
+
+// ════════════════════════════════════════════════════
+// VIEW ROUTER
+// ════════════════════════════════════════════════════
+function showView(viewId){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const v=document.getElementById('v-'+viewId);
+  if(v) v.classList.add('active');
+  document.body.style.overflow='';
+  if(viewId!=='login'){
+    updateTopbar();
+  }
+}
+
+function updateTopbar(){
+  if(!QNU_SESSION) return;
+  const badge=document.getElementById('topUserBadge');
+  const name=document.getElementById('topUserName');
+  if(badge){
+    badge.className='role-badge '+QNU_SESSION.role;
+    badge.textContent=(QNU_SESSION.full_name||QNU_SESSION.role).split(' ')[0]+' ('+QNU_SESSION.role+')';
+  }
+  if(name) name.textContent=QNU_SESSION.full_name||QNU_SESSION.email||'';
+}
+
+function goHome(){
+  if(!QNU_SESSION) return;
+  const map={admin:'admin',writer:'writer',seo:'seo',cmo:'cmo',designer:'designer'};
+  showView(map[QNU_SESSION.role]||'login');
+  if(QNU_SESSION.role!=='admin') fetchData();
+}
+
+// ════════════════════════════════════════════════════
+// LOGIN
+// ════════════════════════════════════════════════════
+function togglePw(){
+  const pw=document.getElementById('loginPw');
+  const btn=document.getElementById('eyeBtn');
+  if(pw.type==='password'){pw.type='text';btn.textContent='Hide';}
+  else{pw.type='password';btn.textContent='Show';}
+}
+
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const password=document.getElementById('loginPw').value;
+  const btn=document.getElementById('loginBtn');
+  const err=document.getElementById('loginErr');
+  err.classList.remove('show');
+  if(!email||!password){err.textContent='Please enter email and password.';err.classList.add('show');return;}
+  btn.disabled=true; btn.textContent='Signing in...';
+  try{
+    const res=await fetch(SUPA_URL+'/auth/v1/token?grant_type=password',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email,password})
+    });
+    const data=await res.json();
+    if(data.error||!data.access_token){
+      err.textContent=data.error_description||data.msg||'Invalid email or password.';
+      err.classList.add('show'); btn.disabled=false; btn.textContent='Sign In'; return;
+    }
+    // Get role from user_profiles
+    const profRes=await fetch(SUPA_URL+'/rest/v1/user_profiles?id=eq.'+data.user.id+'&select=*',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+data.access_token}
+    });
+    const profiles=await profRes.json();
+    if(!profiles||!profiles.length){
+      err.textContent='No role assigned. Contact admin.';
+      err.classList.add('show'); btn.disabled=false; btn.textContent='Sign In'; return;
+    }
+    const profile=profiles[0];
+    QNU_SESSION={
+      user_id:data.user.id,email:data.user.email,
+      access_token:data.access_token,refresh_token:data.refresh_token,
+      expires_at:data.expires_at,role:profile.role,full_name:profile.full_name
+    };
+    localStorage.setItem('qnu_session',JSON.stringify(QNU_SESSION));
+    // Log login
+    await logActivity('login','User logged in');
+    // Update last_login
+    await fetch(SUPA_URL+'/rest/v1/user_profiles?id=eq.'+data.user.id,{
+      method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+data.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({last_login:new Date().toISOString()})
+    });
+    goHome();
+    if(QNU_SESSION.role!=='admin') fetchData();
+    else loadAdminDashboard();
+  }catch(e){
+    err.textContent='Connection error. Try again.';
+    err.classList.add('show'); btn.disabled=false; btn.textContent='Sign In';
+  }
+}
+
+// ════════════════════════════════════════════════════
+// SUPABASE API
+// ════════════════════════════════════════════════════
+async function sbFetch(path,options={}){
+  const isWrite=options.method&&options.method!=='GET';
+  const token=(QNU_SESSION&&QNU_SESSION.access_token)?QNU_SESSION.access_token:SUPA_KEY;
+  const h={'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'};
+  if(isWrite) h['Prefer']='return=representation';
+  if(options.headers) Object.assign(h,options.headers);
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),12000);
+  try{
+    const res=await fetch(SUPA_URL+'/rest/v1/'+path,{...options,headers:h,signal:controller.signal});
+    clearTimeout(timer);
+    if(!res.ok) throw new Error(await res.text());
+    const t=await res.text(); return t?JSON.parse(t):null;
+  }catch(e){clearTimeout(timer);throw e;}
+}
+async function getAll(){return await sbFetch(TABLE+'?order=created_at.asc&select=*');}
+async function insertRow(data){return await sbFetch(TABLE,{method:'POST',body:JSON.stringify(data)});}
+async function updateRow(id,data){return await sbFetch(TABLE+'?id=eq.'+id,{method:'PATCH',body:JSON.stringify(data)});}
+
+async function uploadImage(file){
+  const ext=file.name.split('.').pop();
+  const path='images/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
+  const token=(QNU_SESSION&&QNU_SESSION.access_token)?QNU_SESSION.access_token:SUPA_KEY;
+  const res=await fetch(SUPA_STORAGE+'/object/'+BUCKET+'/'+path,{
+    method:'POST',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':file.type,'x-upsert':'true'},
+    body:file
+  });
+  if(!res.ok){
+    let msg='Upload failed (HTTP '+res.status+')';
+    try{const e=await res.json();msg=e.message||e.error||msg;}catch(_){}
+    throw new Error(msg);
+  }
+  return SUPA_STORAGE+'/object/public/'+BUCKET+'/'+path;
+}
+
+async function logActivity(action,details,rowId=null,rowTitle=null){
+  if(!QNU_SESSION) return;
+  try{
+    await fetch(SUPA_URL+'/rest/v1/activity_log',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+QNU_SESSION.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({user_id:QNU_SESSION.user_id,user_email:QNU_SESSION.email,user_role:QNU_SESSION.role,action,details,row_id:rowId,row_title:rowTitle})
+    });
+  }catch(_){}
+}
+
+async function sendReminder(rowId,rowTitle,currentStage){
+  const stageMap={'with-seo':{label:'SEO Team',next:'seo'},'with-cmo':{label:'CMO',next:'cmo'},'with-designer':{label:'Designer',next:'designer'},'submitted':{label:'Writer',next:'writer'}};
+  const info=stageMap[currentStage];
+  if(!info){showToast('No next step to remind.','error');return;}
+  try{
+    await logActivity('reminder','Reminder sent to '+info.label+' for: '+rowTitle,rowId,rowTitle);
+    await fetch(SUPA_URL+'/functions/v1/rapid-endpoint',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+QNU_SESSION.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({type:'reminder',stage:info.next,row_id:rowId,row_title:rowTitle,sent_by:QNU_SESSION.email})
+    });
+    showToast('Reminder sent to '+info.label+'!','success');
+  }catch(e){showToast('Reminder logged!','success');}
+}
+
+// ════════════════════════════════════════════════════
+// SHARED STATE
+// ════════════════════════════════════════════════════
+let allRows=[],currentFilter='all',activeRow=null,toastTimer=null,realtimeWS=null,publishMode='draft';
+
+function getStatus(row){
+  if(row.posted_to_webflow) return 'posted';
+  if(row.designer_approved) return 'ready';
+  if(row.cmo_approved) return 'with-designer';
+  if(row.seo_approved) return 'with-cmo';
+  if(row.writer_approved) return 'with-seo';
+  if(row.content&&row.content.trim()) return 'submitted';
+  return 'draft';
+}
+function badgeHTML(s){
+  const m={draft:['draft','Draft'],submitted:['submitted','Submitted'],'with-seo':['with-seo','With SEO'],'with-cmo':['with-cmo','With CMO'],'with-designer':['with-designer','With Designer'],ready:['ready','CMO Approved'],posted:['posted','Posted']};
+  const[c,l]=m[s]||['draft','Draft'];
+  return `<span class="badge ${c}"><span class="badge-dot"></span>${l}</span>`;
+}
+function getTypeLabel(row){return row.content_type==='Other'?(row.content_type_other||'Case Study'):(row.content_type||'');}
+function typePillHTML(row){
+  const label=getTypeLabel(row); if(!label) return '<span style="color:var(--border2);font-size:11px">-</span>';
+  const cls={Blog:'blog',Whitepaper:'whitepaper',Newsletter:'newsletter',Other:'other'}[row.content_type]||'other';
+  return `<span class="type-pill ${cls}">${label}</span>`;
+}
+function formatDate(s){if(!s)return '-';return new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+function slugify(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
+function showToast(msg,type='success'){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.className='toast '+type; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
+}
+function filterRows(f,btn){
+  currentFilter=f;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderTable(allRows);
+}
+function setLastUpdated(){const el=document.getElementById('lastUpdated');if(el)el.textContent='Updated '+new Date().toLocaleTimeString();}
+function openFS(){document.getElementById('fsOverlay').classList.add('show');document.body.style.overflow='hidden';}
+function closeFS(){document.getElementById('fsOverlay').classList.remove('show');document.body.style.overflow='';}
+function subscribeRealtime(){
+  if(realtimeWS) return;
+  try{
+    const ws=new WebSocket(SUPA_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPA_KEY+'&vsn=1.0.0');
+    ws.onopen=()=>ws.send(JSON.stringify({topic:'realtime:public:'+TABLE,event:'phx_join',payload:{},ref:'1'}));
+    ws.onmessage=(e)=>{try{const m=JSON.parse(e.data);if(['INSERT','UPDATE','DELETE'].includes(m.event))fetchData();}catch(_){}};
+    ws.onerror=()=>{realtimeWS=null;setTimeout(subscribeRealtime,8000);};
+    ws.onclose=()=>{realtimeWS=null;setTimeout(subscribeRealtime,8000);};
+    realtimeWS=ws;
+  }catch(_){setTimeout(subscribeRealtime,8000);}
+}
+
+// ════════════════════════════════════════════════════
+// COLLECTION FIELDS
+// ════════════════════════════════════════════════════
+const COLLECTION_FIELDS={
+  Blog:[
+    {label:'Title (Name)',slug:'name',type:'text',required:true},
+    {label:'Meta Title',slug:'meta-title',type:'text'},
+    {label:'Meta Description',slug:'meta-description',type:'textarea'},
+    {label:'Author Name',slug:'author-name',type:'text'},
+    {label:'Blog Content',slug:'blog-content',type:'richtext'},
+    {label:'Blog Image',slug:'blog-Image',type:'image'},
+    {label:'Date',slug:'date-and-Time',type:'date'},
+    {label:'FAQ 1 Question',slug:'faq01',type:'text'},
+    {label:'FAQ 1 Answer',slug:'faqdes01',type:'textarea'},
+    {label:'FAQ 2 Question',slug:'faq02',type:'text'},
+    {label:'FAQ 2 Answer',slug:'faqdes02',type:'textarea'},
+  ],
+  Whitepaper:[
+    {label:'Title (Name)',slug:'name',type:'text',required:true},
+    {label:'Meta Title',slug:'meta-title',type:'text'},
+    {label:'Meta Description',slug:'meta-description',type:'textarea'},
+    {label:'Short Para',slug:'short-para',type:'textarea'},
+    {label:'Whitepaper Content',slug:'whitepaper-content',type:'richtext'},
+    {label:'Whitepaper Image',slug:'whitepaper-image',type:'image'},
+    {label:'Whitepaper Date',slug:'whitepaper-date',type:'date'},
+    {label:'FAQ 1 Question',slug:'faq01',type:'text'},
+    {label:'FAQ 1 Answer',slug:'faq-descp',type:'textarea'},
+    {label:'FAQ 2 Question',slug:'faq02',type:'text'},
+    {label:'FAQ 2 Answer',slug:'faq-descp2',type:'textarea'},
+    {label:'FAQ 3 Question',slug:'faq03',type:'text'},
+    {label:'FAQ 3 Answer',slug:'faq-descp3',type:'textarea'},
+    {label:'FAQ 4 Question',slug:'faq04',type:'text'},
+    {label:'FAQ 4 Answer',slug:'faq-descp4',type:'textarea'},
+  ],
+  Newsletter:[
+    {label:'Title (Name)',slug:'name',type:'text',required:true},
+    {label:'News PR Name',slug:'news-pr-name',type:'text'},
+    {label:'PR Description',slug:'pr-description',type:'textarea'},
+    {label:'PR Source Link',slug:'pr-source-link',type:'text'},
+    {label:'Description (Internal)',slug:'description---internal',type:'textarea'},
+    {label:'PR PDF Link',slug:'pr-pdf-link',type:'text'},
+    {label:'PR Published Date',slug:'pr-published-date',type:'date'},
+    {label:'PR Background Image',slug:'pr-bg-img',type:'image'},
+    {label:'FAQ 1 Question',slug:'faq1',type:'text'},
+    {label:'FAQ 1 Answer',slug:'faq-descp',type:'textarea'},
+    {label:'FAQ 2 Question',slug:'faq2',type:'text'},
+    {label:'FAQ 2 Answer',slug:'faq-descp2',type:'textarea'},
+  ],
+  Other:[
+    {label:'Title (Name)',slug:'name',type:'text',required:true},
+    {label:'Meta Title',slug:'meta-title',type:'text'},
+    {label:'Meta Description',slug:'meta-description',type:'textarea'},
+    {label:'Small Info',slug:'small-info',type:'text'},
+    {label:'Case Study Content',slug:'casestudy-content',type:'richtext'},
+    {label:'Case Study Image',slug:'whitepaper-image',type:'image'},
+    {label:'Case Study Date',slug:'whitepaper-date',type:'date'},
+    {label:'About the Client',slug:'about-the-client',type:'textarea'},
+    {label:'Testimonial',slug:'testimonial',type:'text'},
+    {label:'Testimonial Name',slug:'testimonial-name',type:'text'},
+    {label:'FAQ 1 Question',slug:'faq01',type:'text'},
+    {label:'FAQ 1 Answer',slug:'faq-t01',type:'textarea'},
+    {label:'FAQ 2 Question',slug:'faq02',type:'text'},
+    {label:'FAQ 2 Answer',slug:'faq-t02',type:'textarea'},
+  ]
+};
+
+// ════════════════════════════════════════════════════
+// FIELD FORM BUILDER
+// ════════════════════════════════════════════════════
+function rtCmd(editorId,cmd,val=null){const el=document.getElementById(editorId);if(el)el.focus();document.execCommand(cmd,false,val);}
+
+function buildFieldForm(contentType,existingData={},readOnly=false){
+  const fields=COLLECTION_FIELDS[contentType]||COLLECTION_FIELDS['Blog'];
+  let html=''; let inFaq=false;
+  fields.forEach((f)=>{
+    const isFaq=f.slug.startsWith('faq');
+    if(isFaq&&!inFaq){html+='<div class="fs-section-title">FAQ Section</div><div class="faq-section">';inFaq=true;}
+    if(!isFaq&&inFaq){html+='</div>';inFaq=false;}
+    const val=existingData[f.slug]||'';
+    const req=f.required?'<span class="req">*</span>':'';
+    const ro=readOnly?'readonly disabled':'';
+    const roS=readOnly?'opacity:0.75;':'';
+    const ss=f.slug.replace(/[^a-z0-9]/g,'_');
+    if(f.type==='richtext'){
+      html+=`<div class="field-group full" style="${roS}">
+        <div class="field-label">${f.label}${req}</div>
+        <div class="field-richtext-wrap">
+          ${!readOnly?`<div class="richtext-toolbar">
+            <button class="rt-btn" onclick="rtCmd('rtf_${ss}','bold')"><b>B</b></button>
+            <button class="rt-btn" onclick="rtCmd('rtf_${ss}','italic')"><i>I</i></button>
+            <button class="rt-btn" onclick="rtCmd('rtf_${ss}','underline')"><u>U</u></button>
+            <button class="rt-btn" onclick="rtCmd('rtf_${ss}','formatBlock','h2')">H2</button>
+            <button class="rt-btn" onclick="rtCmd('rtf_${ss}','insertUnorderedList')">List</button>
+            <button class="rt-btn" onclick="rtCmd('rtf_${ss}','removeFormat')">Clear</button>
+          </div>`:''}
+          <div class="richtext-editor" id="rtf_${ss}" ${readOnly?'':'contenteditable="true"'} data-slug="${f.slug}">${val}</div>
+        </div>
+      </div>`;
+    }else if(f.type==='textarea'){
+      html+=`<div class="field-group full" style="${roS}"><div class="field-label">${f.label}${req}</div><textarea class="field-textarea" id="ff_${ss}" ${ro}>${val}</textarea></div>`;
+    }else if(f.type==='image'){
+      html+=`<div class="field-group full"><div class="field-label">${f.label}</div>
+        ${val?`<img src="${val}" style="max-height:140px;border-radius:8px;object-fit:cover;max-width:100%;margin-bottom:8px;"/>`:''}
+        ${!readOnly?`<div class="upload-area" onclick="document.getElementById('fimg_${ss}').click()">
+          <input type="file" id="fimg_${ss}" accept="image/*" data-slug="${f.slug}" onchange="handleFieldImage(this)" style="display:none"/>
+          <div class="upload-area-label">Click to <span>upload image</span></div>
+        </div>`:''}
+      </div>`;
+    }else if(f.type==='date'){
+      const dv=val?new Date(val).toISOString().split('T')[0]:'';
+      html+=`<div class="field-group" style="${roS}"><div class="field-label">${f.label}${req}</div><input type="date" class="field-date" id="ff_${ss}" value="${dv}" ${ro}/></div>`;
+    }else{
+      const fw=f.slug==='name'||f.slug.includes('title')||f.slug.includes('description');
+      html+=`<div class="field-group ${fw?'full':''}" style="${roS}"><div class="field-label">${f.label}${req}</div><input type="text" class="field-input" id="ff_${ss}" value="${val.replace(/"/g,'&quot;')}" ${ro}/></div>`;
+    }
+  });
+  if(inFaq) html+='</div>';
+  return html;
+}
+
+function collectFieldValues(contentType){
+  const fields=COLLECTION_FIELDS[contentType]||COLLECTION_FIELDS['Blog'];
+  const data={};
+  fields.forEach(f=>{
+    const ss=f.slug.replace(/[^a-z0-9]/g,'_');
+    if(f.type==='richtext'){const el=document.getElementById('rtf_'+ss);if(el)data[f.slug]=el.innerHTML;}
+    else if(f.type==='image'){}
+    else{const el=document.getElementById('ff_'+ss);if(el)data[f.slug]=el.value||'';}
+  });
+  return data;
+}
+
+async function handleFieldImage(input){
+  const file=input.files[0]; if(!file||!activeRow) return;
+  const slug=input.getAttribute('data-slug');
+  try{
+    showToast('Uploading image...','success');
+    const url=await uploadImage(file);
+    const ef=JSON.parse(activeRow.extra_fields||'{}');
+    ef[slug]=url;
+    await updateRow(activeRow.id,{extra_fields:JSON.stringify(ef),image_url:url});
+    showToast('Image saved!','success');
+    await fetchData();
+  }catch(e){showToast('Upload failed: '+e.message,'error');}
+}
+
+// ════════════════════════════════════════════════════
+// WORD DOWNLOAD / UPLOAD
+// ════════════════════════════════════════════════════
+function downloadWord(content,title){
+  const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:12pt;line-height:1.6;margin:40px;}h1{font-size:16pt;margin-bottom:20px;}</style></head><body><h1>${title}</h1><div>${content}</div></body></html>`;
+  const blob=new Blob(['﻿',html],{type:'application/msword'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=slugify(title||'content')+'.doc'; a.click(); URL.revokeObjectURL(a.href);
+}
+function downloadActiveWordFile(){
+  if(!activeRow) return;
+  const fields=COLLECTION_FIELDS[activeRow.content_type]||[];
+  let content='';
+  fields.forEach(f=>{
+    if(f.type==='image') return;
+    const ss=f.slug.replace(/[^a-z0-9]/g,'_');
+    let val='';
+    if(f.type==='richtext'){const el=document.getElementById('rtf_'+ss);val=el?el.innerText:''}
+    else{const el=document.getElementById('ff_'+ss);val=el?el.value:''}
+    if(val) content+=f.label.toUpperCase()+':\n'+val+'\n\n';
+  });
+  downloadWord(content,activeRow.title||'content');
+  showToast('Downloaded!','success');
+}
+function singleDownloadWord(row){
+  if(!row) return;
+  const ef=JSON.parse(row.extra_fields||'{}');
+  const fields=COLLECTION_FIELDS[row.content_type]||[];
+  let content='';
+  fields.forEach(f=>{if(f.type==='image') return;const val=ef[f.slug]||'';if(val) content+=f.label.toUpperCase()+':\n'+val+'\n\n';});
+  downloadWord(content,row.title||'content'); showToast('Downloaded!','success');
+}
+function readWordFile(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{const div=document.createElement('div');div.innerHTML=e.target.result;resolve(div.innerText||div.textContent||'');};
+    reader.onerror=reject; reader.readAsText(file);
+  });
+}
+async function handleWordUpload(input){
+  const file=input.files[0]; if(!file||!activeRow) return;
+  try{
+    showToast('Reading file...','success');
+    const text=await readWordFile(file);
+    const fields=COLLECTION_FIELDS[activeRow.content_type]||[];
+    fields.forEach((f,idx)=>{
+      if(f.type==='image') return;
+      const label=f.label.toUpperCase()+':';
+      const nf=fields.slice(idx+1).find(x=>x.type!=='image');
+      const nextLabel=nf?nf.label.toUpperCase()+':':null;
+      const start=text.indexOf(label); if(start===-1) return;
+      const vs=start+label.length;
+      const end=nextLabel?text.indexOf(nextLabel,vs):text.length;
+      const val=text.substring(vs,end!==-1?end:undefined).trim(); if(!val) return;
+      const ss=f.slug.replace(/[^a-z0-9]/g,'_');
+      if(f.type==='richtext'){const el=document.getElementById('rtf_'+ss);if(el)el.innerHTML=val;}
+      else{const el=document.getElementById('ff_'+ss);if(el)el.value=val;}
+    });
+    showToast('Word content loaded into fields!','success');
+  }catch(e){showToast('Failed: '+e.message,'error');}
+}
+
+// ════════════════════════════════════════════════════
+// BULK DOWNLOAD
+// ════════════════════════════════════════════════════
+async function bulkDownloadWord(){
+  const from=document.getElementById('dlFrom')?.value;
+  const to=document.getElementById('dlTo')?.value;
+  let rows=allRows;
+  if(from) rows=rows.filter(r=>new Date(r.created_at)>=new Date(from));
+  if(to) rows=rows.filter(r=>new Date(r.created_at)<=new Date(to+'T23:59:59'));
+  if(!rows.length){showToast('No content in that date range.','error');return;}
+  let html='<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:11pt;margin:30px;}h1{font-size:15pt;color:#E8450A;border-bottom:2px solid #E8450A;padding-bottom:8px;}h2{font-size:12pt;margin-top:22px;}label{font-size:8pt;font-weight:bold;color:#666;text-transform:uppercase;display:block;margin-top:12px;}p{margin:3px 0;font-size:11pt;}hr{border:none;border-top:1px solid #ddd;margin:20px 0;}</style></head><body>';
+  html+='<h1>QNu Labs Content Export ('+rows.length+' items)</h1>';
+  rows.forEach((row,i)=>{
+    const ef=JSON.parse(row.extra_fields||'{}');
+    html+=`<h2>${i+1}. ${row.title||'Untitled'} (${row.content_type||''})</h2>`;
+    html+=`<label>Writer</label><p>${row.writer_name||'-'}</p>`;
+    html+=`<label>Date</label><p>${new Date(row.created_at).toLocaleDateString('en-IN')}</p>`;
+    const fields=COLLECTION_FIELDS[row.content_type]||[];
+    fields.forEach(f=>{if(f.type==='image') return;const val=ef[f.slug]||'';if(val)html+=`<label>${f.label}</label><p>${val.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`;});
+    html+='<hr>';
+  });
+  html+='</body></html>';
+  const blob=new Blob(['﻿',html],{type:'application/msword'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='QNu_Export_'+new Date().toISOString().split('T')[0]+'.doc';
+  a.click(); URL.revokeObjectURL(a.href);
+  showToast('Downloaded '+rows.length+' items!','success');
+}
+async function bulkDownloadPDF(){
+  const from=document.getElementById('dlFrom')?.value;
+  const to=document.getElementById('dlTo')?.value;
+  let rows=allRows;
+  if(from) rows=rows.filter(r=>new Date(r.created_at)>=new Date(from));
+  if(to) rows=rows.filter(r=>new Date(r.created_at)<=new Date(to+'T23:59:59'));
+  if(!rows.length){showToast('No content in that date range.','error');return;}
+  let html='<html><head><meta charset="utf-8"><style>body{font-family:Arial;font-size:11pt;margin:30px;}h1{font-size:15pt;color:#E8450A;}h2{font-size:12pt;margin-top:18px;}label{font-size:8pt;font-weight:bold;color:#666;text-transform:uppercase;display:block;margin-top:10px;}p{margin:2px 0;font-size:10pt;}hr{border:none;border-top:1px solid #ccc;margin:18px 0;}</style></head><body>';
+  html+='<h1>QNu Labs Content Export</h1><p style="color:#666;font-size:10pt">Generated: '+new Date().toLocaleString('en-IN')+'</p><hr>';
+  rows.forEach((row,i)=>{
+    const ef=JSON.parse(row.extra_fields||'{}');
+    html+=`<h2>${i+1}. ${row.title||'Untitled'}</h2>`;
+    html+=`<label>Type</label><p>${row.content_type||'-'}</p>`;
+    html+=`<label>Writer</label><p>${row.writer_name||'-'}</p>`;
+    const fields=COLLECTION_FIELDS[row.content_type]||[];
+    fields.forEach(f=>{if(f.type==='image') return;const val=ef[f.slug]||'';if(val)html+=`<label>${f.label}</label><p>${val.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`;});
+    html+='<hr>';
+  });
+  html+='</body></html>';
+  const w=window.open('','_blank'); w.document.write(html); w.document.close();
+  setTimeout(()=>w.print(),400);
+  showToast('Opening print dialog...','success');
+}
+
+// ════════════════════════════════════════════════════
+// FETCH DATA (shared across all role views)
+// ════════════════════════════════════════════════════
+async function fetchData(){
+  const tc=document.getElementById('tableContainer');
+  if(tc) tc.innerHTML='<div class="loading-row"><span class="spinner"></span> Loading...</div>';
+  try{
+    allRows=await getAll()||[];
+    updateStats(allRows); renderTable(allRows); setLastUpdated(); subscribeRealtime();
+  }catch(e){
+    if(tc) tc.innerHTML=`<div class="empty-state"><div class="empty-title">Could not load data</div><div class="empty-sub">${e.message}</div></div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════
+// updateStats — role-aware
+// ════════════════════════════════════════════════════
+function updateStats(r){
+  const role=QNU_SESSION?.role;
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+  if(role==='writer'||role==='admin'){
+    set('s1',r.length);
+    set('s2',r.filter(x=>x.writer_approved&&!x.seo_approved).length);
+    set('s3',r.filter(x=>x.seo_approved&&!x.designer_approved).length);
+    set('s4',r.filter(x=>x.designer_approved&&!x.posted_to_webflow).length);
+    set('s5',r.filter(x=>x.posted_to_webflow).length);
+  }
+  if(role==='seo'){
+    set('s1',r.filter(x=>x.writer_approved&&!x.seo_approved).length);
+    set('s2',r.filter(x=>x.seo_approved).length);
+    set('s3',r.filter(x=>x.posted_to_webflow).length);
+    set('s4',r.length);
+  }
+  if(role==='cmo'){
+    set('s1',r.filter(x=>x.seo_approved&&!x.cmo_approved).length);
+    set('s2',r.filter(x=>x.cmo_approved).length);
+    set('s3',r.filter(x=>x.posted_to_webflow).length);
+    set('s4',r.length);
+  }
+  if(role==='designer'){
+    set('s1',r.filter(x=>x.cmo_approved&&!x.posted_to_webflow).length);
+    set('s2',r.filter(x=>x.posted_to_webflow&&x.webflow_status==='live').length);
+    set('s3',r.filter(x=>x.posted_to_webflow&&x.webflow_status==='draft').length);
+    set('s4',r.length);
+  }
+}
+
+// ════════════════════════════════════════════════════
+// renderTable — role-aware
+// ════════════════════════════════════════════════════
+function renderTable(rows){
+  const c=document.getElementById('tableContainer'); if(!c) return;
+  const role=QNU_SESSION?.role;
+  // Filter
+  const filterMap={
+    pending:r=>!r.writer_approved, review:r=>r.writer_approved&&!r.designer_approved,
+    needs:r=>(role==='seo'?r.writer_approved&&!r.seo_approved:role==='cmo'?r.seo_approved&&!r.cmo_approved:r.cmo_approved&&!r.posted_to_webflow),
+    approved:r=>(role==='seo'?r.seo_approved:role==='cmo'?r.cmo_approved:r.designer_approved),
+    posted:r=>r.posted_to_webflow, ready:r=>r.cmo_approved&&!r.posted_to_webflow
+  };
+  const filtered=currentFilter==='all'?rows:(rows.filter(filterMap[currentFilter]||Boolean));
+  if(!filtered.length){c.innerHTML='<div class="empty-state"><div class="empty-title">Nothing here</div><div class="empty-sub">No content matches this filter.</div></div>';return;}
+
+  // Build headers per role
+  const baseHeaders=['#','Title','Type'];
+  const extraHeaders={
+    writer:['Writer','Date','Approve','Download','Remind','Status'],
+    seo:['Writer','Date','SEO Approve','Download','Remind','Status'],
+    cmo:['Writer','SEO','CMO Approve','Download','Remind','Status'],
+    designer:['Section','Approve','Download','Remind','Webflow','Status'],
+    admin:['Writer','Date','Stage','Download','Remind','Status']
+  };
+  const headers=[...baseHeaders,...(extraHeaders[role]||extraHeaders.writer)];
+  let h=`<table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+
+  filtered.forEach((row,i)=>{
+    const status=getStatus(row);
+    const canBell=!row.posted_to_webflow;
+    const bellCell=canBell
+      ?`<button class="bell-btn" onclick="event.stopPropagation();sendReminder(${row.id},'${(row.title||'').replace(/'/g,"\\'")}',${JSON.stringify(status)})" title="Send reminder">Bell</button>`
+      :'–';
+    const dlCell=`<button class="action-btn secondary" style="padding:3px 9px;font-size:11px;" onclick="event.stopPropagation();singleDownloadWord(allRows.find(r=>r.id==${row.id}))">Word</button>`;
+
+    if(role==='writer'||role==='admin'){
+      h+=`<tr onclick="openModal(${row.id})">
+        <td class="num-cell">${i+1}</td><td style="font-weight:600">${row.title||'-'}</td><td>${typePillHTML(row)}</td>
+        <td style="color:var(--muted)">${row.writer_name||'-'}</td>
+        <td class="date-cell">${formatDate(row.created_at)}</td>
+        <td onclick="event.stopPropagation()"><div class="toggle-wrap"><label class="toggle" id="tog_${row.id}"><input type="checkbox" ${row.writer_approved?'checked':''} data-id="${row.id}" onchange="event.stopPropagation();handleToggle(this,'writer')"/><span class="toggle-slider"></span></label><span class="toggle-label">${row.writer_approved?'Approved':'Pending'}</span></div></td>
+        <td onclick="event.stopPropagation()">${dlCell}</td>
+        <td onclick="event.stopPropagation()">${bellCell}</td>
+        <td>${badgeHTML(status)}</td>
+      </tr>`;
+    }else if(role==='seo'){
+      const can=row.writer_approved;
+      h+=`<tr onclick="${can?`openModal(${row.id})`:''}">
+        <td class="num-cell">${i+1}</td><td style="font-weight:600">${row.title||'-'}</td><td>${typePillHTML(row)}</td>
+        <td style="color:var(--muted)">${row.writer_name||'-'}</td>
+        <td class="date-cell">${formatDate(row.created_at)}</td>
+        <td onclick="event.stopPropagation()">${can?`<div class="toggle-wrap"><label class="toggle seo" id="stog_${row.id}"><input type="checkbox" ${row.seo_approved?'checked':''} data-id="${row.id}" onchange="handleToggle(this,'seo')"/><span class="toggle-slider"></span></label><span class="toggle-label">${row.seo_approved?'Approved':'Pending'}</span></div>`:'<span style="font-size:11px;color:var(--muted)">Awaiting writer</span>'}</td>
+        <td onclick="event.stopPropagation()">${dlCell}</td>
+        <td onclick="event.stopPropagation()">${bellCell}</td>
+        <td>${badgeHTML(status)}</td>
+      </tr>`;
+    }else if(role==='cmo'){
+      const can=row.seo_approved;
+      h+=`<tr onclick="${can?`openModal(${row.id})`:''}">
+        <td class="num-cell">${i+1}</td><td style="font-weight:600">${row.title||'-'}</td><td>${typePillHTML(row)}</td>
+        <td style="color:var(--muted)">${row.writer_name||'-'}</td>
+        <td>${row.seo_approved?'<span style="color:var(--green);font-size:12px;font-weight:600">Done</span>':'<span style="color:var(--muted);font-size:11px">Pending</span>'}</td>
+        <td onclick="event.stopPropagation()">${can?`<div class="toggle-wrap"><label class="toggle cmo" id="ctog_${row.id}"><input type="checkbox" ${row.cmo_approved?'checked':''} data-id="${row.id}" onchange="handleToggle(this,'cmo')"/><span class="toggle-slider"></span></label><span class="toggle-label">${row.cmo_approved?'Approved':'Pending'}</span></div>`:'<span style="font-size:11px;color:var(--muted)">SEO pending</span>'}</td>
+        <td onclick="event.stopPropagation()">${dlCell}</td>
+        <td onclick="event.stopPropagation()">${bellCell}</td>
+        <td>${badgeHTML(status)}</td>
+      </tr>`;
+    }else if(role==='designer'){
+      const can=row.cmo_approved;
+      const section=SECTION_NAMES[row.content_type]||'Case Studies';
+      h+=`<tr onclick="${can?`openModal(${row.id})`:''}">
+        <td class="num-cell">${i+1}</td><td style="font-weight:600">${row.title||'-'}</td><td>${typePillHTML(row)}</td>
+        <td style="font-size:12px;font-weight:600;color:var(--blue)">${section}</td>
+        <td onclick="event.stopPropagation()">${can?`<div class="toggle-wrap"><label class="toggle designer" id="dtog_${row.id}"><input type="checkbox" ${row.designer_approved?'checked':''} data-id="${row.id}" onchange="handleToggle(this,'designer')"/><span class="toggle-slider"></span></label><span class="toggle-label">${row.designer_approved?'Approved':'Pending'}</span></div>`:'<span style="font-size:11px;color:var(--muted)">CMO pending</span>'}</td>
+        <td onclick="event.stopPropagation()">${dlCell}</td>
+        <td onclick="event.stopPropagation()">${bellCell}</td>
+        <td>${row.posted_to_webflow?`<span style="color:var(--green);font-size:12px;font-weight:600">${row.webflow_status==='live'?'Live':'Draft'}</span>`:'<span style="color:var(--muted);font-size:11px">Not posted</span>'}</td>
+        <td>${badgeHTML(status)}</td>
+      </tr>`;
+    }
+  });
+  h+=`</tbody></table>`;
+  c.innerHTML=h;
+}
+
+// ════════════════════════════════════════════════════
+// TABLE TOGGLE (unified for all roles)
+// ════════════════════════════════════════════════════
+async function handleToggle(input,roleType){
+  const id=input.getAttribute('data-id');
+  const prefix={writer:'tog',seo:'stog',cmo:'ctog',designer:'dtog'}[roleType];
+  const el=document.getElementById(prefix+'_'+id); if(!el) return;
+  const fieldMap={writer:'writer_approved',seo:'seo_approved',cmo:'cmo_approved',designer:'designer_approved'};
+  const field=fieldMap[roleType];
+  el.classList.add('saving');
+  try{
+    const data={[field]:input.checked};
+    if(roleType==='writer'&&input.checked){const row=allRows.find(r=>r.id==id);if(row?.content)data.original_content=row.content;}
+    await updateRow(id,data);
+    showToast(input.checked?'Approved!':'Removed.','success');
+    await logActivity(input.checked?'approved':'unapproved',roleType+' approval',parseInt(id));
+    await fetchData();
+  }catch(e){showToast('Failed: '+e.message,'error');}
+  finally{el.classList.remove('saving');}
+}
+
+// ════════════════════════════════════════════════════
+// OPEN MODAL (unified)
+// ════════════════════════════════════════════════════
+function openModal(id){
+  activeRow=allRows.find(r=>r.id==id); if(!activeRow) return;
+  document.getElementById('fsTitle').textContent=activeRow.title||'Untitled';
+  document.getElementById('fsSubtitle').textContent=`By ${activeRow.writer_name||'-'} · ${formatDate(activeRow.created_at)}`;
+  document.getElementById('fsMeta1').innerHTML=typePillHTML(activeRow);
+  document.getElementById('fsMeta2').innerHTML=badgeHTML(getStatus(activeRow));
+  // Build fields
+  const ef=JSON.parse(activeRow.extra_fields||'{}');
+  ef.name=activeRow.title||'';
+  const ct=activeRow.content_type;
+  const mainSlug=ct==='Blog'?'blog-content':ct==='Whitepaper'?'whitepaper-content':ct==='Newsletter'?'pr-description':'casestudy-content';
+  ef[mainSlug]=activeRow.content||'';
+  const role=QNU_SESSION?.role;
+  const readOnly=role==='designer';
+  document.getElementById('fsFieldsWrap').innerHTML=buildFieldForm(ct,ef,readOnly);
+  // Approval section
+  const approveSection=document.getElementById('fsApproveSection');
+  const toggle=document.getElementById('fsToggleInput');
+  const toggleLabel=document.getElementById('fsToggleLabel');
+  const fieldMap={writer:'writer_approved',seo:'seo_approved',cmo:'cmo_approved',designer:'designer_approved'};
+  const field=fieldMap[role];
+  if(field&&approveSection){
+    approveSection.style.display='block';
+    toggle.checked=!!activeRow[field];
+    toggleLabel.textContent=activeRow[field]?'Approved':'Pending';
+  }else if(approveSection){
+    approveSection.style.display='none';
+  }
+  // Designer extras
+  const postSection=document.getElementById('fsPostSection');
+  if(postSection) postSection.style.display=role==='designer'?'block':'none';
+  if(role==='designer'){
+    const postBtn=document.getElementById('postBtn');
+    if(postBtn){postBtn.disabled=!activeRow.designer_approved||!!activeRow.posted_to_webflow;postBtn.textContent='Post to Webflow';}
+    const pr=document.getElementById('postResult');
+    if(pr){
+      if(activeRow.posted_to_webflow){pr.textContent=activeRow.webflow_status==='live'?'Already posted live':'Already saved as draft';pr.style.color=activeRow.webflow_status==='live'?'var(--green)':'var(--yellow)';}
+      else pr.textContent='';
+    }
+    selectPublishOpt('draft');
+    const fsSection=document.getElementById('fsSection');
+    if(fsSection) fsSection.textContent=SECTION_NAMES[ct]||'Case Studies';
+  }
+  openFS();
+}
+
+// ════════════════════════════════════════════════════
+// FS TOGGLE (unified)
+// ════════════════════════════════════════════════════
+async function handleFsToggle(){
+  const role=QNU_SESSION?.role;
+  const checked=document.getElementById('fsToggleInput').checked;
+  document.getElementById('fsToggleLabel').textContent=checked?'Approved':'Pending';
+  const fieldMap={writer:'writer_approved',seo:'seo_approved',cmo:'cmo_approved',designer:'designer_approved'};
+  const field=fieldMap[role];
+  if(!field) return;
+  // Save edits first (not for designer — read-only)
+  if(role!=='designer') await saveEdits();
+  const el=document.getElementById('fsToggle'); el.classList.add('saving');
+  try{
+    const data={[field]:checked};
+    if(role==='writer'&&checked&&activeRow.content) data.original_content=activeRow.content;
+    await updateRow(activeRow.id,data);
+    showToast(checked?'Approved!':'Removed.','success');
+    await logActivity(checked?'approved':'unapproved',role+' approved',activeRow.id,activeRow.title);
+    if(role==='designer'){
+      activeRow.designer_approved=checked;
+      const postBtn=document.getElementById('postBtn');
+      if(postBtn) postBtn.disabled=!checked;
+    }
+    await fetchData();
+  }catch(e){showToast('Failed: '+e.message,'error');}
+  finally{el.classList.remove('saving');}
+}
+
+async function saveEdits(){
+  if(!activeRow) return;
+  const ef=collectFieldValues(activeRow.content_type);
+  const mc=ef['blog-content']||ef['whitepaper-content']||ef['pr-description']||ef['casestudy-content']||'';
+  const title=ef['name']||activeRow.title||'';
+  try{
+    await updateRow(activeRow.id,{title,content:mc,extra_fields:JSON.stringify(ef)});
+    activeRow.content=mc; activeRow.title=title; activeRow.extra_fields=JSON.stringify(ef);
+  }catch(e){showToast('Save failed: '+e.message,'error');}
+}
+async function saveAndClose(){await saveEdits();closeFS();await fetchData();}
+
+// ════════════════════════════════════════════════════
+// WRITER: ADD NEW CONTENT
+// ════════════════════════════════════════════════════
+function onTypeChange(){
+  const t=document.getElementById('newType').value;
+  const wrap=document.getElementById('dynamicFields');
+  const inner=document.getElementById('dynamicFieldsInner');
+  if(!t){wrap.style.display='none';return;}
+  inner.innerHTML=buildFieldForm(t,{},false);
+  wrap.style.display='block';
+}
+async function submitNew(){
+  const typeVal=document.getElementById('newType').value;
+  const writer=document.getElementById('newWriter').value.trim();
+  if(!typeVal){showToast('Please select a content type.','error');return;}
+  if(!writer){showToast('Please enter your name.','error');return;}
+  const ef=collectFieldValues(typeVal);
+  const title=ef['name']||'';
+  if(!title){showToast('Please enter a title.','error');return;}
+  const mc=ef['blog-content']||ef['whitepaper-content']||ef['pr-description']||ef['casestudy-content']||'';
+  const btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='Adding...';
+  try{
+    await insertRow({title,content:mc,writer_name:writer,content_type:typeVal,content_type_other:null,extra_fields:JSON.stringify(ef),image_url:null,writer_approved:false,seo_approved:false,cmo_approved:false,designer_approved:false,posted_to_webflow:false});
+    showToast('Content added!','success');
+    await logActivity('created','New content: '+title,null,title);
+    document.getElementById('newType').value=''; document.getElementById('newWriter').value='';
+    document.getElementById('dynamicFields').style.display='none';
+    await fetchData();
+  }catch(e){showToast('Failed: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Add Content';}
+}
+
+// ════════════════════════════════════════════════════
+// DESIGNER: WEBFLOW
+// ════════════════════════════════════════════════════
+function selectPublishOpt(mode){
+  publishMode=mode;
+  const d=document.getElementById('optDraft');
+  const l=document.getElementById('optLive');
+  const lbl=document.getElementById('publishModeText');
+  if(!d||!l) return;
+  d.className='publish-opt'+(mode==='draft'?' selected-draft':'');
+  l.className='publish-opt'+(mode==='live'?' selected-live':'');
+  d.querySelector('.publish-opt-title').style.color=mode==='draft'?'var(--blue)':'var(--text)';
+  l.querySelector('.publish-opt-title').style.color=mode==='live'?'var(--green)':'var(--text)';
+  if(lbl) lbl.textContent=mode==='draft'?'Save as Draft':'Publish Live';
+}
+async function postToWebflow(){
+  if(!activeRow?.designer_approved){showToast('Please approve first.','error');return;}
+  const btn=document.getElementById('postBtn'); btn.disabled=true; btn.textContent='Posting...';
+  const resultEl=document.getElementById('postResult'); resultEl.textContent='';
+  try{
+    const ef=JSON.parse(activeRow.extra_fields||'{}');
+    ef.name=activeRow.title||'Untitled';
+    const ct=activeRow.content_type;
+    const mainSlug=ct==='Blog'?'blog-content':ct==='Whitepaper'?'whitepaper-content':ct==='Newsletter'?'pr-description':'casestudy-content';
+    ef[mainSlug]=activeRow.content||'';
+    if(activeRow.image_url){
+      const imgSlug=ct==='Blog'?'blog-Image':ct==='Newsletter'?'pr-bg-img':'whitepaper-image';
+      if(!ef[imgSlug]) ef[imgSlug]={url:activeRow.image_url,alt:activeRow.title||''};
+    }
+    const res=await fetch(WEBFLOW_EDGE,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo','apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo'},
+      body:JSON.stringify({extra_fields:ef,row:{...activeRow,extra_fields:JSON.stringify(ef)},publish_mode:publishMode})
+    });
+    const data=await res.json();
+    if(data.success){
+      await updateRow(activeRow.id,{posted_to_webflow:true,webflow_item_id:data.item_id,webflow_status:data.status});
+      const isLive=data.status==='live';
+      showToast(isLive?'Posted live!':'Saved as draft!','success');
+      resultEl.textContent=isLive?'Live on website!':'Saved as draft';
+      resultEl.style.color=isLive?'var(--green)':'var(--yellow)';
+      await logActivity('posted','Posted to Webflow as '+data.status,activeRow.id,activeRow.title);
+      activeRow.posted_to_webflow=true; await fetchData();
+    }else{
+      showToast('Webflow error: '+data.error,'error');
+      resultEl.textContent='Error: '+data.error; resultEl.style.color='var(--accent)';
+      btn.disabled=false; btn.textContent='Post to Webflow';
+    }
+  }catch(e){
+    showToast('Failed: '+e.message,'error');
+    document.getElementById('postResult').textContent='Error: '+e.message;
+    btn.disabled=false; btn.textContent='Post to Webflow';
+  }
+}
+
+// ════════════════════════════════════════════════════
+// ADMIN
+// ════════════════════════════════════════════════════
+async function adminFetch(path,options={}){
+  const token=QNU_SESSION?.access_token||SUPA_KEY;
+  const h={'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json',...(options.headers||{})};
+  const res=await fetch(SUPA_URL+'/rest/v1/'+path,{...options,headers:h});
+  const t=await res.text(); return t?JSON.parse(t):null;
+}
+
+function adminShowSection(id,el){
+  document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.admin-nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('asec-'+id).classList.add('active');
+  el.classList.add('active');
+  if(id==='users') loadUsers();
+  else if(id==='activity') loadActivity();
+  else if(id==='content') loadContent();
+  else loadAdminDashboard();
+}
+
+async function loadAdminDashboard(){
+  const rows=await adminFetch('content_approvals?select=*')||[];
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+  set('ads0',rows.length);
+  set('ads1',rows.filter(r=>r.content&&!r.writer_approved).length);
+  set('ads2',rows.filter(r=>r.writer_approved&&!r.seo_approved).length);
+  set('ads3',rows.filter(r=>r.seo_approved&&!r.cmo_approved).length);
+  set('ads4',rows.filter(r=>r.cmo_approved&&!r.posted_to_webflow).length);
+  set('ads5',rows.filter(r=>r.posted_to_webflow).length);
+  const logs=await adminFetch('activity_log?order=created_at.desc&limit=15&select=*')||[];
+  renderActivityLogs(logs,document.getElementById('recentActList'));
+}
+
+async function loadUsers(){
+  const users=await adminFetch('user_profiles?order=created_at.asc&select=*')||[];
+  const c=document.getElementById('userList');
+  if(!users.length){c.innerHTML='<div class="empty-state"><div class="empty-title">No users yet</div></div>';return;}
+  const rColors={writer:'var(--accent)',seo:'var(--yellow)',cmo:'var(--purple)',designer:'var(--blue)',admin:'#1A1A1A'};
+  c.innerHTML=users.map(u=>`
+    <div class="user-card">
+      <div>
+        <div class="user-name">${u.full_name||'Unknown'}</div>
+        <div class="user-email">${u.email}</div>
+        <div class="user-meta">Last login: ${u.last_login?new Date(u.last_login).toLocaleString('en-IN'):'Never'}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span style="background:${rColors[u.role]||'var(--muted)'};color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">${u.role.toUpperCase()}</span>
+        <button class="btn-secondary" style="padding:5px 12px;font-size:12px;" onclick="openEditUser('${u.id}','${u.full_name||''}','${u.email}','${u.role}')">Edit</button>
+        <button class="btn-secondary" style="padding:5px 12px;font-size:12px;" onclick="openResetPw('${u.id}','${u.email}')">Reset PW</button>
+        <button class="btn-secondary" style="padding:5px 12px;font-size:12px;color:var(--accent);border-color:var(--accent-border);" onclick="deleteUser('${u.id}','${u.email}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+async function loadActivity(){
+  const logs=await adminFetch('activity_log?order=created_at.desc&limit=100&select=*')||[];
+  renderActivityLogs(logs,document.getElementById('activityList'));
+}
+
+function renderActivityLogs(logs,container){
+  if(!container) return;
+  if(!logs.length){container.innerHTML='<div class="empty-state"><div class="empty-title">No activity yet</div></div>';return;}
+  container.innerHTML=logs.map(l=>{
+    const cls={login:'login',approved:'approved',edited:'edited',posted:'posted',reminder:'reminder',created:'created'}[l.action]||'';
+    return `<div class="log-row">
+      <div style="color:var(--muted)">${new Date(l.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+      <div style="font-weight:600;font-size:12px">${l.user_email||'-'}<br><span style="color:var(--muted);font-weight:400;font-size:11px">${l.user_role||''}</span></div>
+      <div><span class="log-action ${cls}">${l.action}</span></div>
+      <div style="color:var(--muted);font-size:12px">${l.details||''}${l.row_title?' — '+l.row_title:''}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadContent(){
+  const rows=await adminFetch('content_approvals?order=created_at.desc&select=*')||[];
+  const c=document.getElementById('contentList');
+  if(!rows.length){c.innerHTML='<div class="empty-state"><div class="empty-title">No content yet</div></div>';return;}
+  const stage=r=>r.posted_to_webflow?'Posted':r.cmo_approved?'With Designer':r.seo_approved?'With CMO':r.writer_approved?'With SEO':'Draft';
+  const stageClr=r=>r.posted_to_webflow?'var(--green)':r.cmo_approved?'var(--blue)':r.seo_approved?'var(--purple)':r.writer_approved?'var(--yellow)':'var(--muted)';
+  c.innerHTML=`<table style="width:100%;border-collapse:collapse;">
+    <thead><tr style="background:var(--surface2);border-bottom:1px solid var(--border);">
+      ${['#','Title','Type','Writer','Stage','Date'].map(h=>`<th style="padding:10px 14px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;">${h}</th>`).join('')}
+    </tr></thead><tbody>
+    ${rows.map((r,i)=>`<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:10px 14px;color:var(--muted);font-size:12px">${i+1}</td>
+      <td style="padding:10px 14px;font-weight:600;font-size:13px">${r.title||'-'}</td>
+      <td style="padding:10px 14px;font-size:12px;color:var(--blue)">${r.content_type||'-'}</td>
+      <td style="padding:10px 14px;font-size:12px;color:var(--muted)">${r.writer_name||'-'}</td>
+      <td style="padding:10px 14px;"><span style="font-size:11px;font-weight:600;color:${stageClr(r)}">${stage(r)}</span></td>
+      <td style="padding:10px 14px;font-size:11px;color:var(--muted)">${new Date(r.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+}
+
+// Admin modals
+let resetUserId=null;
+function openCreateUser(){
+  ['newFullName','newEmail','newPassword'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('newRole').value='writer';
+  document.getElementById('createUserModal').classList.add('show');
+}
+function openEditUser(id,name,email,role){
+  document.getElementById('editUserId').value=id;
+  document.getElementById('editFullName').value=name;
+  document.getElementById('editEmail').value=email;
+  document.getElementById('editRole').value=role;
+  document.getElementById('editUserModal').classList.add('show');
+}
+function openResetPw(id,email){
+  resetUserId=id;
+  document.getElementById('resetPwSub').textContent='New password for '+email;
+  document.getElementById('resetPwInput').value='';
+  document.getElementById('resetPwModal').classList.add('show');
+}
+function closeAdminModal(){
+  ['createUserModal','editUserModal','resetPwModal'].forEach(id=>document.getElementById(id).classList.remove('show'));
+}
+
+async function createUser(){
+  const fullName=document.getElementById('newFullName').value.trim();
+  const email=document.getElementById('newEmail').value.trim();
+  const password=document.getElementById('newPassword').value;
+  const role=document.getElementById('newRole').value;
+  if(!fullName||!email||!password){showToast('Fill in all fields.','error');return;}
+  if(password.length<6){showToast('Password min 6 chars.','error');return;}
+  const btn=document.getElementById('createUserBtn'); btn.disabled=true; btn.textContent='Creating...';
+  try{
+    let uid=null;
+    // Try admin API first
+    const r1=await fetch(SUPA_URL+'/auth/v1/admin/users',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+QNU_SESSION.access_token,'Content-Type':'application/json'},body:JSON.stringify({email,password,email_confirm:true})});
+    const d1=await r1.json();
+    if(d1.id) uid=d1.id;
+    else{
+      // Fallback signup
+      const r2=await fetch(SUPA_URL+'/auth/v1/signup',{method:'POST',headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+      const d2=await r2.json(); uid=d2.user?.id||d2.id;
+    }
+    if(!uid){showToast('Could not create auth user.','error');btn.disabled=false;btn.textContent='Create User';return;}
+    await adminFetch('user_profiles',{method:'POST',body:JSON.stringify({id:uid,email,full_name:fullName,role})});
+    showToast('User created!','success'); closeAdminModal(); await loadUsers();
+  }catch(e){showToast('Error: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Create User';}
+}
+
+async function saveEditUser(){
+  const id=document.getElementById('editUserId').value;
+  const fullName=document.getElementById('editFullName').value.trim();
+  const email=document.getElementById('editEmail').value.trim();
+  const role=document.getElementById('editRole').value;
+  if(!fullName||!email){showToast('Name and email required.','error');return;}
+  const btn=document.getElementById('editUserBtn'); btn.disabled=true; btn.textContent='Saving...';
+  try{
+    await adminFetch('user_profiles?id=eq.'+id,{method:'PATCH',body:JSON.stringify({full_name:fullName,email,role})});
+    showToast('User updated!','success'); closeAdminModal(); await loadUsers();
+  }catch(e){showToast('Error: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Save';}
+}
+
+async function doResetPw(){
+  const pw=document.getElementById('resetPwInput').value;
+  if(!pw||pw.length<6){showToast('Password min 6 chars.','error');return;}
+  const btn=document.getElementById('resetPwBtn'); btn.disabled=true; btn.textContent='Resetting...';
+  try{
+    const r=await fetch(SUPA_URL+'/auth/v1/admin/users/'+resetUserId,{method:'PUT',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+QNU_SESSION.access_token,'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    const d=await r.json();
+    if(d.error){showToast('Error: '+d.message,'error');btn.disabled=false;btn.textContent='Reset';return;}
+    showToast('Password reset!','success'); closeAdminModal();
+  }catch(e){showToast('Error: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Reset';};
+}
+
+async function deleteUser(id,email){
+  if(!confirm('Delete user '+email+'? Cannot be undone.')) return;
+  try{
+    await adminFetch('user_profiles?id=eq.'+id,{method:'DELETE'});
+    showToast('User deleted.','success'); await loadUsers();
+  }catch(e){showToast('Error: '+e.message,'error');}
+}
+
+// ════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════
+(function init(){
+  if(QNU_SESSION&&QNU_SESSION.access_token){
+    if(QNU_SESSION.expires_at&&Date.now()/1000>QNU_SESSION.expires_at){
+      localStorage.removeItem('qnu_session'); QNU_SESSION=null;
+    }
+  }
+  if(QNU_SESSION){
+    goHome();
+    if(QNU_SESSION.role==='admin') loadAdminDashboard();
+    else fetchData();
+  } else {
+    showView('login');
+  }
+})();
+
+
+// Show topbar when not on login
+const _origShowView = showView;
+showView = function(viewId) {
+  _origShowView(viewId);
+  const tb = document.getElementById('mainTopbar');
+  if (tb) tb.style.display = viewId === 'login' ? 'none' : 'block';
+  // Adjust layout so topbar doesn't overlap
+  document.querySelectorAll('.view:not(#v-login)').forEach(v => {
+    v.style.paddingTop = viewId !== 'login' ? '0' : '0';
+  });
+  // Update approve section style per role
+  if (viewId !== 'login' && viewId !== 'admin' && QNU_SESSION) {
+    const inner = document.getElementById('fsApproveInner');
+    const lbl = document.getElementById('fsApproveLabel');
+    const sub = document.getElementById('fsApproveSub');
+    const toggle = document.getElementById('fsToggle');
+    const map = {
+      writer: {cls:'accent',label:'Approve for SEO Review',sub:'Triggers notification to SEO team'},
+      seo:    {cls:'yellow',label:'Approve for CMO Review',sub:'Save edits first, then approve.'},
+      cmo:    {cls:'purple',label:'Approve for Designer',sub:'Designer will post to Webflow.'},
+      designer:{cls:'blue',label:'Designer Approval',sub:'Approve before posting to Webflow.'}
+    };
+    const info = map[QNU_SESSION.role];
+    if (info && inner) {
+      inner.className = 'approve-inner ' + info.cls;
+      if (lbl) { lbl.className = 'approve-label ' + info.cls; lbl.textContent = info.label; }
+      if (sub) sub.textContent = info.sub;
+      if (toggle) { toggle.className = 'toggle ' + (QNU_SESSION.role === 'writer' ? '' : QNU_SESSION.role); }
+    }
+    const fsTitle = document.getElementById('fsFieldsTitle');
+    if (fsTitle) fsTitle.childNodes[0].textContent = QNU_SESSION.role === 'designer' ? 'All Webflow Fields (Read-only) ' : 'All Webflow Fields — Edit ';
+    const dsec = document.getElementById('fsDesignerSection');
+    if (dsec) dsec.style.display = QNU_SESSION.role === 'designer' ? 'block' : 'none';
+  }
+};
+
+// Enter key on login
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && document.getElementById('v-login').classList.contains('active')) doLogin(); });
+</script>
+</body></html>
