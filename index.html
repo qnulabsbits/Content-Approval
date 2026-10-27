@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>QNu Labs – Content Approval</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-<style>:root{
+<style>
+:root{
   --bg:#F5F0E8;--surface:#FFFFFF;--surface2:#FAF7F2;
   --border:#E8DDD0;--border2:#D9CCBA;
   --text:#1A1A1A;--muted:#7A6E63;
@@ -280,17 +281,22 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
   .topbar,.fs-topbar{padding:0 16px;}
   .main,.fs-body,.admin-content{padding:18px 16px;}
 }
+
+/* Fix log row spacing */
+.log-row{display:grid;grid-template-columns:150px 160px 90px 1fr;gap:0;padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px;align-items:start;}
+.log-row > div{padding-right:12px;}
+.log-header{background:var(--surface2);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;font-size:10px;align-items:center;}
+/* Admin back btn */
+.admin-back{display:flex;align-items:center;gap:8px;margin-bottom:18px;}
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════════
-     LOGIN VIEW
-══════════════════════════════════════════════════ -->
+<!-- LOGIN VIEW -->
 <div class="view active" id="v-login">
   <div class="login-wrap">
     <div class="login-card">
-      <img class="login-logo" src="logo.png" alt="QNu Labs"/>
+      <img class="login-logo" src="logo.png" alt="QNu Labs" onclick="goHome()"/>
       <div class="login-title">Content Approval System</div>
       <div class="login-sub">QNu Labs — Corporate Marketing</div>
       <div class="login-group">
@@ -310,9 +316,7 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════
-     SHARED TOPBAR (hidden in login)
-══════════════════════════════════════════════════ -->
+<!-- SHARED TOPBAR -->
 <div id="mainTopbar" style="display:none;">
   <div class="topbar">
     <div class="topbar-left">
@@ -329,27 +333,42 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════
-     WRITER VIEW
-══════════════════════════════════════════════════ -->
-<div class="view" id="v-writer">
+<!-- ══════════════════════════════════════
+     SHARED ROLE VIEW (writer/seo/cmo/designer)
+     Single set of IDs — no duplicates
+══════════════════════════════════════ -->
+<div class="view" id="v-writer" style="display:none;"><!-- writer placeholder --></div>
+<div class="view" id="v-seo" style="display:none;"><!-- seo placeholder --></div>
+<div class="view" id="v-cmo" style="display:none;"><!-- cmo placeholder --></div>
+<div class="view" id="v-designer" style="display:none;"><!-- designer placeholder --></div>
+
+<!-- SHARED CONTENT AREA (used by all 4 roles) -->
+<div id="roleContent" style="display:none;">
   <div class="main">
-    <div class="page-header"><h2>Content Submission</h2><p>Submit new content with all Webflow fields and approve for SEO review.</p></div>
+    <div class="page-header">
+      <h2 id="pageH2">Dashboard</h2>
+      <p id="pageP"></p>
+    </div>
+    <!-- Bulk download bar -->
     <div class="download-bar">
       <span class="download-bar-title">Bulk Download</span>
-      <label style="font-size:12px;color:var(--muted)">From</label><input type="date" class="date-input" id="dlFrom"/>
-      <label style="font-size:12px;color:var(--muted)">To</label><input type="date" class="date-input" id="dlTo"/>
+      <label style="font-size:12px;color:var(--muted)">From</label>
+      <input type="date" class="date-input" id="dlFrom"/>
+      <label style="font-size:12px;color:var(--muted)">To</label>
+      <input type="date" class="date-input" id="dlTo"/>
       <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadWord()">Word</button>
       <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadPDF()">PDF</button>
     </div>
-    <div class="stats-row" style="grid-template-columns:repeat(5,1fr)">
-      <div class="stat-card s-total"><div class="stat-label">Total</div><div class="stat-value" id="s1">-</div></div>
-      <div class="stat-card s-accent"><div class="stat-label">With SEO</div><div class="stat-value" id="s2">-</div></div>
-      <div class="stat-card s-yellow"><div class="stat-label">With CMO</div><div class="stat-value" id="s3">-</div></div>
-      <div class="stat-card s-blue"><div class="stat-label">With Designer</div><div class="stat-value" id="s4">-</div></div>
-      <div class="stat-card s-green"><div class="stat-label">Posted</div><div class="stat-value" id="s5">-</div></div>
+    <!-- Stats row — 5 cards, some hidden per role -->
+    <div class="stats-row" style="grid-template-columns:repeat(5,1fr)" id="statsRow">
+      <div class="stat-card s-total" id="statCard0"><div class="stat-label" id="statLbl0">Total</div><div class="stat-value" id="statVal0">-</div></div>
+      <div class="stat-card s-accent" id="statCard1"><div class="stat-label" id="statLbl1">With SEO</div><div class="stat-value" id="statVal1">-</div></div>
+      <div class="stat-card s-yellow" id="statCard2"><div class="stat-label" id="statLbl2">With CMO</div><div class="stat-value" id="statVal2">-</div></div>
+      <div class="stat-card s-blue" id="statCard3"><div class="stat-label" id="statLbl3">With Designer</div><div class="stat-value" id="statVal3">-</div></div>
+      <div class="stat-card s-green" id="statCard4"><div class="stat-label" id="statLbl4">Posted</div><div class="stat-value" id="statVal4">-</div></div>
     </div>
-    <div class="fs-card" style="margin-bottom:22px;">
+    <!-- Writer-only add form -->
+    <div id="writerAddForm" class="fs-card" style="display:none;margin-bottom:22px;">
       <div class="fs-card-title">Add New Content</div>
       <div class="field-grid">
         <div class="field-group"><div class="field-label">Content Type <span class="req">*</span></div>
@@ -361,120 +380,27 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
             <option value="Other">Other (Case Study)</option>
           </select>
         </div>
-        <div class="field-group"><div class="field-label">Your Name <span class="req">*</span></div><input type="text" class="field-input" id="newWriter" placeholder="Your full name"/></div>
+        <div class="field-group"><div class="field-label">Your Name <span class="req">*</span></div>
+          <input type="text" class="field-input" id="newWriter" placeholder="Your full name"/>
+        </div>
       </div>
-      <div id="dynamicFields" style="margin-top:12px;display:none;"><div class="field-grid" id="dynamicFieldsInner"></div></div>
+      <div id="dynamicFields" style="margin-top:12px;display:none;">
+        <div class="field-grid" id="dynamicFieldsInner"></div>
+      </div>
       <div class="save-bar"><button class="action-btn primary" id="submitBtn" onclick="submitNew()">Add Content</button></div>
     </div>
+    <!-- Filter tabs + table -->
     <div class="section-header">
-      <div class="section-title">All Submissions</div>
-      <div class="filter-tabs">
+      <div class="section-title" id="tableTitle">All Content</div>
+      <div class="filter-tabs" id="filterTabs">
         <button class="tab active" onclick="filterRows('all',this)">All</button>
-        <button class="tab" onclick="filterRows('pending',this)">Pending</button>
-        <button class="tab" onclick="filterRows('review',this)">In Review</button>
-        <button class="tab" onclick="filterRows('posted',this)">Posted</button>
       </div>
     </div>
     <div class="table-wrap"><div id="tableContainer"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════
-     SEO VIEW
-══════════════════════════════════════════════════ -->
-<div class="view" id="v-seo">
-  <div class="main">
-    <div class="page-header"><h2>SEO Review Queue</h2><p>Click any row to open full-screen editor with all Webflow fields.</p></div>
-    <div class="download-bar">
-      <span class="download-bar-title">Bulk Download</span>
-      <label style="font-size:12px;color:var(--muted)">From</label><input type="date" class="date-input" id="dlFrom"/>
-      <label style="font-size:12px;color:var(--muted)">To</label><input type="date" class="date-input" id="dlTo"/>
-      <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadWord()">Word</button>
-      <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadPDF()">PDF</button>
-    </div>
-    <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
-      <div class="stat-card s-accent"><div class="stat-label">Needs Review</div><div class="stat-value" id="s1">-</div></div>
-      <div class="stat-card s-yellow"><div class="stat-label">Approved</div><div class="stat-value" id="s2">-</div></div>
-      <div class="stat-card s-green"><div class="stat-label">Posted</div><div class="stat-value" id="s3">-</div></div>
-      <div class="stat-card s-total"><div class="stat-label">Total</div><div class="stat-value" id="s4">-</div></div>
-    </div>
-    <div class="section-header">
-      <div class="section-title">Content Queue</div>
-      <div class="filter-tabs">
-        <button class="tab active" onclick="filterRows('all',this)">All</button>
-        <button class="tab" onclick="filterRows('needs',this)">Needs Review</button>
-        <button class="tab" onclick="filterRows('approved',this)">Approved</button>
-      </div>
-    </div>
-    <div class="table-wrap"><div id="tableContainer"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════
-     CMO VIEW
-══════════════════════════════════════════════════ -->
-<div class="view" id="v-cmo">
-  <div class="main">
-    <div class="page-header"><h2>CMO Final Approval</h2><p>Review SEO content, edit all fields and approve for Designer.</p></div>
-    <div class="download-bar">
-      <span class="download-bar-title">Bulk Download</span>
-      <label style="font-size:12px;color:var(--muted)">From</label><input type="date" class="date-input" id="dlFrom"/>
-      <label style="font-size:12px;color:var(--muted)">To</label><input type="date" class="date-input" id="dlTo"/>
-      <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadWord()">Word</button>
-      <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadPDF()">PDF</button>
-    </div>
-    <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
-      <div class="stat-card s-purple"><div class="stat-label">Awaiting Approval</div><div class="stat-value" id="s1">-</div></div>
-      <div class="stat-card s-green"><div class="stat-label">Approved</div><div class="stat-value" id="s2">-</div></div>
-      <div class="stat-card s-blue"><div class="stat-label">Posted</div><div class="stat-value" id="s3">-</div></div>
-      <div class="stat-card s-total"><div class="stat-label">Total</div><div class="stat-value" id="s4">-</div></div>
-    </div>
-    <div class="section-header">
-      <div class="section-title">Content for Final Approval</div>
-      <div class="filter-tabs">
-        <button class="tab active" onclick="filterRows('all',this)">All</button>
-        <button class="tab" onclick="filterRows('needs',this)">Needs Approval</button>
-        <button class="tab" onclick="filterRows('approved',this)">Approved</button>
-      </div>
-    </div>
-    <div class="table-wrap"><div id="tableContainer"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════
-     DESIGNER VIEW
-══════════════════════════════════════════════════ -->
-<div class="view" id="v-designer">
-  <div class="main">
-    <div class="page-header"><h2>Designer Publication Queue</h2><p>Review approved content and post directly to Webflow.</p></div>
-    <div class="download-bar">
-      <span class="download-bar-title">Bulk Download</span>
-      <label style="font-size:12px;color:var(--muted)">From</label><input type="date" class="date-input" id="dlFrom"/>
-      <label style="font-size:12px;color:var(--muted)">To</label><input type="date" class="date-input" id="dlTo"/>
-      <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadWord()">Word</button>
-      <button class="action-btn secondary" style="padding:6px 12px;font-size:12px;" onclick="bulkDownloadPDF()">PDF</button>
-    </div>
-    <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
-      <div class="stat-card s-blue"><div class="stat-label">Ready to Post</div><div class="stat-value" id="s1">-</div></div>
-      <div class="stat-card s-green"><div class="stat-label">Posted Live</div><div class="stat-value" id="s2">-</div></div>
-      <div class="stat-card s-yellow"><div class="stat-label">Draft</div><div class="stat-value" id="s3">-</div></div>
-      <div class="stat-card s-total"><div class="stat-label">Total</div><div class="stat-value" id="s4">-</div></div>
-    </div>
-    <div class="section-header">
-      <div class="section-title">Publication Queue</div>
-      <div class="filter-tabs">
-        <button class="tab active" onclick="filterRows('all',this)">All</button>
-        <button class="tab" onclick="filterRows('ready',this)">Ready to Post</button>
-        <button class="tab" onclick="filterRows('posted',this)">Posted</button>
-      </div>
-    </div>
-    <div class="table-wrap"><div id="tableContainer"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════
-     ADMIN VIEW
-══════════════════════════════════════════════════ -->
+<!-- ADMIN VIEW -->
 <div class="view" id="v-admin">
   <div class="admin-grid">
     <div class="admin-sidebar">
@@ -487,15 +413,15 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
       <div class="admin-nav-item" onclick="adminShowSection('activity',this)">Activity Log</div>
       <div class="admin-nav-item" onclick="adminShowSection('content',this)">All Content</div>
       <div style="padding:16px 20px 0;border-top:1px solid var(--border);margin-top:16px;">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">Role Dashboards</div>
-        <a href="#" onclick="QNU_SESSION.role='writer';goHome();fetchData();return false;" style="display:block;padding:7px 0;font-size:13px;color:var(--accent);text-decoration:none;font-weight:500;">Writer</a>
-        <a href="#" onclick="QNU_SESSION.role='seo';goHome();fetchData();return false;" style="display:block;padding:7px 0;font-size:13px;color:var(--yellow);text-decoration:none;font-weight:500;">SEO Team</a>
-        <a href="#" onclick="QNU_SESSION.role='cmo';goHome();fetchData();return false;" style="display:block;padding:7px 0;font-size:13px;color:var(--purple);text-decoration:none;font-weight:500;">CMO</a>
-        <a href="#" onclick="QNU_SESSION.role='designer';goHome();fetchData();return false;" style="display:block;padding:7px 0;font-size:13px;color:var(--blue);text-decoration:none;font-weight:500;">Designer</a>
-        <a href="#" onclick="QNU_SESSION.role='admin';goHome();loadAdminDashboard();return false;" style="display:block;padding:7px 0;font-size:13px;color:#1A1A1A;text-decoration:none;font-weight:500;">Back to Admin</a>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">View As Role</div>
+        <a href="#" onclick="switchToRole('writer');return false;" style="display:block;padding:7px 0;font-size:13px;color:var(--accent);text-decoration:none;font-weight:500;">Writer</a>
+        <a href="#" onclick="switchToRole('seo');return false;" style="display:block;padding:7px 0;font-size:13px;color:var(--yellow);text-decoration:none;font-weight:500;">SEO Team</a>
+        <a href="#" onclick="switchToRole('cmo');return false;" style="display:block;padding:7px 0;font-size:13px;color:var(--purple);text-decoration:none;font-weight:500;">CMO</a>
+        <a href="#" onclick="switchToRole('designer');return false;" style="display:block;padding:7px 0;font-size:13px;color:var(--blue);text-decoration:none;font-weight:500;">Designer</a>
       </div>
     </div>
     <div class="admin-content">
+      <!-- DASHBOARD SECTION -->
       <div class="admin-section active" id="asec-dashboard">
         <div class="admin-section-title">Dashboard Overview</div>
         <div class="admin-section-sub">Live pipeline stats and recent activity</div>
@@ -513,22 +439,36 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
           <div id="recentActList"></div>
         </div>
       </div>
+      <!-- USERS SECTION -->
       <div class="admin-section" id="asec-users">
-        <div class="admin-section-title">User Management</div>
+        <div class="admin-back">
+          <button class="btn-secondary" onclick="adminShowSection('dashboard',document.querySelector('.admin-nav-item'))">Back to Dashboard</button>
+          <div>
+            <div class="admin-section-title" style="margin-bottom:0">User Management</div>
+          </div>
+        </div>
         <div class="admin-section-sub">Create, edit and manage team accounts</div>
         <button class="btn-primary" onclick="openCreateUser()" style="margin-bottom:18px;">+ Create New User</button>
         <div id="userList"><div class="loading-row"><span class="spinner"></span> Loading...</div></div>
       </div>
+      <!-- ACTIVITY SECTION -->
       <div class="admin-section" id="asec-activity">
-        <div class="admin-section-title">Activity Log</div>
+        <div class="admin-back">
+          <button class="btn-secondary" onclick="adminShowSection('dashboard',document.querySelector('.admin-nav-item'))">Back to Dashboard</button>
+          <div class="admin-section-title" style="margin-bottom:0">Activity Log</div>
+        </div>
         <div class="admin-section-sub">Full audit trail of all user actions</div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
           <div class="log-row log-header"><div>Time</div><div>User</div><div>Action</div><div>Details</div></div>
           <div id="activityList"><div class="loading-row"><span class="spinner"></span> Loading...</div></div>
         </div>
       </div>
+      <!-- CONTENT SECTION -->
       <div class="admin-section" id="asec-content">
-        <div class="admin-section-title">All Content</div>
+        <div class="admin-back">
+          <button class="btn-secondary" onclick="adminShowSection('dashboard',document.querySelector('.admin-nav-item'))">Back to Dashboard</button>
+          <div class="admin-section-title" style="margin-bottom:0">All Content</div>
+        </div>
         <div class="admin-section-sub">Full view of every piece of content</div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
           <div id="contentList"><div class="loading-row"><span class="spinner"></span> Loading...</div></div>
@@ -538,9 +478,7 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════
-     SHARED FULLSCREEN OVERLAY (all roles)
-══════════════════════════════════════════════════ -->
+<!-- SHARED FULLSCREEN OVERLAY -->
 <div class="fs-overlay" id="fsOverlay">
   <div class="fs-topbar">
     <div style="display:flex;align-items:center;gap:12px;">
@@ -550,29 +488,25 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
         <div class="fs-subtitle" id="fsSubtitle">-</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;">
+    <div style="display:flex;align-items:center;gap:8px;">
       <div id="fsMeta1"></div>
       <div id="fsMeta2"></div>
-      <!-- Word buttons for non-designer roles -->
-      <button class="action-btn secondary" style="padding:5px 12px;font-size:12px;" onclick="downloadActiveWordFile()">Word</button>
-      <button class="action-btn secondary" style="padding:5px 12px;font-size:12px;" onclick="document.getElementById('fsWordInput').click()">Upload Word</button>
+      <button class="action-btn secondary" style="padding:5px 11px;font-size:12px;" onclick="downloadActiveWordFile()">Word</button>
+      <button class="action-btn secondary" style="padding:5px 11px;font-size:12px;" onclick="document.getElementById('fsWordInput').click()">Upload Word</button>
       <input type="file" id="fsWordInput" accept=".doc,.docx,.txt" style="display:none" onchange="handleWordUpload(this)"/>
     </div>
   </div>
   <div class="fs-body">
-    <!-- Designer section name -->
-    <div id="fsDesignerSection" style="display:none;margin-bottom:14px;">
-      <span style="font-size:13px;font-weight:600;color:var(--blue);">Webflow Section: </span>
+    <div id="fsDesignerSection" style="display:none;margin-bottom:12px;">
+      <span style="font-size:12px;font-weight:600;color:var(--blue);">Webflow Section: </span>
       <span id="fsSection" style="font-size:13px;font-weight:700;color:var(--blue);">-</span>
     </div>
-    <!-- Fields -->
     <div class="fs-card">
       <div class="fs-card-title" id="fsFieldsTitle">Content Fields
-        <button class="action-btn primary" style="padding:5px 12px;font-size:12px;" onclick="saveEdits()">Save</button>
+        <button class="action-btn primary" style="padding:5px 11px;font-size:12px;" onclick="saveEdits()">Save</button>
       </div>
       <div class="field-grid" id="fsFieldsWrap"></div>
     </div>
-    <!-- Approval toggle -->
     <div id="fsApproveSection" class="approve-section">
       <div class="approve-inner accent" id="fsApproveInner">
         <div>
@@ -585,7 +519,6 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
     </div>
-    <!-- Designer: Webflow post section -->
     <div id="fsPostSection" style="display:none;">
       <div class="fs-card" style="border:2px solid var(--blue);background:var(--blue-light);margin-top:16px;">
         <div class="fs-card-title" style="color:var(--blue);">How to post to Webflow</div>
@@ -609,9 +542,7 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════
-     ADMIN MODALS
-══════════════════════════════════════════════════ -->
+<!-- ADMIN MODALS -->
 <div class="modal-overlay" id="createUserModal">
   <div class="modal-box">
     <div class="modal-title">Create New User</div>
@@ -662,9 +593,6 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════
-     TOAST
-══════════════════════════════════════════════════ -->
 <div class="toast" id="toast"><div class="toast-dot"></div><span id="toastMsg"></span></div>
 
 <script>
@@ -699,9 +627,95 @@ function showView(viewId){
   const v=document.getElementById('v-'+viewId);
   if(v) v.classList.add('active');
   document.body.style.overflow='';
-  if(viewId!=='login'){
+  if(viewId!=='login'&&viewId!=='admin'){
+    updateTopbar();
+    updateRoleContent(viewId);
+  } else if(viewId==='admin'){
     updateTopbar();
   }
+}
+
+function updateRoleContent(role){
+  // Update page header
+  const titles={
+    writer:{h:'Content Submission',p:'Submit new content with all Webflow fields and approve for SEO review.'},
+    seo:{h:'SEO Review Queue',p:'Click any row to open full-screen editor with all Webflow fields.'},
+    cmo:{h:'CMO Final Approval',p:'Review SEO content, edit all fields and approve for Designer.'},
+    designer:{h:'Designer Publication Queue',p:'Review approved content and post directly to Webflow.'},
+    admin:{h:'Content Overview',p:'Full view of all content in the pipeline.'}
+  };
+  const info=titles[role]||titles.writer;
+  const h2=document.getElementById('pageH2');
+  const p=document.getElementById('pageP');
+  if(h2) h2.textContent=info.h;
+  if(p) p.textContent=info.p;
+  // Update filter tabs
+  const tabsMap={
+    writer:`<button class="tab active" onclick="filterRows('all',this)">All</button>
+            <button class="tab" onclick="filterRows('pending',this)">Pending</button>
+            <button class="tab" onclick="filterRows('review',this)">In Review</button>
+            <button class="tab" onclick="filterRows('posted',this)">Posted</button>`,
+    seo:`<button class="tab active" onclick="filterRows('all',this)">All</button>
+         <button class="tab" onclick="filterRows('needs',this)">Needs Review</button>
+         <button class="tab" onclick="filterRows('approved',this)">Approved</button>`,
+    cmo:`<button class="tab active" onclick="filterRows('all',this)">All</button>
+         <button class="tab" onclick="filterRows('needs',this)">Needs Approval</button>
+         <button class="tab" onclick="filterRows('approved',this)">Approved</button>`,
+    designer:`<button class="tab active" onclick="filterRows('all',this)">All</button>
+              <button class="tab" onclick="filterRows('ready',this)">Ready to Post</button>
+              <button class="tab" onclick="filterRows('posted',this)">Posted</button>`
+  };
+  const tabsWrap=document.getElementById('filterTabs');
+  if(tabsWrap) tabsWrap.innerHTML=tabsMap[role]||tabsMap.writer;
+  currentFilter='all';
+  // Update stat labels
+  const statLabels={
+    writer:[['Total','s1'],['With SEO','s2'],['With CMO','s3'],['With Designer','s4'],['Posted','s5']],
+    seo:[['Needs Review','s1'],['Approved','s2'],['Posted','s3'],['Total','s4'],['','s5']],
+    cmo:[['Awaiting Approval','s1'],['Approved','s2'],['Posted','s3'],['Total','s4'],['','s5']],
+    designer:[['Ready to Post','s1'],['Posted Live','s2'],['Draft','s3'],['Total','s4'],['','s5']]
+  };
+  const statClasses={
+    writer:['s-total','s-accent','s-yellow','s-blue','s-green'],
+    seo:['s-accent','s-yellow','s-green','s-total',''],
+    cmo:['s-purple','s-green','s-blue','s-total',''],
+    designer:['s-blue','s-green','s-yellow','s-total','']
+  };
+  const labels=statLabels[role]||statLabels.writer;
+  const classes=statClasses[role]||statClasses.writer;
+  labels.forEach(([label,id],i)=>{
+    const card=document.getElementById('statCard'+i);
+    const lbl=document.getElementById('statLbl'+i);
+    const val=document.getElementById('statVal'+i);
+    if(card){ card.className='stat-card '+classes[i]; card.style.display=label?'block':'none'; }
+    if(lbl) lbl.textContent=label;
+    if(val) val.textContent='-';
+  });
+  // Update writer-only add form visibility
+  const addForm=document.getElementById('writerAddForm');
+  if(addForm) addForm.style.display=role==='writer'?'block':'none';
+  // Update approve section styling
+  const inner=document.getElementById('fsApproveInner');
+  const lbl2=document.getElementById('fsApproveLabel');
+  const sub=document.getElementById('fsApproveSub');
+  const tog=document.getElementById('fsToggle');
+  const approveMap={
+    writer:{cls:'accent',label:'Approve for SEO Review',sub:'Triggers notification to SEO team'},
+    seo:{cls:'yellow',label:'Approve for CMO Review',sub:'Save edits first, then approve.'},
+    cmo:{cls:'purple',label:'Approve for Designer',sub:'Designer will post to Webflow.'},
+    designer:{cls:'blue',label:'Designer Approval',sub:'Approve before posting to Webflow.'}
+  };
+  const ai=approveMap[role];
+  if(ai&&inner){
+    inner.className='approve-inner '+ai.cls;
+    if(lbl2){lbl2.className='approve-label '+ai.cls;lbl2.textContent=ai.label;}
+    if(sub) sub.textContent=ai.sub;
+    if(tog) tog.className='toggle '+(role==='writer'?'':role);
+  }
+  const dsec=document.getElementById('fsDesignerSection');
+  if(dsec) dsec.style.display=role==='designer'?'block':'none';
+  const fsTitle=document.getElementById('fsFieldsTitle');
+  if(fsTitle) fsTitle.childNodes[0].textContent=role==='designer'?'All Webflow Fields (Read-only) ':'All Webflow Fields — Edit ';
 }
 
 function updateTopbar(){
@@ -1180,31 +1194,27 @@ async function fetchData(){
 // ════════════════════════════════════════════════════
 function updateStats(r){
   const role=QNU_SESSION?.role;
-  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+  const set=(i,val)=>{const el=document.getElementById('statVal'+i);if(el)el.textContent=val;};
   if(role==='writer'||role==='admin'){
-    set('s1',r.length);
-    set('s2',r.filter(x=>x.writer_approved&&!x.seo_approved).length);
-    set('s3',r.filter(x=>x.seo_approved&&!x.designer_approved).length);
-    set('s4',r.filter(x=>x.designer_approved&&!x.posted_to_webflow).length);
-    set('s5',r.filter(x=>x.posted_to_webflow).length);
-  }
-  if(role==='seo'){
-    set('s1',r.filter(x=>x.writer_approved&&!x.seo_approved).length);
-    set('s2',r.filter(x=>x.seo_approved).length);
-    set('s3',r.filter(x=>x.posted_to_webflow).length);
-    set('s4',r.length);
-  }
-  if(role==='cmo'){
-    set('s1',r.filter(x=>x.seo_approved&&!x.cmo_approved).length);
-    set('s2',r.filter(x=>x.cmo_approved).length);
-    set('s3',r.filter(x=>x.posted_to_webflow).length);
-    set('s4',r.length);
-  }
-  if(role==='designer'){
-    set('s1',r.filter(x=>x.cmo_approved&&!x.posted_to_webflow).length);
-    set('s2',r.filter(x=>x.posted_to_webflow&&x.webflow_status==='live').length);
-    set('s3',r.filter(x=>x.posted_to_webflow&&x.webflow_status==='draft').length);
-    set('s4',r.length);
+    set(0,r.length); set(1,r.filter(x=>x.writer_approved&&!x.seo_approved).length);
+    set(2,r.filter(x=>x.seo_approved&&!x.designer_approved).length);
+    set(3,r.filter(x=>x.designer_approved&&!x.posted_to_webflow).length);
+    set(4,r.filter(x=>x.posted_to_webflow).length);
+  } else if(role==='seo'){
+    set(0,r.filter(x=>x.writer_approved&&!x.seo_approved).length);
+    set(1,r.filter(x=>x.seo_approved).length);
+    set(2,r.filter(x=>x.posted_to_webflow).length);
+    set(3,r.length);
+  } else if(role==='cmo'){
+    set(0,r.filter(x=>x.seo_approved&&!x.cmo_approved).length);
+    set(1,r.filter(x=>x.cmo_approved).length);
+    set(2,r.filter(x=>x.posted_to_webflow).length);
+    set(3,r.length);
+  } else if(role==='designer'){
+    set(0,r.filter(x=>x.cmo_approved&&!x.posted_to_webflow).length);
+    set(1,r.filter(x=>x.posted_to_webflow&&x.webflow_status==='live').length);
+    set(2,r.filter(x=>x.posted_to_webflow&&x.webflow_status==='draft').length);
+    set(3,r.length);
   }
 }
 
@@ -1691,43 +1701,77 @@ async function deleteUser(id,email){
 })();
 
 
-// Show topbar when not on login
+// ── SHOW/HIDE ROLE CONTENT + TOPBAR ──
 const _origShowView = showView;
 showView = function(viewId) {
-  _origShowView(viewId);
-  const tb = document.getElementById('mainTopbar');
-  if (tb) tb.style.display = viewId === 'login' ? 'none' : 'block';
-  // Adjust layout so topbar doesn't overlap
-  document.querySelectorAll('.view:not(#v-login)').forEach(v => {
-    v.style.paddingTop = viewId !== 'login' ? '0' : '0';
-  });
-  // Update approve section style per role
-  if (viewId !== 'login' && viewId !== 'admin' && QNU_SESSION) {
-    const inner = document.getElementById('fsApproveInner');
-    const lbl = document.getElementById('fsApproveLabel');
-    const sub = document.getElementById('fsApproveSub');
-    const toggle = document.getElementById('fsToggle');
-    const map = {
-      writer: {cls:'accent',label:'Approve for SEO Review',sub:'Triggers notification to SEO team'},
-      seo:    {cls:'yellow',label:'Approve for CMO Review',sub:'Save edits first, then approve.'},
-      cmo:    {cls:'purple',label:'Approve for Designer',sub:'Designer will post to Webflow.'},
-      designer:{cls:'blue',label:'Designer Approval',sub:'Approve before posting to Webflow.'}
-    };
-    const info = map[QNU_SESSION.role];
-    if (info && inner) {
-      inner.className = 'approve-inner ' + info.cls;
-      if (lbl) { lbl.className = 'approve-label ' + info.cls; lbl.textContent = info.label; }
-      if (sub) sub.textContent = info.sub;
-      if (toggle) { toggle.className = 'toggle ' + (QNU_SESSION.role === 'writer' ? '' : QNU_SESSION.role); }
-    }
-    const fsTitle = document.getElementById('fsFieldsTitle');
-    if (fsTitle) fsTitle.childNodes[0].textContent = QNU_SESSION.role === 'designer' ? 'All Webflow Fields (Read-only) ' : 'All Webflow Fields — Edit ';
-    const dsec = document.getElementById('fsDesignerSection');
-    if (dsec) dsec.style.display = QNU_SESSION.role === 'designer' ? 'block' : 'none';
+  // Hide all views
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const v = document.getElementById('v-' + viewId);
+  if (v) v.classList.add('active');
+  document.body.style.overflow = '';
+
+  const topbar = document.getElementById('mainTopbar');
+  const roleContent = document.getElementById('roleContent');
+  const adminView = document.getElementById('v-admin');
+
+  if (viewId === 'login') {
+    if (topbar) topbar.style.display = 'none';
+    if (roleContent) roleContent.style.display = 'none';
+    if (adminView) adminView.style.display = 'none';
+  } else if (viewId === 'admin') {
+    if (topbar) topbar.style.display = 'block';
+    if (roleContent) roleContent.style.display = 'none';
+    if (adminView) adminView.style.display = 'block';
+    updateTopbar();
+    const uname = document.getElementById('topUserName');
+    if (uname && QNU_SESSION) uname.textContent = QNU_SESSION.full_name || QNU_SESSION.email || 'Admin';
+  } else {
+    if (topbar) topbar.style.display = 'block';
+    if (roleContent) roleContent.style.display = 'block';
+    if (adminView) adminView.style.display = 'none';
+    updateTopbar();
+    updateRoleContent(viewId);
   }
 };
 
+// Admin can switch to role views without losing admin role
+function switchToRole(role) {
+  const savedRole = QNU_SESSION.role;
+  QNU_SESSION._savedRole = savedRole;
+  QNU_SESSION._viewRole = role;
+  // Show role content but keep admin session
+  const topbar = document.getElementById('mainTopbar');
+  const roleContent = document.getElementById('roleContent');
+  const adminView = document.getElementById('v-admin');
+  if (topbar) topbar.style.display = 'block';
+  if (roleContent) roleContent.style.display = 'block';
+  if (adminView) adminView.style.display = 'none';
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  updateTopbar();
+  updateRoleContent(role);
+  // Override renderTable role temporarily
+  const tmpSession = {...QNU_SESSION, role: role};
+  QNU_SESSION = tmpSession;
+  fetchData();
+  // Add back to admin button
+  const backBtn = document.getElementById('roleBackToAdmin');
+  if (!backBtn) {
+    const bar = document.querySelector('#roleContent .download-bar');
+    if (bar) {
+      const btn = document.createElement('button');
+      btn.className = 'action-btn secondary';
+      btn.style.cssText = 'padding:6px 12px;font-size:12px;margin-left:auto;';
+      btn.textContent = 'Back to Admin';
+      btn.id = 'roleBackToAdmin';
+      btn.onclick = () => { QNU_SESSION.role = 'admin'; btn.remove(); goHome(); };
+      bar.appendChild(btn);
+    }
+  }
+}
+
 // Enter key on login
-document.addEventListener('keydown', e => { if (e.key === 'Enter' && document.getElementById('v-login').classList.contains('active')) doLogin(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('v-login').classList.contains('active')) doLogin();
+});
 </script>
 </body></html>
