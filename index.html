@@ -762,7 +762,9 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
       </div>
       <div id="addTaskForm" style="display:none;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:12px;align-items:end">
         <div class="field-group"><div class="field-label">Task Title</div><input class="field-input" id="ptTaskTitle" placeholder="Task name"/></div>
-        <div class="field-group"><div class="field-label">Assignee</div><input class="field-input" id="ptTaskAssignee" placeholder="Person name"/></div>
+        <div class="field-group"><div class="field-label">Assignee</div>
+        <select class="field-select" id="ptTaskAssignee"><option value="">Select assignee...</option></select>
+      </div>
         <div class="field-group"><div class="field-label">Due Date</div><input class="field-date" id="ptTaskDue" type="date"/></div>
         <div class="field-group"><div class="field-label">Priority</div><select class="field-select" id="ptTaskPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>
         <div class="field-group"><div class="field-label">Status</div><select class="field-select" id="ptTaskStatus"><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="review">Review</option><option value="done">Done</option></select></div>
@@ -915,8 +917,21 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
     <div class="field-group" style="margin-bottom:12px"><div class="field-label">Full Name</div><input class="field-input" id="admNewName" placeholder="e.g. Priya Sharma"/></div>
     <div class="field-group" style="margin-bottom:12px"><div class="field-label">Email</div><input class="field-input" type="email" id="admNewEmail" placeholder="priya@qnulabs.com"/></div>
     <div class="field-group" style="margin-bottom:12px"><div class="field-label">Password</div><input class="field-input" type="password" id="admNewPassword" placeholder="Min 6 characters"/></div>
-    <div class="field-group" style="margin-bottom:4px"><div class="field-label">Role</div>
+    <div class="field-group" style="margin-bottom:12px"><div class="field-label">Role</div>
       <select class="field-select" id="admNewRole"><option value="writer">Writer</option><option value="seo">SEO Team</option><option value="cmo">CMO</option><option value="designer">Designer</option><option value="hr">HR Executive</option><option value="admin">Admin</option></select>
+    </div>
+    <div class="field-group" style="margin-bottom:4px">
+      <div class="field-label">Department</div>
+      <select class="field-select" id="admNewDept" onchange="toggleCustomDept('admNewDeptCustom',this.value)"><option value="">Select department...</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Sales">Sales</option>
+            <option value="Engineering">Engineering</option>
+            <option value="HR">HR</option>
+            <option value="Leadership">Leadership</option>
+            <option value="Finance">Finance</option>
+            <option value="Operations">Operations</option>
+            <option value="custom">Other (type below)</option></select>
+      <input class="field-input" id="admNewDeptCustom" placeholder="Type department name" style="display:none;margin-top:6px"/>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('admCreateModal')">Cancel</button>
@@ -930,8 +945,21 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
     <input type="hidden" id="admEditId"/>
     <div class="field-group" style="margin-bottom:12px"><div class="field-label">Full Name</div><input class="field-input" id="admEditName"/></div>
     <div class="field-group" style="margin-bottom:12px"><div class="field-label">Email (display only)</div><input class="field-input" id="admEditEmail"/></div>
-    <div class="field-group" style="margin-bottom:4px"><div class="field-label">Role</div>
+    <div class="field-group" style="margin-bottom:12px"><div class="field-label">Role</div>
       <select class="field-select" id="admEditRole"><option value="writer">Writer</option><option value="seo">SEO Team</option><option value="cmo">CMO</option><option value="designer">Designer</option><option value="hr">HR Executive</option><option value="admin">Admin</option></select>
+    </div>
+    <div class="field-group" style="margin-bottom:4px">
+      <div class="field-label">Department</div>
+      <select class="field-select" id="admEditDept" onchange="toggleCustomDept('admEditDeptCustom',this.value)"><option value="">Select department...</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Sales">Sales</option>
+            <option value="Engineering">Engineering</option>
+            <option value="HR">HR</option>
+            <option value="Leadership">Leadership</option>
+            <option value="Finance">Finance</option>
+            <option value="Operations">Operations</option>
+            <option value="custom">Other (type below)</option></select>
+      <input class="field-input" id="admEditDeptCustom" placeholder="Type department name" style="display:none;margin-top:6px"/>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('admEditModal')">Cancel</button>
@@ -1794,6 +1822,7 @@ const STATUS_LABELS={todo:'To Do',inprogress:'In Progress',review:'Review',done:
 const PRIORITY_COLORS={high:'var(--accent)',medium:'var(--yellow)',low:'var(--green)'};
 
 async function loadProjects() {
+  loadUsersForAssignee();
   try {
     projects = await sbFetch('projects?order=created_at.desc&select=*')||[];
     renderProjectStats();
@@ -1886,6 +1915,7 @@ async function openProjectModal(id) {
   $('pmDesc').textContent=p.description||'No description.';
   await loadProjectTasks(p.id);
   await loadProjectKPIs(p.id);
+  await populateAssigneeDropdown();
   showModal('projectModal');
 }
 
@@ -2517,6 +2547,43 @@ async function loadAdmin() {
   } catch(e){toast('Could not load admin data: '+e.message,'error');}
 }
 
+function toggleCustomDept(customId, val) {
+  const el=$(customId); if(!el) return;
+  el.style.display = val==='custom' ? 'block' : 'none';
+  if(val!=='custom') el.value='';
+}
+
+async function loadUsersForAssignee() {
+  if(window._allUsers) return window._allUsers;
+  try {
+    const users = await sbFetch('user_profiles?order=full_name.asc&select=id,full_name,email,department,role')||[];
+    window._allUsers = users;
+    return users;
+  } catch(_){ return []; }
+}
+
+async function populateAssigneeDropdown() {
+  const sel=$('ptTaskAssignee'); if(!sel) return;
+  const users = await loadUsersForAssignee();
+  const marketing = users.filter(u=>(u.department||'').toLowerCase()==='marketing');
+  const others = users.filter(u=>(u.department||'').toLowerCase()!=='marketing');
+  others.sort((a,b)=>(a.department||'zzz').localeCompare(b.department||'zzz')||
+    (a.full_name||'').localeCompare(b.full_name||''));
+  let html='<option value="">Select assignee...</option>';
+  if(marketing.length){
+    html+='<optgroup label="Marketing">';
+    marketing.forEach(u=>{html+=`<option value="${esc(u.full_name)}">${esc(u.full_name)}</option>`;});
+    html+='</optgroup>';
+  }
+  const depts=[...new Set(others.map(u=>u.department||'Other'))];
+  depts.forEach(dept=>{
+    html+=`<optgroup label="${esc(dept)}">`;
+    others.filter(u=>(u.department||'Other')===dept).forEach(u=>{html+=`<option value="${esc(u.full_name)}">${esc(u.full_name)}</option>`;});
+    html+='</optgroup>';
+  });
+  sel.innerHTML=html;
+}
+
 async function loadAdminStats() {
   try {
     const rows=await sbFetch('content_approvals?select=*')||[];
@@ -2551,11 +2618,11 @@ function renderAdminUsers() {
         <div>
           <div style="font-size:14px;font-weight:700">${esc(u.full_name||'Unknown')}</div>
           <div style="font-size:12px;color:var(--muted)">${esc(u.email)}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">Last login: ${u.last_login?formatDateTime(u.last_login):'Never'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${u.department?'<span style="font-weight:600;color:var(--blue)">'+esc(u.department)+'</span> &middot; ':''} Last login: ${u.last_login?formatDateTime(u.last_login):'Never'}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <span style="background:${rColors[u.role]||'var(--muted)'};color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">${esc(String(u.role).toUpperCase())}</span>
-          <button class="btn btn-secondary btn-xs" onclick="openEditUser('${u.id}','${esc(u.full_name||'')}','${esc(u.email)}','${u.role}')">Edit</button>
+          <button class="btn btn-secondary btn-xs" onclick="openEditUser('${u.id}','${esc(u.full_name||'')}','${esc(u.email)}','${u.role}','${esc(u.department||'')}')">Edit</button>
           <button class="btn btn-secondary btn-xs" onclick="openResetPw('${u.id}','${esc(u.email)}')">Reset PW</button>
           <button class="btn btn-secondary btn-xs" style="color:var(--accent);border-color:var(--accent-border)" onclick="deleteUser('${u.id}','${esc(u.email)}')">Delete</button>
         </div>
@@ -2588,10 +2655,16 @@ async function toggleModulePerm(input) {
 let resetUserId=null;
 function openCreateUser(){
   ['admNewName','admNewEmail','admNewPassword'].forEach(id=>{const el=$(id);if(el)el.value='';});
-  $('admNewRole').value='writer'; showModal('admCreateModal');
+  $('admNewRole').value='writer';
+  $('admNewDept').value=''; $('admNewDeptCustom').style.display='none'; $('admNewDeptCustom').value='';
+  showModal('admCreateModal');
 }
-function openEditUser(id,name,email,role){
+function openEditUser(id,name,email,role,dept){
   $('admEditId').value=id; $('admEditName').value=name; $('admEditEmail').value=email; $('admEditRole').value=role;
+  const fixedDepts=['Marketing','Sales','Engineering','HR','Leadership','Finance','Operations'];
+  if(!dept){$('admEditDept').value='';$('admEditDeptCustom').style.display='none';$('admEditDeptCustom').value='';}
+  else if(fixedDepts.includes(dept)){$('admEditDept').value=dept;$('admEditDeptCustom').style.display='none';$('admEditDeptCustom').value='';}
+  else{$('admEditDept').value='custom';$('admEditDeptCustom').style.display='block';$('admEditDeptCustom').value=dept;}
   showModal('admEditModal');
 }
 function openResetPw(id,email){
@@ -2616,7 +2689,8 @@ async function adminCreateUser(){
     const defaultPerms={content:false,projects:false,crm:false,analytics:false,reports:false,inventory:false,inventory_write:false,hr:false};
     defaultPerms[['content','projects','inventory'].includes(role)?role:'content']=true;
     if(role==='admin') Object.keys(defaultPerms).forEach(k=>defaultPerms[k]=true);
-    await dbInsert('user_profiles',{id:uid,email,full_name:name,role,module_permissions:defaultPerms});
+    const newDept=$('admNewDept').value==='custom'?$('admNewDeptCustom').value.trim():$('admNewDept').value;
+    await dbInsert('user_profiles',{id:uid,email,full_name:name,role,department:newDept||null,module_permissions:defaultPerms});
     toast('User created.');
     logActivity('user_created','Created user '+email+' ('+role+')');
     closeModal('admCreateModal'); await loadAdmin();
@@ -2629,7 +2703,8 @@ async function adminSaveEdit(){
   if(!name||!email){toast('Name and email required.','error');return;}
   const btn=$('admEditBtn'); btn.disabled=true; btn.textContent='Saving...';
   try{
-    await sbFetch('user_profiles?id=eq.'+id,{method:'PATCH',body:JSON.stringify({full_name:name,email,role})});
+    const editDept=$('admEditDept').value==='custom'?$('admEditDeptCustom').value.trim():$('admEditDept').value;
+    await sbFetch('user_profiles?id=eq.'+id,{method:'PATCH',body:JSON.stringify({full_name:name,email,role,department:editDept||null})});
     toast('User updated.'); closeModal('admEditModal'); await loadAdmin();
   }catch(e){toast('Error: '+e.message,'error');}
   finally{btn.disabled=false;btn.textContent='Save';}
