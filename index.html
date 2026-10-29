@@ -1821,10 +1821,22 @@ const PROJECT_STATUSES=['todo','inprogress','review','done'];
 const STATUS_LABELS={todo:'To Do',inprogress:'In Progress',review:'Review',done:'Done'};
 const PRIORITY_COLORS={high:'var(--accent)',medium:'var(--yellow)',low:'var(--green)'};
 
+let projectTaskCounts = {}; // projectId → {total, done}
+
 async function loadProjects() {
   loadUsersForAssignee();
   try {
     projects = await sbFetch('projects?order=created_at.desc&select=*')||[];
+    // Fetch task counts for all projects in one call
+    try {
+      const allTasks = await sbFetch('project_tasks?select=project_id,status')||[];
+      projectTaskCounts = {};
+      allTasks.forEach(t=>{
+        if(!projectTaskCounts[t.project_id]) projectTaskCounts[t.project_id]={total:0,done:0};
+        projectTaskCounts[t.project_id].total++;
+        if(t.status==='done') projectTaskCounts[t.project_id].done++;
+      });
+    } catch(_){}
     renderProjectStats();
     if(projectView==='kanban') renderKanban();
     else renderProjectTable();
@@ -1842,6 +1854,19 @@ function renderProjectStats() {
   s('ps3',projects.filter(p=>p.status==='done').length);
 }
 
+function taskCountHTML(pid) {
+  const tc=projectTaskCounts[pid];
+  if(!tc||!tc.total) return '<span style="font-size:10px;color:var(--border2)">No tasks</span>';
+  const p=Math.round(tc.done/tc.total*100);
+  const col=p===100?'var(--green)':p>=50?'var(--yellow)':'var(--muted)';
+  return `<div style="display:flex;align-items:center;gap:6px">
+    <div style="flex:1;height:4px;background:var(--border);border-radius:4px;overflow:hidden;min-width:40px">
+      <div style="height:100%;width:${p}%;background:${col};border-radius:4px"></div>
+    </div>
+    <span style="font-size:10px;color:${col};font-weight:600;white-space:nowrap">${tc.done}/${tc.total}</span>
+  </div>`;
+}
+
 function renderKanban() {
   const c=$('projectContent'); if(!c) return;
   let html='<div class="kanban-board">';
@@ -1857,7 +1882,7 @@ function renderKanban() {
           <div class="kanban-card-title">${esc(p.title)}</div>
           <span class="badge ${p.priority||'medium'}" style="flex-shrink:0">${esc(p.priority||'medium')}</span>
         </div>
-        ${p.type?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">${esc(p.type)}</div>`:''}
+        <div style="margin-bottom:8px">${taskCountHTML(p.id)}</div>
         <div class="kanban-card-meta">
           <div class="kanban-card-owner">${esc(p.owner_name||'-')}</div>
           <div class="kanban-card-date${overdue?' overdue':''}">${d?formatDate(d):''}</div>
@@ -1877,19 +1902,25 @@ function renderProjectTable() {
   const c=$('projectContent'); if(!c) return;
   const rows=projects.filter(p=>projectFilter==='all'||p.type===projectFilter);
   if(!rows.length){c.innerHTML='<div class="empty-state"><div class="empty-title">No projects yet</div></div>';return;}
-  let h=`<div class="table-wrap"><table><thead><tr>${['#','Title','Type','Status','Priority','Owner','Due','Budget'].map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`;
+  let h=`<div class="table-wrap"><table><thead><tr>${['#','Theme / Project','Status','Priority','Primary Owner','Tasks','Source'].map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`;
   rows.forEach((p,i)=>{
-    const days=daysUntil(p.due_date);
-    const overdue=days!==null&&days<0&&p.status!=='done';
-    h+=`<tr data-popen="${p.id}">
+    const tc=projectTaskCounts[p.id];
+    const taskText=tc&&tc.total?`${tc.done}/${tc.total} done`:'—';
+    const taskCol=tc&&tc.total>0&&tc.done===tc.total?'var(--green)':tc&&tc.done>0?'var(--yellow)':'var(--muted)';
+    const tags=(()=>{try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
+    h+=`<tr data-popen="${p.id}" style="cursor:pointer">
       <td class="td-num">${i+1}</td>
-      <td style="font-weight:600">${esc(p.title)}</td>
-      <td class="td-muted">${esc(p.type||'-')}</td>
+      <td><div style="font-weight:600;margin-bottom:3px">${esc(p.title)}</div>
+        ${p.description?`<div style="font-size:11px;color:var(--muted);max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.description.split('\n')[0])}</div>`:''}
+      </td>
       <td><span class="badge ${p.status||'todo'}">${STATUS_LABELS[p.status]||p.status}</span></td>
       <td><span class="badge ${p.priority||'medium'}">${esc(p.priority||'medium')}</span></td>
       <td class="td-muted">${esc(p.owner_name||'-')}</td>
-      <td class="td-muted${overdue?' ':''}"><span style="${overdue?'color:var(--accent);font-weight:600':''}"}>${p.due_date?formatDate(p.due_date):'-'}</span></td>
-      <td class="td-muted">${p.budget?'₹'+Number(p.budget).toLocaleString('en-IN'):'-'}</td>
+      <td>
+        <span style="font-size:12px;font-weight:600;color:${taskCol}">${taskText}</span>
+        ${tc&&tc.total?`<div style="height:3px;background:var(--border);border-radius:3px;margin-top:4px;overflow:hidden;width:60px"><div style="height:100%;width:${Math.round(tc.done/tc.total*100)}%;background:${taskCol};border-radius:3px"></div></div>`:''}
+      </td>
+      <td class="td-muted" style="font-size:11px">${tags.length?esc(tags[0]):'—'}</td>
     </tr>`;
   });
   h+='</tbody></table></div>';
@@ -2044,17 +2075,23 @@ function switchProjectView(view) {
   if(view==='kanban') renderKanban(); else renderProjectTable();
 }
 
-// Excel import for projects
+// ─────────────────────────────────────────────────────────────
+// EXCEL IMPORT — QNu Weekly Project Tracker format
+// Exact headers: Theme / Project | Item | Status | Primary Owner
+//                Priority | Individual KPI | Team KPI | Shared KPI
+//                Detailed Comments and Notes | Source
+// ─────────────────────────────────────────────────────────────
 function importProjectExcel(input) {
   const file=input.files[0]; if(!file) return;
   toast('Reading Excel file...');
-  // We use SheetJS via CDN loaded in HTML
   const reader=new FileReader();
   reader.onload=function(e){
     try {
       const wb=XLSX.read(e.target.result,{type:'binary'});
+      // Always use first sheet (Weekly Tracker)
       const ws=wb.Sheets[wb.SheetNames[0]];
-      const data=XLSX.utils.sheet_to_json(ws);
+      const data=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!data.length){toast('No data found in the file.','error');return;}
       importProjectsFromData(data);
     } catch(err){toast('Could not read file: '+err.message,'error');}
   };
@@ -2062,29 +2099,199 @@ function importProjectExcel(input) {
   input.value='';
 }
 
+/* Read a cell value — tries exact key then case-insensitive fallback */
+function xlVal(row, keys) {
+  for(const k of keys){
+    const v=row[k];
+    if(v!==undefined&&v!==null&&String(v).trim()!=='') return String(v).trim();
+  }
+  // case-insensitive fallback
+  const lkeys=keys.map(k=>k.toLowerCase());
+  for(const rk of Object.keys(row)){
+    if(lkeys.includes(rk.toLowerCase())){
+      const v=row[rk];
+      if(v!==undefined&&v!==null&&String(v).trim()!=='') return String(v).trim();
+    }
+  }
+  return '';
+}
+
+/* Status mapping — covers all values seen in the real file */
+function xlStatus(raw) {
+  if(!raw) return 'todo';
+  const s=raw.toLowerCase().replace(/[\s_-]/g,'');
+  if(s==='done'||s.includes('complet')||s.includes('finish')) return 'done';
+  if(s.includes('inprogress')||s.includes('ongoing')||s.includes('active')||s==='wip') return 'inprogress';
+  if(s.includes('review')) return 'review';
+  if(s.includes('wait')||s.includes('pending')||s.includes('notstart')||s.includes('blocked')||s.includes('hold')) return 'review';
+  return 'todo';
+}
+
+/* Priority mapping */
+function xlPriority(raw) {
+  if(!raw) return 'medium';
+  const s=raw.toLowerCase();
+  if(s.includes('high')||s.includes('urgent')||s.includes('critical')) return 'high';
+  if(s.includes('low')||s.includes('minor')) return 'low';
+  return 'medium';
+}
+
 async function importProjectsFromData(rows) {
   if(!rows.length){toast('No data found in file.','error');return;}
-  let created=0, updated=0;
-  for(const row of rows) {
-    const title=String(row['Title']||row['title']||'').trim();
-    if(!title) continue;
-    const data={
-      title, type:row['Type']||row['type']||'campaign',
-      status:row['Status']||row['status']||'todo',
-      priority:row['Priority']||row['priority']||'medium',
-      owner_name:row['Owner']||row['owner']||'',
-      due_date:row['Due Date']||row['due_date']||null,
-      start_date:row['Start Date']||row['start_date']||null,
-      budget:row['Budget']||row['budget']||null,
-      description:row['Description']||row['description']||'',
-      created_by:SESSION?.user_id, owner_id:SESSION?.user_id, team_members:'[]'
-    };
-    const existing=projects.find(p=>p.title.toLowerCase()===title.toLowerCase());
-    if(existing) { await dbUpdate('projects',existing.id,data); updated++; }
-    else { await dbInsert('projects',data); created++; }
+
+  // ── STEP 1: Group all rows by Theme / Project ──────────────────────────────
+  // Important: same theme can appear in non-contiguous blocks (e.g. "Events"
+  // appears twice in the real file). We merge them into ONE project.
+  const groups = new Map(); // normalised-key → { theme:string, rows:[] }
+  let lastTheme = '';
+
+  for(const row of rows){
+    const rawTheme = xlVal(row, ['Theme / Project','Theme/Project','Theme','Project']);
+    const theme = rawTheme || lastTheme;
+    if(!theme) continue;
+    lastTheme = theme;
+    const key = theme.toLowerCase().trim();
+    if(!groups.has(key)) groups.set(key, {theme, rows:[]});
+    groups.get(key).rows.push(row);
   }
-  toast(`Imported: ${created} created, ${updated} updated.`);
+
+  if(!groups.size){
+    toast('Could not find "Theme / Project" column. Make sure your first sheet has the correct headers.','error');
+    return;
+  }
+
+  let projectsCreated=0, projectsUpdated=0, tasksCreated=0, tasksUpdated=0, errors=0;
+
+  // Re-fetch current projects fresh so we get the latest IDs
+  let currentProjects=[];
+  try{ currentProjects=await sbFetch('projects?order=created_at.desc&select=*')||[]; }catch(_){}
+
+  for(const [key, group] of groups){
+    const theme = group.theme;
+
+    // ── STEP 2: Derive project-level summary from all rows in this group ──
+    // Overall status = worst-case (if any task not done, project is not done)
+    const allStatuses = group.rows.map(r=>xlVal(r,['Status','status']));
+    const hasDone      = allStatuses.some(s=>xlStatus(s)==='done');
+    const hasProgress  = allStatuses.some(s=>xlStatus(s)==='inprogress');
+    const hasReview    = allStatuses.some(s=>xlStatus(s)==='review');
+    const projectStatus = hasProgress?'inprogress':hasReview?'review':hasDone?'done':'todo';
+
+    // Overall priority = highest across tasks
+    const allPriorities = group.rows.map(r=>xlVal(r,['Priority','priority']));
+    const projectPriority = allPriorities.some(p=>xlPriority(p)==='high')?'high':
+                            allPriorities.some(p=>xlPriority(p)==='medium')?'medium':'low';
+
+    // Primary owner from first row
+    const firstRow   = group.rows[0];
+    const projectOwner = xlVal(firstRow,['Primary Owner','Owner','primary owner','owner']);
+    const source       = xlVal(firstRow,['Source','source']);
+
+    // Collect all KPIs and notes into description
+    const descParts=[];
+    group.rows.forEach(r=>{
+      const note=xlVal(r,['Detailed Comments and Notes','Notes / Next Step','Notes','notes']);
+      const indKPI=xlVal(r,['Individual KPI','individual kpi']);
+      const teamKPI=xlVal(r,['Team KPI','team kpi']);
+      const sharedKPI=xlVal(r,['Shared KPI','shared kpi']);
+      if(note) descParts.push(note);
+      if(indKPI||teamKPI||sharedKPI){
+        const kpiStr=[indKPI&&'Individual: '+indKPI, teamKPI&&'Team: '+teamKPI, sharedKPI&&'Shared: '+sharedKPI].filter(Boolean).join(' | ');
+        descParts.push('KPI — '+kpiStr);
+      }
+    });
+
+    const projectData={
+      title:        theme,
+      type:         'campaign',
+      status:       projectStatus,
+      priority:     projectPriority,
+      owner_name:   projectOwner,
+      description:  descParts.slice(0,3).join('\n'),  // first 3 notes as project description
+      created_by:   SESSION?.user_id,
+      owner_id:     SESSION?.user_id,
+      team_members: '[]',
+      tags:         source?JSON.stringify([source]):'[]'
+    };
+
+    // ── STEP 3: Create or update the project ──────────────────────────────────
+    let projectId=null;
+    const existing=currentProjects.find(p=>p.title.toLowerCase().trim()===key);
+    try{
+      if(existing){
+        await dbUpdate('projects',existing.id,projectData);
+        projectId=existing.id;
+        projectsUpdated++;
+      } else {
+        const res=await dbInsert('projects',projectData);
+        projectId=Array.isArray(res)?res[0].id:res.id;
+        projectsCreated++;
+        // Add to local list so duplicate themes in same file resolve correctly
+        currentProjects.push({...projectData, id:projectId});
+      }
+    } catch(e){ console.error('Project insert/update error',theme,e); errors++; continue; }
+
+    // ── STEP 4: Fetch existing tasks then add / update per Item row ───────────
+    let existingTasks=[];
+    try{ existingTasks=await sbFetch('project_tasks?project_id=eq.'+projectId+'&select=*')||[]; }catch(_){}
+
+    let sortOrder=0;
+    for(const row of group.rows){
+      const item=xlVal(row,['Item','item','Task','task','Name','name']);
+      if(!item) continue;  // blank item = carry-row, skip
+
+      const taskStatus   = xlStatus(xlVal(row,['Status','status']));
+      const taskPriority = xlPriority(xlVal(row,['Priority','priority']));
+      const taskOwner    = xlVal(row,['Primary Owner','Owner','primary owner','owner']);
+      const taskSource   = xlVal(row,['Source','source']);
+      const taskNotes    = xlVal(row,['Detailed Comments and Notes','Notes / Next Step','Notes','notes']);
+      const indKPI       = xlVal(row,['Individual KPI','individual kpi']);
+      const teamKPI      = xlVal(row,['Team KPI','team kpi']);
+      const sharedKPI    = xlVal(row,['Shared KPI','shared kpi']);
+
+      // Build task description from notes + KPIs + source
+      const taskDescParts=[];
+      if(taskNotes)   taskDescParts.push(taskNotes);
+      if(indKPI)      taskDescParts.push('Individual KPI: '+indKPI);
+      if(teamKPI)     taskDescParts.push('Team KPI: '+teamKPI);
+      if(sharedKPI)   taskDescParts.push('Shared KPI: '+sharedKPI);
+      if(taskSource)  taskDescParts.push('Source: '+taskSource);
+
+      const taskData={
+        project_id:    projectId,
+        title:         item,
+        status:        taskStatus,
+        priority:      taskPriority,
+        assignee_name: taskOwner,
+        description:   taskDescParts.join('\n'),
+        helpers:       '[]',
+        sort_order:    sortOrder++
+      };
+
+      try{
+        const existingTask=existingTasks.find(t=>t.title.toLowerCase().trim()===item.toLowerCase().trim());
+        if(existingTask){
+          await dbUpdate('project_tasks',existingTask.id,taskData);
+          tasksUpdated++;
+        } else {
+          await dbInsert('project_tasks',taskData);
+          tasksCreated++;
+        }
+      } catch(e){ console.error('Task error',item,e); errors++; }
+    }
+  }
+
+  // ── STEP 5: Refresh + summary toast ──────────────────────────────────────
+  window._allUsers=null;
   await loadProjects();
+
+  const parts=[];
+  if(projectsCreated) parts.push(projectsCreated+' project'+(projectsCreated>1?'s':'')+' created');
+  if(projectsUpdated) parts.push(projectsUpdated+' project'+(projectsUpdated>1?'s':'')+' updated');
+  if(tasksCreated)    parts.push(tasksCreated+' task'+(tasksCreated>1?'s':'')+' created');
+  if(tasksUpdated)    parts.push(tasksUpdated+' task'+(tasksUpdated>1?'s':'')+' updated');
+  if(errors)          parts.push(errors+' error'+(errors>1?'s':'')+'(check console)');
+  toast(parts.length?parts.join(', ')+'.':'Nothing imported — check headers.', errors&&!projectsCreated?'error':'success');
 }
 
 /* ═══════════════════════════════════════════════════
