@@ -943,83 +943,7 @@ function saveBlob(content, type, filename) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 function toWord(title, bodyHtml) {
-  const shell = `\ufeff<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font-family:Arial;font-size:11pt;line-height:1.5;margin:30px}h1{font-size:16pt;color:#E8450A}h2{font-size:13pt;margin-top:22px;border-top:1px solid #ccc;padding-top:12px}p{margin:4px 0}label{font-size:8pt;font-weight:bold;color:#666;text-transform:uppercase;display:block;margin-top:12px}hr{border:none;border-top:1px solid #ddd;margin:20px 0}</style></head><body>${bodyHtml}<!-- ═══════════════ FLOATING CHAT BUTTON ═══════════════ -->
-<button class="chat-fab" id="chatFab" onclick="toggleChat()" title="Team Chat">
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-  <span class="chat-fab-badge" id="chatFabBadge">0</span>
-</button>
-
-<!-- ═══════════════ CHAT PANEL ═══════════════ -->
-<div class="chat-panel" id="chatPanel">
-  <!-- inner modal for new DM / group -->
-  <div class="chat-modal" id="chatInnerModal"></div>
-
-  <!-- Conversation list view -->
-  <div id="chatConvView" style="display:flex;flex-direction:column;height:100%">
-    <div class="chat-header">
-      <div>
-        <div class="chat-header-title">Team Chat</div>
-        <div class="chat-header-sub" id="chatOnlineSub">Messages</div>
-      </div>
-      <div class="chat-header-actions">
-        <button class="chat-icon-btn" onclick="openNewDM()" title="New message">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> DM
-        </button>
-        <button class="chat-icon-btn" onclick="openNewGroup()" title="New group">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Group
-        </button>
-        <button class="chat-icon-btn" onclick="toggleChat()">✕</button>
-      </div>
-    </div>
-    <div class="chat-conv-list" id="chatConvList">
-      <div class="loading-row"><span class="spinner"></span> Loading...</div>
-    </div>
-  </div>
-
-  <!-- Messages view -->
-  <div class="chat-messages-view" id="chatMsgView">
-    <div class="chat-msg-header">
-      <button class="chat-msg-back" onclick="backToConvList()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <div class="chat-msg-avatar" id="chatMsgAvatar">?</div>
-      <div>
-        <div class="chat-msg-name" id="chatMsgName">Chat</div>
-        <div class="chat-msg-members" id="chatMsgMembers"></div>
-      </div>
-    </div>
-    <div class="chat-msg-list" id="chatMsgList"></div>
-    <div class="chat-typing-row" id="chatTypingRow"></div>
-    <div class="chat-input-area" id="chatInputArea" style="position:relative">
-      <!-- emoji react picker -->
-      <div id="chatEmojiReactPicker" style="display:none;position:absolute;bottom:70px;right:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;box-shadow:var(--shadow-lg);z-index:10;width:220px;grid-template-columns:repeat(8,1fr);gap:2px;"></div>
-      <!-- emoji input picker -->
-      <div id="chatEmojiPicker" style="display:none;position:absolute;bottom:70px;left:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;box-shadow:var(--shadow-lg);z-index:10;width:220px;grid-template-columns:repeat(8,1fr);gap:2px;"></div>
-      <!-- reply preview -->
-      <div id="chatReplyPreview" class="chat-reply-preview" style="display:none">
-        <div class="chat-reply-preview-text">Replying to <b id="chatReplyName"></b>: <span id="chatReplyText"></span></div>
-        <button class="chat-reply-close" onclick="cancelReply()">✕</button>
-      </div>
-      <div class="chat-input-row">
-        <textarea class="chat-input" id="chatMsgInput" placeholder="Type a message..." rows="1"
-          oninput="onChatInput()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage()}"></textarea>
-        <div class="chat-input-btns">
-          <button class="chat-emoji-btn" onclick="toggleEmojiPicker()" title="Emoji">😊</button>
-          <label class="chat-attach-btn" title="Attach file (max 5MB)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-            <input type="file" id="chatFileInput" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="onChatFileSelect(this)"/>
-          </label>
-          <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()" title="Send">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════ TASK ASSIGNMENT FLOATING BOX ═══════════════ -->
-<div class="task-assign-box" id="taskAssignBox"></div>
+  const shell = `\ufeff<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font-family:Arial;font-size:11pt;line-height:1.5;margin:30px}h1{font-size:16pt;color:#E8450A}h2{font-size:13pt;margin-top:22px;border-top:1px solid #ccc;padding-top:12px}p{margin:4px 0}label{font-size:8pt;font-weight:bold;color:#666;text-transform:uppercase;display:block;margin-top:12px}hr{border:none;border-top:1px solid #ddd;margin:20px 0}</style></head><body>${bodyHtml}
 
 </body></html>`;
   return shell;
@@ -3315,4 +3239,82 @@ async function assignTask(assignedToId, assignedToName, taskTitle, taskDesc, mod
 
 
 </script>
+
+<!-- ═══════════════ FLOATING CHAT BUTTON ═══════════════ -->
+<button class="chat-fab" id="chatFab" onclick="toggleChat()" title="Team Chat">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <span class="chat-fab-badge" id="chatFabBadge">0</span>
+</button>
+
+<!-- ═══════════════ CHAT PANEL ═══════════════ -->
+<div class="chat-panel" id="chatPanel">
+  <!-- inner modal for new DM / group -->
+  <div class="chat-modal" id="chatInnerModal"></div>
+
+  <!-- Conversation list view -->
+  <div id="chatConvView" style="display:flex;flex-direction:column;height:100%">
+    <div class="chat-header">
+      <div>
+        <div class="chat-header-title">Team Chat</div>
+        <div class="chat-header-sub" id="chatOnlineSub">Messages</div>
+      </div>
+      <div class="chat-header-actions">
+        <button class="chat-icon-btn" onclick="openNewDM()" title="New message">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> DM
+        </button>
+        <button class="chat-icon-btn" onclick="openNewGroup()" title="New group">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Group
+        </button>
+        <button class="chat-icon-btn" onclick="toggleChat()">✕</button>
+      </div>
+    </div>
+    <div class="chat-conv-list" id="chatConvList">
+      <div class="loading-row"><span class="spinner"></span> Loading...</div>
+    </div>
+  </div>
+
+  <!-- Messages view -->
+  <div class="chat-messages-view" id="chatMsgView">
+    <div class="chat-msg-header">
+      <button class="chat-msg-back" onclick="backToConvList()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="chat-msg-avatar" id="chatMsgAvatar">?</div>
+      <div>
+        <div class="chat-msg-name" id="chatMsgName">Chat</div>
+        <div class="chat-msg-members" id="chatMsgMembers"></div>
+      </div>
+    </div>
+    <div class="chat-msg-list" id="chatMsgList"></div>
+    <div class="chat-typing-row" id="chatTypingRow"></div>
+    <div class="chat-input-area" id="chatInputArea" style="position:relative">
+      <!-- emoji react picker -->
+      <div id="chatEmojiReactPicker" style="display:none;position:absolute;bottom:70px;right:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;box-shadow:var(--shadow-lg);z-index:10;width:220px;grid-template-columns:repeat(8,1fr);gap:2px;"></div>
+      <!-- emoji input picker -->
+      <div id="chatEmojiPicker" style="display:none;position:absolute;bottom:70px;left:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;box-shadow:var(--shadow-lg);z-index:10;width:220px;grid-template-columns:repeat(8,1fr);gap:2px;"></div>
+      <!-- reply preview -->
+      <div id="chatReplyPreview" class="chat-reply-preview" style="display:none">
+        <div class="chat-reply-preview-text">Replying to <b id="chatReplyName"></b>: <span id="chatReplyText"></span></div>
+        <button class="chat-reply-close" onclick="cancelReply()">✕</button>
+      </div>
+      <div class="chat-input-row">
+        <textarea class="chat-input" id="chatMsgInput" placeholder="Type a message..." rows="1"
+          oninput="onChatInput()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage()}"></textarea>
+        <div class="chat-input-btns">
+          <button class="chat-emoji-btn" onclick="toggleEmojiPicker()" title="Emoji">😊</button>
+          <label class="chat-attach-btn" title="Attach file (max 5MB)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            <input type="file" id="chatFileInput" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="onChatFileSelect(this)"/>
+          </label>
+          <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()" title="Send">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ TASK ASSIGNMENT FLOATING BOX ═══════════════ -->
+<div class="task-assign-box" id="taskAssignBox"></div>
 </body></html>
