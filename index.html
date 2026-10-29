@@ -408,11 +408,13 @@
           <div><span style="color:var(--muted);font-size:11px">Due Date</span><div id="pmDue" style="font-weight:600">-</div></div>
           <div><span style="color:var(--muted);font-size:11px">Type</span><div id="pmType" style="font-weight:600">-</div></div>
           <div><span style="color:var(--muted);font-size:11px">Budget</span><div id="pmBudget" style="font-weight:600">-</div></div>
+          <div><span style="color:var(--muted);font-size:11px">Source</span><div id="pmSource" style="font-weight:600">-</div></div>
         </div>
       </div>
       <div class="card card-pad">
         <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Description</div>
-        <div id="pmDesc" style="font-size:13px;line-height:1.6;color:var(--muted)">-</div>
+        <textarea id="pmDesc" class="field-textarea" style="min-height:80px;font-size:13px;line-height:1.6"></textarea>
+        <button class="btn btn-secondary btn-xs" style="margin-top:6px" onclick="saveProjectDesc()">Save Notes</button>
       </div>
     </div>
     <!-- Tasks -->
@@ -1605,7 +1607,8 @@ async function openProjectModal(id) {
   $('pmDue').textContent=p.due_date?formatDate(p.due_date):'-';
   $('pmType').textContent=p.type||'-';
   $('pmBudget').textContent=p.budget?'₹'+Number(p.budget).toLocaleString('en-IN'):'-';
-  $('pmDesc').textContent=p.description||'No description.';
+  const descEl=$('pmDesc'); if(descEl) descEl.value=p.description||'';
+  const pmSrc=$('pmSource'); if(pmSrc){const tags=(()=>{try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();pmSrc.textContent=tags.length?tags.join(', '):'-';}
   await loadProjectTasks(p.id);
   await loadProjectKPIs(p.id);
   await populateAssigneeDropdown();
@@ -1619,13 +1622,19 @@ async function loadProjectTasks(projectId) {
   let h='';
   tasks.forEach(t=>{
     const days=daysUntil(t.due_date), overdue=days!==null&&days<0&&t.status!=='done';
-    h+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <input type="checkbox" ${t.status==='done'?'checked':''} data-taskid="${t.id}" onchange="toggleTask(this)" style="flex-shrink:0"/>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:500;${t.status==='done'?'text-decoration:line-through;color:var(--muted)':''}">${esc(t.title)}</div>
-        <div style="font-size:11px;color:var(--muted)">${esc(t.assignee_name||'-')}${t.due_date?` · <span style="${overdue?'color:var(--accent);font-weight:600':''}">${formatDate(t.due_date)}</span>`:''}</div>
+    h+=`<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <input type="checkbox" ${t.status==='done'?'checked':''} data-taskid="${t.id}" onchange="toggleTask(this)" style="flex-shrink:0;margin-top:3px"/>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <div style="font-size:13px;font-weight:600;${t.status==='done'?'text-decoration:line-through;color:var(--muted)':''}">${esc(t.title)}</div>
+            <span class="badge ${t.priority||'medium'}" style="font-size:9px">${esc(t.priority||'medium')}</span>
+            <span class="badge ${t.status||'todo'}" style="font-size:9px">${STATUS_LABELS[t.status]||t.status}</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(t.assignee_name||'Unassigned')}${t.due_date?` · <span style="${overdue?'color:var(--accent);font-weight:600':''}">${formatDate(t.due_date)}</span>`:''}</div>
+          ${t.description?`<div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;background:var(--surface2);border-radius:6px;padding:5px 8px;white-space:pre-wrap">${esc(t.description)}</div>`:''}
+        </div>
       </div>
-      <span class="badge ${t.status||'todo'}" style="flex-shrink:0">${STATUS_LABELS[t.status]||t.status}</span>
     </div>`;
   });
   c.innerHTML=h;
@@ -1645,13 +1654,20 @@ async function loadProjectKPIs(projectId) {
   const kpis=await sbFetch('project_kpis?project_id=eq.'+projectId+'&order=created_at.asc&select=*')||[];
   const c=$('pmKPIs');
   if(!kpis.length){c.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No KPIs yet.</div>';return;}
+  const typeColors={individual:'var(--accent)',shared:'var(--blue)',team:'var(--purple)'};
+  const typeLabels={individual:'Individual',shared:'Shared',team:'Team'};
   let h='<div class="kpi-row" style="margin-top:8px">';
   kpis.forEach(k=>{
     const p=pct(k.current_value||0,k.target_value||1);
     const cls=p>=80?'good':p>=40?'warn':'bad';
+    const tcolor=typeColors[k.kpi_type||'individual']||'var(--accent)';
+    const tlabel=typeLabels[k.kpi_type||'individual']||'KPI';
     h+=`<div class="kpi-card">
-      <div class="kpi-title">${esc(k.title)}</div>
-      <div class="kpi-sub">${esc(k.kpi_type||'individual')} · ${esc(k.owner_name||'')}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div class="kpi-title">${esc(k.title)}</div>
+        <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:${tcolor}22;color:${tcolor};text-transform:uppercase">${tlabel}</span>
+      </div>
+      <div class="kpi-sub">${esc(k.owner_name||'')}</div>
       <div class="kpi-progress"><div class="kpi-bar" style="width:${p}%;background:${p>=80?'var(--green)':p>=40?'var(--yellow)':'var(--accent)'}"></div></div>
       <div class="kpi-numbers">
         <span class="kpi-current">${esc(String(k.current_value||0))}${esc(k.unit||'')}</span>
