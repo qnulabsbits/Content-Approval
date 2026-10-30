@@ -281,6 +281,54 @@
       <div id="admTab-activity" style="display:none"><div id="adminActivityLog"></div></div>
     </div>
 
+    <!-- ═══ SETTINGS PAGE ═══ -->
+    <div class="page" id="pg-settings">
+      <div class="page-header">
+        <div>
+          <div class="page-title">My Settings</div>
+          <div class="page-sub">Manage your profile and password</div>
+        </div>
+      </div>
+      <div style="max-width:560px;display:flex;flex-direction:column;gap:20px">
+        <!-- Profile card -->
+        <div class="card card-pad">
+          <div class="card-title">Profile</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+            <div><div class="field-label">Full Name</div><div id="settingsUserName" style="font-size:14px;font-weight:600;margin-top:4px">—</div></div>
+            <div><div class="field-label">Email</div><div id="settingsEmail" style="font-size:14px;margin-top:4px;color:var(--muted)">—</div></div>
+            <div><div class="field-label">Role</div><div id="settingsRole" style="font-size:14px;margin-top:4px;color:var(--muted)">—</div></div>
+            <div><div class="field-label">Department</div><div id="settingsDept" style="font-size:14px;margin-top:4px;color:var(--muted)">—</div></div>
+          </div>
+          <div class="field-group" style="margin-bottom:10px">
+            <div class="field-label">Change Display Name</div>
+            <input class="field-input" id="settingsEditName" placeholder="Your full name"/>
+          </div>
+          <button class="btn btn-primary btn-sm" id="settingsProfileBtn" onclick="updateOwnProfile()">Save Name</button>
+        </div>
+
+        <!-- Password card -->
+        <div class="card card-pad">
+          <div class="card-title">Change Password</div>
+          <div class="field-group" style="margin-bottom:12px">
+            <div class="field-label">New Password <span class="req">*</span></div>
+            <div class="pw-wrap">
+              <input class="field-input" type="password" id="settingsNewPw" placeholder="Min 6 characters"/>
+              <button class="eye-btn" type="button" onclick="toggleSettingsPw('settingsNewPw',this)">Show</button>
+            </div>
+          </div>
+          <div class="field-group" style="margin-bottom:16px">
+            <div class="field-label">Confirm New Password <span class="req">*</span></div>
+            <div class="pw-wrap">
+              <input class="field-input" type="password" id="settingsConfirmPw" placeholder="Repeat new password"/>
+              <button class="eye-btn" type="button" onclick="toggleSettingsPw('settingsConfirmPw',this)">Show</button>
+            </div>
+          </div>
+          <div id="settingsPwMsg" style="font-size:12px;margin-bottom:10px;min-height:18px"></div>
+          <button class="btn btn-primary" id="settingsPwBtn" onclick="changeOwnPassword()">Change Password</button>
+          <div style="font-size:11px;color:var(--muted);margin-top:10px">You will remain logged in after changing your password. The change is reflected in Admin settings.</div>
+        </div>
+      </div>
+    </div>
   </div><!-- end app-main -->
 </div><!-- end app-shell -->
 
@@ -834,7 +882,7 @@ function showPage(pageId) {
   const si = document.querySelector('.sidebar-item[data-page="'+pageId+'"]');
   if (si) si.classList.add('active');
   // Load page data
-  const loaders = { content:loadContent, projects:loadProjects, inventory:loadInventory, hr:loadHR, admin:loadAdmin };
+  const loaders = { content:loadContent, projects:loadProjects, inventory:loadInventory, hr:loadHR, admin:loadAdmin, settings:loadSettings };
   if (loaders[pageId]) loaders[pageId]();
 }
 
@@ -915,6 +963,7 @@ const MODULES = [
   { id:'reports',  label:'Monthly Reports',   icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>', coming:true },
   { id:'inventory',label:'Inventory',         icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>' },
   { id:'hr',       label:'HR Module',         icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>' },
+  { id:'settings', label:'My Settings',        icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>', alwaysShow:true },
 ];
 
 function buildSidebar() {
@@ -923,7 +972,7 @@ function buildSidebar() {
   const isAdmin = SESSION.role === 'admin';
   let html = '';
   MODULES.forEach(m => {
-    const hasPerm = isAdmin || perms[m.id];
+    const hasPerm = isAdmin || perms[m.id] || m.alwaysShow;
     if (!hasPerm && !m.coming) return;
     if (!hasPerm && m.coming) return; // coming soon only shown if permitted
     if (m.coming) {
@@ -1629,7 +1678,7 @@ function contentSetFilter(f,btn) {
 /* ═══════════════════════════════════════════════════
    PROJECT TRACKER MODULE
 ═══════════════════════════════════════════════════ */
-let projects=[], projectFilter='all', projectView='kanban', activeProject=null, activeTask=null;
+let projects=[], projectFilter='all', projectView='table', activeProject=null, activeTask=null;
 let projectKPICache={}, projectTasksCache={}, pendingImportChanges=[];
 
 const PROJECT_STATUSES=['todo','inprogress','review','done'];
@@ -1640,6 +1689,12 @@ let projectTaskCounts = {}; // projectId → {total, done}
 
 async function loadProjects() {
   loadUsersForAssignee();
+  // Sync view toggle buttons
+  ['kanban','table'].forEach(v=>{
+    const btn=$('projView_'+v);
+    if(btn) btn.classList.toggle('active',v===projectView);
+    if(btn) btn.style.background=(v===projectView)?'var(--surface)':'transparent';
+  });
   try {
     projects = await sbFetch('projects?order=created_at.desc&select=*')||[];
     // Fetch task counts for all projects in one call
@@ -3838,6 +3893,82 @@ function closeBanner(){
   var b=document.getElementById("loginBanner"); if(b) b.classList.remove("show");
   var am=document.querySelector(".app-main"); if(am) am.style.marginTop="";
 }
+
+/* ═══════════════════════════════════════════════════
+   USER SETTINGS PAGE
+═══════════════════════════════════════════════════ */
+function loadSettings() {
+  if(!SESSION) return;
+  const n=$('settingsUserName'); if(n) n.textContent=SESSION.full_name||SESSION.email||'';
+  const nameInput=$('settingsEditName'); if(nameInput) nameInput.value=SESSION.full_name||'';
+  const e=$('settingsEmail'); if(e) e.textContent=SESSION.email||'';
+  const r=$('settingsRole'); if(r) r.textContent=SESSION.role||'';
+  const d=$('settingsDept'); if(d) d.textContent=SESSION.department||'—';
+  // Clear password fields
+  ['settingsNewPw','settingsConfirmPw','settingsCurrentPw'].forEach(function(id){
+    const el=$(id); if(el) el.value='';
+  });
+  $('settingsPwMsg')&&($('settingsPwMsg').textContent='');
+}
+
+async function changeOwnPassword() {
+  const newPw=($('settingsNewPw')?.value||'').trim();
+  const confirmPw=($('settingsConfirmPw')?.value||'').trim();
+  const msgEl=$('settingsPwMsg');
+  if(!newPw||!confirmPw){
+    if(msgEl){msgEl.textContent='Please fill in both fields.';msgEl.style.color='var(--accent)';}
+    return;
+  }
+  if(newPw.length<6){
+    if(msgEl){msgEl.textContent='Password must be at least 6 characters.';msgEl.style.color='var(--accent)';}
+    return;
+  }
+  if(newPw!==confirmPw){
+    if(msgEl){msgEl.textContent='Passwords do not match.';msgEl.style.color='var(--accent)';}
+    return;
+  }
+  const btn=$('settingsPwBtn');
+  if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    // Use Supabase auth PUT /user to update own password
+    const token=await getToken();
+    const res=await fetch(SUPA_URL+'/auth/v1/user',{
+      method:'PUT',
+      headers:{apikey:SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({password:newPw})
+    });
+    const d=await res.json();
+    if(!res.ok) throw new Error(d.msg||d.message||d.error_description||'Could not update password');
+    if(msgEl){msgEl.textContent='Password changed successfully.';msgEl.style.color='var(--green)';}
+    $('settingsNewPw').value=''; $('settingsConfirmPw').value='';
+    toast('Password updated.');
+    logActivity('password_changed','User changed their own password');
+  }catch(e){
+    if(msgEl){msgEl.textContent='Error: '+e.message;msgEl.style.color='var(--accent)';}
+    toast('Could not change password: '+e.message,'error');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Change Password';}
+  }
+}
+
+async function updateOwnProfile() {
+  const name=($('settingsEditName')?.value||'').trim();
+  if(!name){toast('Name cannot be empty.','error');return;}
+  const btn=$('settingsProfileBtn');
+  if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    await sbFetch('user_profiles?id=eq.'+SESSION.user_id,{method:'PATCH',body:JSON.stringify({full_name:name})});
+    SESSION.full_name=name;
+    saveSession();
+    updateTopbar();
+    toast('Profile updated.');
+    logActivity('profile_updated','Updated display name to: '+name);
+    const n=$('settingsUserName'); if(n) n.textContent=name;
+  }catch(e){toast('Could not update: '+e.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save Name';}}
+}
+
+function toggleSettingsPw(id,btn){const el=document.getElementById(id);if(!el)return;if(el.type==="password"){el.type="text";btn.textContent="Hide";}else{el.type="password";btn.textContent="Show";}}
 </script>
 
 <!-- ═══════════════ FLOATING CHAT BUTTON ═══════════════ -->
