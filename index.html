@@ -433,16 +433,40 @@
       <div class="card-title">Tasks
         <button class="btn btn-secondary btn-xs" onclick="document.getElementById('addTaskForm').style.display=document.getElementById('addTaskForm').style.display==='none'?'grid':'none'">+ Add Task</button>
       </div>
-      <div id="addTaskForm" style="display:none;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:12px;align-items:end">
-        <div class="field-group"><div class="field-label">Task Title</div><input class="field-input" id="ptTaskTitle" placeholder="Task name"/></div>
-        <div class="field-group"><div class="field-label">Assignee</div>
-        <select class="field-select" id="ptTaskAssignee"><option value="">Select assignee...</option></select>
-      </div>
-        <div class="field-group"><div class="field-label">Due Date</div><input class="field-date" id="ptTaskDue" type="date"/></div>
-        <div class="field-group"><div class="field-label">Priority</div><select class="field-select" id="ptTaskPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>
-        <div class="field-group"><div class="field-label">Status</div><select class="field-select" id="ptTaskStatus"><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="review">Review</option><option value="done">Done</option></select></div>
-        <div style="display:none"><div class="field-label">Desc</div><input class="field-input" id="ptTaskDesc" placeholder="Optional"/></div>
-        <button class="btn btn-primary btn-sm" id="ptSaveBtn" onclick="saveProjectTask()">Add</button>
+      <div id="addTaskForm" style="display:none;margin-bottom:16px">
+        <div class="field-grid" style="grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+          <div class="field-group full"><div class="field-label">Task Title <span class="req">*</span></div>
+            <input class="field-input" id="ptTaskTitle" placeholder="e.g. Design landing page banner"/>
+          </div>
+          <div class="field-group"><div class="field-label">Assign To</div>
+            <input class="field-input" id="ptTaskAssigneeInput" placeholder="Type a name..." list="ptAssigneeList" autocomplete="off"/>
+            <datalist id="ptAssigneeList"></datalist>
+            <input type="hidden" id="ptTaskAssignee"/>
+          </div>
+          <div class="field-group"><div class="field-label">Due Date</div>
+            <input class="field-date" id="ptTaskDue" type="date"/>
+          </div>
+          <div class="field-group"><div class="field-label">Priority</div>
+            <select class="field-select" id="ptTaskPriority">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div class="field-group"><div class="field-label">Status</div>
+            <select class="field-select" id="ptTaskStatus">
+              <option value="todo">To Do</option>
+              <option value="inprogress">In Progress</option>
+              <option value="review">Review</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+          <div class="field-group full"><div class="field-label">Notes / Description</div>
+            <input class="field-input" id="ptTaskDesc" placeholder="Optional notes or details"/>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="ptSaveBtn" onclick="saveProjectTask()">Add Task</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('addTaskForm').style.display='none'">Cancel</button>
       </div>
       <div id="pmTasks"><div class="loading-row"><span class="spinner"></span></div></div>
     </div>
@@ -1631,12 +1655,22 @@ function renderProjectTable() {
   const c=$('projectContent'); if(!c) return;
   const isAdmin=SESSION?.role==='admin';
   const rows=projects.filter(p=>projectFilter==='all'||p.type===projectFilter);
-  let actionBar='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
+  // Action bar: only show 'Delete' button by default.
+  // Clicking it reveals checkboxes + Delete Selected + Delete All + Cancel.
+  let actionBar='<div id="projActionBar" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
   if(isAdmin){
-    actionBar+='<input type="checkbox" id="selectAllProj" onchange="toggleSelectAll(this,\'projectChk\')" title="Select all"/>'
+    // Default state — just a Delete button
+    actionBar+='\
+      <button class="btn btn-secondary btn-sm" id="projDeleteToggle" onclick="toggleProjectDeleteMode()" '
+        +'style="color:#DC2626;border-color:#FECACA;font-size:12px">Delete</button>'
+      // Hidden bulk-delete controls (shown after clicking Delete)
+      +'<span id="projDeleteControls" style="display:none;display:contents">'
+      +'<input type="checkbox" id="selectAllProj" onchange="toggleSelectAll(this,\'projectChk\')" title="Select all"/>'
       +'<label for="selectAllProj" style="font-size:12px;color:var(--muted);margin-right:4px">Select all</label>'
-      +'<button class="btn btn-sm" style="background:#DC2626;color:#fff;padding:5px 12px;font-size:12px;border-radius:6px;border:none;cursor:pointer" onclick="bulkDeleteProjects()">Delete Selected</button>'
-      +'<button class="btn btn-secondary btn-sm" style="color:#DC2626;border-color:#FECACA;font-size:12px" onclick="deleteAllProjects()">Delete All</button>';
+      +'<button class="btn btn-sm" style="background:#DC2626;color:#fff;font-size:12px" onclick="bulkDeleteProjects()">Delete Selected</button>'
+      +'<button class="btn btn-secondary btn-sm" style="color:#DC2626;border-color:#FECACA;font-size:12px" onclick="deleteAllProjects()">Delete All</button>'
+      +'<button class="btn btn-secondary btn-sm" style="font-size:12px" onclick="toggleProjectDeleteMode()">Cancel</button>'
+      +'</span>';
   }
   actionBar+='<button class="btn btn-secondary btn-sm" onclick="downloadProjectsExcel()" style="margin-left:auto;font-size:12px">Download Excel</button></div>';
   if(!rows.length){ c.innerHTML=actionBar+'<div class="empty-state"><div class="empty-title">No projects yet</div></div>'; return; }
@@ -1654,7 +1688,7 @@ function renderProjectTable() {
     const sharedKPIs=pkpis.filter(function(k){return k.kpi_type==='shared';}).map(function(k){return k.title;}).join('; ')||'—';
     const taskList=tasks.map(function(t){return t.title;}).slice(0,3).join(', ')+(tasks.length>3?'…':'');
     h+='<tr data-popen="'+p.id+'" style="cursor:pointer">'
-      +(isAdmin?'<td data-noopen="1" onclick="event.stopPropagation()"><input type="checkbox" class="projectChk" value="'+p.id+'"/></td>':'')
+      +(isAdmin?'<td data-noopen="1" onclick="event.stopPropagation()" class="projChkCell" style="display:none"><input type="checkbox" class="projectChk" value="'+p.id+'"/></td>':'')
       +'<td style="font-weight:700;min-width:160px">'+esc(p.title)+'</td>'
       +'<td style="font-size:11px;color:var(--muted);min-width:180px">'+esc(taskList||'—')+'</td>'
       +'<td><span class="badge '+(p.status||'todo')+'">'+(STATUS_LABELS[p.status]||p.status)+'</span></td>'
@@ -1682,6 +1716,26 @@ async function deleteProjectFromModal(){
     logActivity('deleted','Deleted project: '+activeProject?.title||'');
     await loadProjects();
   }catch(e){toast('Error: '+e.message,'error');}
+}
+
+function toggleProjectDeleteMode(){
+  const controls=document.getElementById('projDeleteControls');
+  const toggle=document.getElementById('projDeleteToggle');
+  const cells=document.querySelectorAll('.projChkCell');
+  const isOn=controls&&controls.style.display!=='none'&&controls.style.display!=='';
+  if(isOn){
+    // Turn OFF — hide controls + checkboxes + uncheck all
+    if(controls) controls.style.display='none';
+    if(toggle){toggle.style.color='#DC2626';toggle.textContent='Delete';}
+    cells.forEach(function(c){c.style.display='none';});
+    document.querySelectorAll('.projectChk').forEach(function(c){c.checked=false;});
+    const sa=document.getElementById('selectAllProj'); if(sa) sa.checked=false;
+  } else {
+    // Turn ON — show controls + checkboxes
+    if(controls) controls.style.display='';
+    if(toggle){toggle.style.color='var(--muted)';toggle.textContent='Delete';}
+    cells.forEach(function(c){c.style.display='';});
+  }
 }
 
 async function deleteAllProjects(){
@@ -1799,15 +1853,22 @@ async function saveProjectTask() {
   const title=$('ptTaskTitle').value.trim();
   if(!title){toast('Please enter a task title.','error');return;}
   const btn=$('ptSaveBtn'); btn.disabled=true; btn.textContent='Saving...';
+  // Get assignee from the text input (works with both datalist and free typing)
+  const assigneeName = ($('ptTaskAssigneeInput')?.value||$('ptTaskAssignee')?.value||'').trim();
   try {
     await dbInsert('project_tasks',{
       project_id:activeProject.id, title, status:$('ptTaskStatus').value,
-      priority:$('ptTaskPriority').value, assignee_name:$('ptTaskAssignee').value,
+      priority:$('ptTaskPriority').value, assignee_name:assigneeName,
       assignee_id:null, due_date:$('ptTaskDue').value||null,
       description:$('ptTaskDesc')?.value||'', helpers:JSON.stringify([])
     });
-    toast('Task added.');
-    $('ptTaskTitle').value=''; if($('ptTaskDesc')) $('ptTaskDesc').value='';
+    toast('Task added'+(assigneeName?' and assigned to '+assigneeName:'')+'.');
+    // Clear form
+    $('ptTaskTitle').value='';
+    if($('ptTaskAssigneeInput')) $('ptTaskAssigneeInput').value='';
+    $('ptTaskAssignee').value='';
+    if($('ptTaskDue')) $('ptTaskDue').value='';
+    if($('ptTaskDesc')) $('ptTaskDesc').value='';
     await loadProjectTasks(activeProject.id);
     await loadProjects();
   } catch(e){toast('Could not add task: '+e.message,'error');}
@@ -2626,34 +2687,32 @@ function toggleCustomDept(customId, val) {
 }
 
 async function loadUsersForAssignee() {
-  if(window._allUsers) return window._allUsers;
+  // Always fetch fresh — don't cache so new users show up immediately
   try {
     const users = await sbFetch('user_profiles?order=full_name.asc&select=id,full_name,email,department,role')||[];
-    window._allUsers = users;
+    window._allUsers = users; // still cache for Grant All etc.
     return users;
-  } catch(_){ return []; }
+  } catch(_){ return window._allUsers||[]; }
 }
 
 async function populateAssigneeDropdown() {
-  const sel=$('ptTaskAssignee'); if(!sel) return;
+  const dl=$('ptAssigneeList');
+  const inp=$('ptTaskAssigneeInput');
+  if(!dl||!inp) return;
   const users = await loadUsersForAssignee();
-  const marketing = users.filter(u=>(u.department||'').toLowerCase()==='marketing');
-  const others = users.filter(u=>(u.department||'').toLowerCase()!=='marketing');
-  others.sort((a,b)=>(a.department||'zzz').localeCompare(b.department||'zzz')||
-    (a.full_name||'').localeCompare(b.full_name||''));
-  let html='<option value="">Select assignee...</option>';
-  if(marketing.length){
-    html+='<optgroup label="Marketing">';
-    marketing.forEach(u=>{html+=`<option value="${esc(u.full_name)}">${esc(u.full_name)}</option>`;});
-    html+='</optgroup>';
-  }
-  const depts=[...new Set(others.map(u=>u.department||'Other'))];
-  depts.forEach(dept=>{
-    html+=`<optgroup label="${esc(dept)}">`;
-    others.filter(u=>(u.department||'Other')===dept).forEach(u=>{html+=`<option value="${esc(u.full_name)}">${esc(u.full_name)}</option>`;});
-    html+='</optgroup>';
-  });
-  sel.innerHTML=html;
+  // Marketing users first, then rest sorted by dept+name
+  const sorted=[
+    ...users.filter(u=>(u.department||'').toLowerCase()==='marketing'),
+    ...users.filter(u=>(u.department||'').toLowerCase()!=='marketing')
+      .sort((a,b)=>(a.department||'').localeCompare(b.department||'')||(a.full_name||'').localeCompare(b.full_name||''))
+  ];
+  // Build datalist options — label shows name + dept
+  dl.innerHTML=sorted.map(u=>
+    `<option value="${esc(u.full_name)}" label="${esc(u.full_name+(u.department?' ('+u.department+')':''))}">`
+  ).join('');
+  // Sync hidden field when input changes
+  inp.oninput=function(){ $('ptTaskAssignee').value=inp.value; };
+  inp.onblur=function(){ $('ptTaskAssignee').value=inp.value; };
 }
 
 async function loadAdminStats() {
