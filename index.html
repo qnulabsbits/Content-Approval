@@ -152,8 +152,8 @@
         </div>
         <div class="page-actions">
           <div style="display:flex;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:3px">
-            <button class="btn btn-secondary btn-sm" id="projView_kanban" onclick="switchProjectView('kanban')" style="border:none;background:var(--surface)">Kanban</button>
-            <button class="btn btn-secondary btn-sm" id="projView_table" onclick="switchProjectView('table')" style="border:none;background:transparent">Table</button>
+            <button class="btn btn-secondary btn-sm" id="projView_kanban" onclick="switchProjectView('kanban')" style="border:none;background:transparent">Kanban</button>
+            <button class="btn btn-secondary btn-sm" id="projView_table" onclick="switchProjectView('table')" style="border:none;background:var(--surface)">Table</button>
           </div>
           <label class="btn btn-secondary btn-sm" style="cursor:pointer">
             Import Excel
@@ -898,6 +898,13 @@ function goHome() {
 
 function forceLogout(msg) {
   SESSION = null; try { localStorage.removeItem('mo_session'); } catch (_) {}
+  // Hide the running banner immediately
+  const banner=document.getElementById('loginBanner');
+  if(banner){banner.classList.remove('show');}
+  const track=document.getElementById('bannerTrack');
+  if(track){track.innerHTML='';}
+  const am=document.querySelector('.app-main');
+  if(am){am.style.marginTop='';}
   $('loginPw').value = '';
   $('loginErr').classList.remove('show');
   setScreen('login');
@@ -1813,7 +1820,7 @@ function renderProjectTable() {
 
     if(!tasks.length){
       /* Project with no tasks — one row */
-      h+='<tr data-popen="'+p.id+'" class="proj-row" style="cursor:pointer">'
+      h+='<tr data-popen="'+p.id+'" class="proj-row" onclick="openProjectModal(\''+p.id+'\')" style="cursor:pointer">'
         +(isAdmin?'<td class="projChkCell" data-noopen="1" onclick="event.stopPropagation()" style="display:none"><input type="checkbox" class="projectChk" value="'+p.id+'"/></td>':'')
         +'<td style="font-weight:700;min-width:170px;vertical-align:top;padding:10px 12px">'+esc(p.title)+'</td>'
         +'<td style="font-size:12px;color:var(--muted);padding:10px 12px">—</td>'
@@ -1840,7 +1847,7 @@ function renderProjectTable() {
         const tTeamKPI=taskDesc.match(/Team KPI: ([^\n]+)/)?.[1]||'';
         const tSharedKPI=taskDesc.match(/Shared KPI: ([^\n]+)/)?.[1]||'';
         const overdue=t.due_date&&daysUntil(t.due_date)<0&&t.status!=='done';
-        h+='<tr data-taskopen="'+t.id+'" data-projid="'+p.id+'" class="task-row" style="cursor:pointer;border-top:'+(isFirst?'2px solid var(--border2)':'1px solid var(--border)')+'">'; 
+        h+='<tr data-taskopen="'+t.id+'" data-projid="'+p.id+'" class="task-row"'  +' onclick="openTaskEditModal(\''+t.id+'\',\''+p.id+'\')"'  +' style="cursor:pointer;border-top:'+(isFirst?'2px solid var(--border2)':'1px solid var(--border)')+'">';  
         if(isAdmin){
           h+='<td class="projChkCell" data-noopen="1" onclick="event.stopPropagation()" style="display:none">'
             +(isFirst?'<input type="checkbox" class="projectChk" value="'+p.id+'"/>':'')
@@ -1886,11 +1893,19 @@ function renderProjectTable() {
 }
 
 /* ── Task edit MODAL ── */
-function openTaskEditModal(taskId, projId) {
+async function openTaskEditModal(taskId, projId) {
   const p=projects.find(x=>String(x.id)===String(projId));
-  const tasks=projectTasksCache[projId]||[];
+  if(!p){toast('Project not found — try refreshing.','error');return;}
+  // Always fetch tasks fresh from DB — don't rely on cache
+  let tasks=projectTasksCache[projId]||[];
+  if(!tasks.length){
+    try{
+      tasks=await sbFetch('project_tasks?project_id=eq.'+projId+'&order=sort_order.asc&select=*')||[];
+      projectTasksCache[projId]=tasks;
+    }catch(_){}
+  }
   const t=tasks.find(x=>String(x.id)===String(taskId));
-  if(!t||!p){toast('Task not found — try refreshing.','error');return;}
+  if(!t){toast('Task not found — try refreshing.','error');return;}
   activeProject=p;
 
   const m=$('taskEditModal');
@@ -2231,8 +2246,13 @@ function downloadProjectsExcel(){
 
 function switchProjectView(view) {
   projectView=view;
-  ['kanban','table'].forEach(v=>{
-    const btn=$('projView_'+v); if(btn) btn.classList.toggle('active',v===view);
+  ['kanban','table'].forEach(function(v){
+    const btn=$('projView_'+v);
+    if(btn){
+      btn.classList.toggle('active',v===view);
+      btn.style.background=(v===view)?'var(--surface)':'transparent';
+      btn.style.fontWeight=(v===view)?'600':'400';
+    }
   });
   if(view==='kanban') renderKanban(); else renderProjectTable();
 }
@@ -2765,23 +2785,12 @@ document.addEventListener('click', e=>{
   if(tr) openHRModal(tr.getAttribute('data-hropen'));
 });
 
-/* Projects page — whole task row opens edit modal */
+/* Kanban card click */
 document.addEventListener('click', function(e){
-  if(!$('pg-projects')?.classList.contains('active')) return;
-  if(e.target.closest('[data-noopen]')) return;
-  if(e.target.closest('button')||e.target.tagName==='BUTTON') return;
-  if(e.target.closest('input')||e.target.closest('select')||e.target.closest('label')) return;
-  /* Task row */
-  const taskRow=e.target.closest('tr[data-taskopen]');
-  if(taskRow){
-    openTaskEditModal(taskRow.getAttribute('data-taskopen'), taskRow.getAttribute('data-projid'));
-    return;
-  }
-  /* Project row (no tasks) */
-  const projRow=e.target.closest('tr[data-popen]');
-  if(projRow){ openProjectModal(projRow.getAttribute('data-popen')); return; }
-  /* Kanban card */
-  const card=e.target.closest('[data-popen]');
+  if(!e.target.closest('#pg-projects')) return;
+  if(e.target.closest('.modal-overlay')) return;
+  if(e.target.closest('button')) return;
+  const card=e.target.closest('.kanban-card[data-popen]');
   if(card) openProjectModal(card.getAttribute('data-popen'));
 });
 document.addEventListener('change', e=>{
