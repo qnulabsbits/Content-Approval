@@ -1621,195 +1621,61 @@ function renderKanban() {
 
 function renderProjectTable() {
   const c=$('projectContent'); if(!c) return;
+  const isAdmin=SESSION?.role==='admin';
   const rows=projects.filter(p=>projectFilter==='all'||p.type===projectFilter);
-  if(!rows.length){c.innerHTML='<div class="empty-state"><div class="empty-title">No projects yet</div></div>';return;}
-  const isAdminProj=SESSION?.role==='admin';
-  let h=`<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px">
-    ${isAdminProj?'<button class=\"btn btn-secondary btn-sm\" style=\"color:var(--accent)\" onclick=\"bulkDeleteProjects()\">Delete Selected</button>':''}
-    <button class="btn btn-secondary btn-sm" onclick="downloadProjectsExcel()">Download Excel</button>
-  </div><div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
-    ${isAdminProj?'<th><input type=\"checkbox\" onchange=\"toggleSelectAll(this,\'projectChk\')\"/></th>':''}
-    ${['Theme / Project','Item / Tasks','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Notes','Source'].map(x=>`<th style="white-space:nowrap">${x}</th>`).join('')}
-  </tr></thead><tbody>`;
-  rows.forEach((p,i)=>{
-    const tc=projectTaskCounts[p.id];
-    const taskText=tc&&tc.total?`${tc.done}/${tc.total} done`:'—';
-    const taskCol=tc&&tc.total>0&&tc.done===tc.total?'var(--green)':tc&&tc.done>0?'var(--yellow)':'var(--muted)';
-    const tags=(()=>{try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
-    h+=`<tr data-popen="${p.id}" style="cursor:pointer">
-      <td class="td-num">${i+1}</td>
-      <td><div style="font-weight:600;margin-bottom:3px">${esc(p.title)}</div>
-        ${p.description?`<div style="font-size:11px;color:var(--muted);max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.description.split('\n')[0])}</div>`:''}
-      </td>
-      <td><span class="badge ${p.status||'todo'}">${STATUS_LABELS[p.status]||p.status}</span></td>
-      <td><span class="badge ${p.priority||'medium'}">${esc(p.priority||'medium')}</span></td>
-      <td class="td-muted">${esc(p.owner_name||'-')}</td>
-      <td>
-        <span style="font-size:12px;font-weight:600;color:${taskCol}">${taskText}</span>
-        ${tc&&tc.total?`<div style="height:3px;background:var(--border);border-radius:3px;margin-top:4px;overflow:hidden;width:60px"><div style="height:100%;width:${Math.round(tc.done/tc.total*100)}%;background:${taskCol};border-radius:3px"></div></div>`:''}
-      </td>
-      <td class="td-muted" style="font-size:11px">${tags.length?esc(tags[0]):'—'}</td>
-    </tr>`;
+  let actionBar='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
+  if(isAdmin){
+    actionBar+='<input type="checkbox" id="selectAllProj" onchange="toggleSelectAll(this,\'projectChk\')" title="Select all"/>'
+      +'<label for="selectAllProj" style="font-size:12px;color:var(--muted);margin-right:4px">Select all</label>'
+      +'<button class="btn btn-sm" style="background:#DC2626;color:#fff;padding:5px 12px;font-size:12px;border-radius:6px;border:none;cursor:pointer" onclick="bulkDeleteProjects()">Delete Selected</button>'
+      +'<button class="btn btn-secondary btn-sm" style="color:#DC2626;border-color:#FECACA;font-size:12px" onclick="deleteAllProjects()">Delete All</button>';
+  }
+  actionBar+='<button class="btn btn-secondary btn-sm" onclick="downloadProjectsExcel()" style="margin-left:auto;font-size:12px">Download Excel</button></div>';
+  if(!rows.length){ c.innerHTML=actionBar+'<div class="empty-state"><div class="empty-title">No projects yet</div></div>'; return; }
+  const cols=['Theme / Project','Item / Tasks','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Notes','Source'];
+  let h=actionBar+'<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>'
+    +(isAdmin?'<th style="width:32px"></th>':'')
+    +cols.map(x=>'<th style="white-space:nowrap;font-size:11px">'+x+'</th>').join('')
+    +'</tr></thead><tbody>';
+  rows.forEach(function(p){
+    const pkpis=projectKPICache[p.id]||[];
+    const tasks=projectTasksCache[p.id]||[];
+    const tags=(function(){try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
+    const indKPIs=pkpis.filter(function(k){return k.kpi_type==='individual';}).map(function(k){return k.title;}).join('; ')||'—';
+    const teamKPIs=pkpis.filter(function(k){return k.kpi_type==='team';}).map(function(k){return k.title;}).join('; ')||'—';
+    const sharedKPIs=pkpis.filter(function(k){return k.kpi_type==='shared';}).map(function(k){return k.title;}).join('; ')||'—';
+    const taskList=tasks.map(function(t){return t.title;}).slice(0,3).join(', ')+(tasks.length>3?'…':'');
+    h+='<tr data-popen="'+p.id+'" style="cursor:pointer">'
+      +(isAdmin?'<td data-noopen="1" onclick="event.stopPropagation()"><input type="checkbox" class="projectChk" value="'+p.id+'"/></td>':'')
+      +'<td style="font-weight:700;min-width:160px">'+esc(p.title)+'</td>'
+      +'<td style="font-size:11px;color:var(--muted);min-width:180px">'+esc(taskList||'—')+'</td>'
+      +'<td><span class="badge '+(p.status||'todo')+'">'+(STATUS_LABELS[p.status]||p.status)+'</span></td>'
+      +'<td><span class="badge '+(p.priority||'medium')+'">'+esc(p.priority||'medium')+'</span></td>'
+      +'<td class="td-muted" style="min-width:120px">'+esc(p.owner_name||'—')+'</td>'
+      +'<td style="font-size:11px;color:var(--muted);max-width:160px;white-space:normal">'+esc(indKPIs)+'</td>'
+      +'<td style="font-size:11px;color:var(--muted);max-width:160px;white-space:normal">'+esc(teamKPIs)+'</td>'
+      +'<td style="font-size:11px;color:var(--muted);max-width:160px;white-space:normal">'+esc(sharedKPIs)+'</td>'
+      +'<td style="font-size:11px;color:var(--muted);max-width:200px;white-space:normal">'+esc((p.description||'').split('\n')[0].slice(0,80)||'—')+'</td>'
+      +'<td style="font-size:11px;color:var(--muted);min-width:100px">'+esc(tags[0]||'—')+'</td>'
+      +'</tr>';
   });
   h+='</tbody></table></div>';
   c.innerHTML=h;
 }
 
-document.addEventListener('click', e=>{
-  if(!$('pg-projects')?.classList.contains('active')) return;
-  const card=e.target.closest('[data-popen]');
-  if(card) openProjectModal(card.getAttribute('data-popen'));
-});
-
-async function openProjectModal(id) {
-  const p=projects.find(x=>String(x.id)===String(id)); if(!p) return;
-  activeProject=p;
-  $('pmTitle').textContent=p.title;
-  const descEl=$('pmDesc'); if(descEl) descEl.value=p.description||'';
-  const _tags=(()=>{try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
-  if($('pmTitleEdit')) $('pmTitleEdit').value=p.title||'';
-  if($('pmStatusEdit')) $('pmStatusEdit').value=p.status||'todo';
-  if($('pmPriorityEdit')) $('pmPriorityEdit').value=p.priority||'medium';
-  if($('pmOwnerEdit')) $('pmOwnerEdit').value=p.owner_name||'';
-  if($('pmDueEdit')) $('pmDueEdit').value=dateInput(p.due_date||'');
-  if($('pmTypeEdit')) $('pmTypeEdit').value=p.type||'campaign';
-  if($('pmBudgetEdit')) $('pmBudgetEdit').value=p.budget||'';
-  if($('pmSourceEdit')) $('pmSourceEdit').value=_tags.join(', ');
-  await loadProjectTasks(p.id);
-  await loadProjectKPIs(p.id);
-  await populateAssigneeDropdown();
-  showModal('projectModal');
+async function deleteAllProjects(){
+  if(!projects.length){toast('No projects to delete.','error');return;}
+  if(!confirm('Delete ALL '+projects.length+' projects with all tasks and KPIs? This cannot be undone.')) return;
+  try{
+    for(const p of projects){
+      await sbFetch('project_tasks?project_id=eq.'+p.id,{method:'DELETE'}).catch(function(){});
+      await sbFetch('project_kpis?project_id=eq.'+p.id,{method:'DELETE'}).catch(function(){});
+      await sbFetch('projects?id=eq.'+p.id,{method:'DELETE'}).catch(function(){});
+    }
+    toast('All projects deleted.'); logActivity('bulk_delete','Admin deleted all projects'); await loadProjects();
+  }catch(e){toast('Error: '+e.message,'error');}
 }
 
-async function loadProjectTasks(projectId) {
-  const tasks=await sbFetch('project_tasks?project_id=eq.'+projectId+'&order=sort_order.asc&select=*')||[];
-  const c=$('pmTasks');
-  if(!tasks.length){c.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No tasks yet.</div>';return;}
-  let h='';
-  tasks.forEach(t=>{
-    const days=daysUntil(t.due_date), overdue=days!==null&&days<0&&t.status!=='done';
-    h+=`<div style="padding:8px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <input type="checkbox" ${t.status==='done'?'checked':''} data-taskid="${t.id}" onchange="toggleTask(this)" style="flex-shrink:0;margin-top:3px"/>
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <div style="font-size:13px;font-weight:600;${t.status==='done'?'text-decoration:line-through;color:var(--muted)':''}">${esc(t.title)}</div>
-            <span class="badge ${t.priority||'medium'}" style="font-size:9px">${esc(t.priority||'medium')}</span>
-            <span class="badge ${t.status||'todo'}" style="font-size:9px">${STATUS_LABELS[t.status]||t.status}</span>
-          </div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(t.assignee_name||'Unassigned')}${t.due_date?` · <span style="${overdue?'color:var(--accent);font-weight:600':''}">${formatDate(t.due_date)}</span>`:''}</div>
-          ${t.description?`<div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;background:var(--surface2);border-radius:6px;padding:5px 8px;white-space:pre-wrap">${esc(t.description)}</div>`:''}
-        </div>
-      </div>
-    </div>`;
-  });
-  c.innerHTML=h;
-}
-
-async function toggleTask(input) {
-  const id=input.getAttribute('data-taskid');
-  const done=input.checked;
-  try {
-    await dbUpdate('project_tasks',id,{status:done?'done':'todo',completed_at:done?new Date().toISOString():null});
-    if(activeProject) loadProjectTasks(activeProject.id);
-    await loadProjects();
-  } catch(e){toast('Could not update task: '+e.message,'error');input.checked=!input.checked;}
-}
-
-async function loadProjectKPIs(projectId) {
-  const kpis=await sbFetch('project_kpis?project_id=eq.'+projectId+'&order=created_at.asc&select=*')||[];
-  const c=$('pmKPIs');
-  if(!kpis.length){c.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No KPIs yet.</div>';return;}
-  const typeColors={individual:'var(--accent)',shared:'var(--blue)',team:'var(--purple)'};
-  const typeLabels={individual:'Individual',shared:'Shared',team:'Team'};
-  let h='<div class="kpi-row" style="margin-top:8px">';
-  kpis.forEach(k=>{
-    const p=pct(k.current_value||0,k.target_value||1);
-    const cls=p>=80?'good':p>=40?'warn':'bad';
-    const tcolor=typeColors[k.kpi_type||'individual']||'var(--accent)';
-    const tlabel=typeLabels[k.kpi_type||'individual']||'KPI';
-    h+=`<div class="kpi-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <div class="kpi-title">${esc(k.title)}</div>
-        <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:${tcolor}22;color:${tcolor};text-transform:uppercase">${tlabel}</span>
-      </div>
-      <div class="kpi-sub">${esc(k.owner_name||'')}</div>
-      <div class="kpi-progress"><div class="kpi-bar" style="width:${p}%;background:${p>=80?'var(--green)':p>=40?'var(--yellow)':'var(--accent)'}"></div></div>
-      <div class="kpi-numbers">
-        <span class="kpi-current">${esc(String(k.current_value||0))}${esc(k.unit||'')}</span>
-        <span class="kpi-target">/ ${esc(String(k.target_value||0))}${esc(k.unit||'')}</span>
-        <span class="kpi-pct ${cls}">${p}%</span>
-      </div>
-    </div>`;
-  });
-  h+='</div>';
-  c.innerHTML=h;
-}
-
-function openAddProject() {
-  $('apTitle').value=''; $('apType').value='campaign'; $('apStatus').value='todo';
-  $('apPriority').value='medium'; $('apOwner').value=SESSION?.full_name||'';
-  $('apStartDate').value=''; $('apDueDate').value=''; $('apBudget').value=''; $('apDesc').value='';
-  showModal('addProjectModal');
-}
-
-async function saveNewProject() {
-  const title=$('apTitle').value.trim();
-  if(!title){toast('Please enter a project title.','error');return;}
-  const btn=$('apSaveBtn'); btn.disabled=true; btn.textContent='Saving...';
-  try {
-    await dbInsert('projects',{
-      title,type:$('apType').value,status:$('apStatus').value,priority:$('apPriority').value,
-      owner_name:$('apOwner').value,owner_id:SESSION?.user_id,
-      start_date:$('apStartDate').value||null,due_date:$('apDueDate').value||null,
-      budget:$('apBudget').value||null,description:$('apDesc').value,
-      created_by:SESSION?.user_id,team_members:JSON.stringify([])
-    });
-    toast('Project created.');
-    logActivity('created','New project: '+title);
-    closeModal('addProjectModal');
-    await loadProjects();
-  } catch(e){toast('Could not create project: '+e.message,'error');}
-  finally{btn.disabled=false;btn.textContent='Create Project';}
-}
-
-async function saveProjectTask() {
-  if(!activeProject) return;
-  const title=$('ptTaskTitle').value.trim();
-  if(!title){toast('Please enter a task title.','error');return;}
-  const btn=$('ptSaveBtn'); btn.disabled=true; btn.textContent='Saving...';
-  try {
-    await dbInsert('project_tasks',{
-      project_id:activeProject.id, title, status:$('ptTaskStatus').value,
-      priority:$('ptTaskPriority').value, assignee_name:$('ptTaskAssignee').value,
-      assignee_id:null, due_date:$('ptTaskDue').value||null,
-      description:$('ptTaskDesc').value, helpers:JSON.stringify([])
-    });
-    toast('Task added.');
-    $('ptTaskTitle').value=''; $('ptTaskDesc').value='';
-    await loadProjectTasks(activeProject.id);
-    await loadProjects();
-  } catch(e){toast('Could not add task: '+e.message,'error');}
-  finally{btn.disabled=false;btn.textContent='Add Task';}
-}
-
-async function saveProjectKPI() {
-  if(!activeProject) return;
-  const title=$('pkKPITitle').value.trim();
-  if(!title){toast('Please enter a KPI title.','error');return;}
-  const btn=$('pkSaveBtn'); btn.disabled=true; btn.textContent='Saving...';
-  try {
-    await dbInsert('project_kpis',{
-      project_id:activeProject.id, title, kpi_type:$('pkKPIType').value,
-      target_value:parseFloat($('pkTarget').value)||0, current_value:parseFloat($('pkCurrent').value)||0,
-      unit:$('pkUnit').value, owner_name:$('pkOwner').value, due_date:$('pkDue').value||null
-    });
-    toast('KPI added.');
-    $('pkKPITitle').value=''; $('pkTarget').value=''; $('pkCurrent').value=''; $('pkUnit').value='';
-    await loadProjectKPIs(activeProject.id);
-  } catch(e){toast('Could not add KPI: '+e.message,'error');}
-  finally{btn.disabled=false;btn.textContent='Add KPI';}
-}
 
 function downloadProjectsExcel(){
   if(typeof XLSX==='undefined'){toast('XLSX library not loaded','error');return;}
@@ -2562,7 +2428,7 @@ let adminUsers=[];
 
 async function loadAdmin() {
   try {
-    adminUsers=await sbFetch('user_profiles?order=created_at.asc&select=*')||[];
+    adminUsers=await sbFetch('user_profiles?order=created_at.asc&select=id,email,full_name,role,department,module_permissions,last_login,created_at')||[];
     renderAdminUsers();
     loadAdminStats();
     loadInventoryRequests();
@@ -2622,14 +2488,14 @@ function renderAdminUsers() {
   const c=$('adminUserList'); if(!c) return;
   if(!adminUsers.length){c.innerHTML='<div class="empty-state"><div class="empty-title">No users yet</div></div>';return;}
   const MODS=[
-    {id:'content',label:'Content'},
-    {id:'projects',label:'Projects'},
-    {id:'crm',label:'CRM'},
+    {id:'content',label:'Content Approval'},
+    {id:'projects',label:'Project Tracker'},
+    {id:'crm',label:'CRM Dashboard'},
     {id:'analytics',label:'Analytics'},
-    {id:'reports',label:'Reports'},
-    {id:'inventory',label:'Inventory'},
-    {id:'inventory_write',label:'Inv. Write'},
-    {id:'hr',label:'HR'}
+    {id:'reports',label:'Monthly Reports'},
+    {id:'inventory',label:'Inventory (View)'},
+    {id:'inventory_write',label:'Inventory (Write)'},
+    {id:'hr',label:'HR Module'}
   ];
   const rColors={writer:'var(--accent)',seo:'var(--yellow)',cmo:'var(--purple)',designer:'var(--blue)',admin:'#1A1A1A',hr:'var(--teal)'};
   let h='';
@@ -2640,7 +2506,7 @@ function renderAdminUsers() {
         <div>
           <div style="font-size:14px;font-weight:700">${esc(u.full_name||'Unknown')}</div>
           <div style="font-size:12px;color:var(--muted)">${esc(u.email)}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">${u.department?'<span style="font-weight:600;color:var(--blue)">'+esc(u.department)+'</span> &middot; ':''} Last login: ${u.last_login?formatDateTime(u.last_login):'Never'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${u.department?'<span style="font-weight:600;color:var(--blue)">'+esc(u.department)+'</span> &middot; ':''} Last login: ${u.last_login?formatDateTime(u.last_login):'Never'} &middot; Joined: ${u.created_at?formatDate(u.created_at):'-'}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <span style="background:${rColors[u.role]||'var(--muted)'};color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">${esc(String(u.role).toUpperCase())}</span>
@@ -3229,6 +3095,7 @@ function subscribeRealtime(){
   }
   // Polling fallback — refresh every 5s when chat is open
   setInterval(async()=>{
+    initChatBadge();
     if(!chatOpen) return;
     if(activeConvId&&chatView==='messages'){
       const msgs=await sbFetch('chat_messages?conversation_id=eq.'+activeConvId+'&order=created_at.asc&limit=200&select=*').catch(()=>null);
