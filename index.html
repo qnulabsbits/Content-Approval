@@ -992,6 +992,74 @@ function saveBlob(content, type, filename) {
 function toWord(title, bodyHtml) {
   const shell = `\ufeff<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font-family:Arial;font-size:11pt;line-height:1.5;margin:30px}h1{font-size:16pt;color:#E8450A}h2{font-size:13pt;margin-top:22px;border-top:1px solid #ccc;padding-top:12px}p{margin:4px 0}label{font-size:8pt;font-weight:bold;color:#666;text-transform:uppercase;display:block;margin-top:12px}hr{border:none;border-top:1px solid #ddd;margin:20px 0}</style></head><body>${bodyHtml}
 
+
+<!-- ═══ TASK EDIT MODAL ═══ -->
+<div class="modal-overlay" id="taskEditModal">
+  <div class="modal" style="max-width:680px;width:100%">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div>
+        <div style="font-size:17px;font-weight:700">Edit Task</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">in <b id="tep_project_name"></b></div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('taskEditModal')">✕ Close</button>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
+    <!-- Row 1: Title -->
+    <div class="field-group" style="margin-bottom:14px">
+      <div class="field-label">Task Title <span class="req">*</span></div>
+      <input class="field-input" id="tep_title" placeholder="Task name" style="font-size:14px;font-weight:500"/>
+    </div>
+    <!-- Row 2: Status / Priority / Due -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="field-group">
+        <div class="field-label">Status</div>
+        <select class="field-select" id="tep_status">
+          <option value="todo">To Do</option>
+          <option value="inprogress">In Progress</option>
+          <option value="review">Review</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Priority</div>
+        <select class="field-select" id="tep_priority">
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Due Date</div>
+        <input class="field-date" id="tep_due" type="date"/>
+      </div>
+    </div>
+    <!-- Row 3: Assign To -->
+    <div class="field-group" style="margin-bottom:14px">
+      <div class="field-label">Assign To <span style="font-size:10px;color:var(--muted);font-weight:400">(Marketing users shown first)</span></div>
+      <input class="field-input" id="tep_assignee" list="tepAssigneeList"
+        placeholder="Start typing a name..." autocomplete="off" style="font-size:13px"/>
+      <datalist id="tepAssigneeList"></datalist>
+    </div>
+    <!-- Row 4: Notes — big textarea -->
+    <div class="field-group" style="margin-bottom:18px">
+      <div class="field-label">Notes / Description</div>
+      <textarea class="field-textarea" id="tep_notes"
+        style="min-height:160px;font-size:13px;line-height:1.7;resize:vertical"
+        placeholder="Add notes, context, links or progress updates..."></textarea>
+    </div>
+    <!-- Footer -->
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-primary" id="tepSaveBtn"
+        onclick="saveTaskEdit(document.getElementById('taskEditModal').getAttribute('data-panelfor'), document.getElementById('taskEditModal').getAttribute('data-projid'))">
+        Save Task
+      </button>
+      <button class="btn btn-secondary" onclick="closeModal('taskEditModal')">Cancel</button>
+      <button class="btn btn-sm" style="background:#DC2626;color:#fff;margin-left:auto"
+        onclick="deleteTaskFromModal()">Delete Task</button>
+    </div>
+  </div>
+</div>
+
 </body></html>`;
   return shell;
 }
@@ -1725,21 +1793,19 @@ function renderProjectTable() {
         }
         /* Theme/Project — only on first row, spans all task rows visually */
         if(isFirst){
-          h+='<td style="font-weight:700;min-width:170px;vertical-align:top;padding:12px 12px 4px;background:var(--surface2)" rowspan="'+rowspan+'">'
-            +'<div>'+esc(p.title)+'</div>'
-            +'<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'
-            +'<span class="badge '+(p.status||'todo')+'" style="font-size:9px">'+(STATUS_LABELS[p.status]||p.status)+'</span>'
-            +'<span class="badge '+(p.priority||'medium')+'" style="font-size:9px">'+esc(p.priority||'medium')+'</span>'
-            +'</div>'
-            +'<div style="font-size:10px;color:var(--muted);margin-top:4px">'+esc(p.owner_name||'')+'</div>'
-            +'<button onclick="event.stopPropagation();openProjectModal(\''+p.id+'\')" style="margin-top:8px;font-size:10px;background:var(--accent);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">Edit Project</button>'
+          h+='<td style="font-weight:700;font-size:14px;min-width:170px;vertical-align:top;padding:12px 12px 10px;background:var(--surface2);border-right:2px solid var(--border)" rowspan="'+rowspan+'">'
+            +'<div style="line-height:1.4">'+esc(p.title)+'</div>'
+            +'<button onclick="event.stopPropagation();openProjectModal(\''+p.id+'\')" '
+            +'style="margin-top:10px;font-size:10px;background:var(--blue);color:#fff;border:none;border-radius:4px;padding:3px 10px;cursor:pointer;font-family:Inter,sans-serif">'
+            +'Edit Project</button>'
             +'</td>';
         }
-        /* Task item */
+                /* Task item — whole row is clickable via TR listener */
         h+='<td style="font-size:13px;font-weight:500;min-width:200px;padding:10px 12px">'
-          +'<div onclick="event.stopPropagation();openTaskEditPanel(\''+t.id+'\',\''+p.id+'\')" style="cursor:pointer">'
-          +esc(t.title)
-          +'<div style="font-size:10px;color:var(--muted);margin-top:2px">'+esc(t.assignee_name||'Unassigned')+(t.due_date?'  ·  <span style="'+(overdue?'color:#DC2626;font-weight:600':'')+'">'+formatDate(t.due_date)+'</span>':'')+'</div>'
+          +'<div style="font-weight:600">'+esc(t.title)+'</div>'
+          +'<div style="font-size:11px;color:var(--muted);margin-top:3px">'
+          +esc(t.assignee_name||'Unassigned')
+          +(t.due_date?'  ·  <span style="'+(overdue?'color:#DC2626;font-weight:600':'')+'">'+formatDate(t.due_date)+'</span>':'')
           +'</div>'
           +'</td>'
         /* Status */
@@ -1764,119 +1830,104 @@ function renderProjectTable() {
   c.innerHTML=h;
 }
 
-/* ── Inline task edit panel ── */
-function openTaskEditPanel(taskId, projId) {
-  // Remove any existing panel
-  const existing=document.getElementById('taskEditPanel');
-  if(existing) existing.remove();
-
-  // Find the task row
-  const row=document.querySelector('tr[data-taskopen="'+taskId+'"]');
-  if(!row) return;
-
-  // Find the task data
+/* ── Task edit MODAL ── */
+function openTaskEditModal(taskId, projId) {
   const p=projects.find(x=>String(x.id)===String(projId));
   const tasks=projectTasksCache[projId]||[];
   const t=tasks.find(x=>String(x.id)===String(taskId));
-  if(!t||!p) return;
-
+  if(!t||!p){toast('Task not found — try refreshing.','error');return;}
   activeProject=p;
 
-  // Build panel row
-  const panel=document.createElement('tr');
-  panel.id='taskEditPanel';
-  panel.setAttribute('data-panelfor', taskId);
-  const colspan=(SESSION?.role==='admin')?11:10;
-  panel.innerHTML='<td colspan="'+colspan+'" style="padding:0;background:var(--accent-light);border:2px solid var(--accent-border)">'
-    +'<div style="padding:16px 20px">'
-    +'<div style="font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">'
-    +'<span>Edit Task: '+esc(t.title)+'</span>'
-    +'<button onclick="document.getElementById(\'taskEditPanel\').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted)">✕</button>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px">'
-    +'<div class="field-group"><div class="field-label">Task Title</div>'
-    +'<input class="field-input" id="tep_title" value="'+esc(t.title)+'"/></div>'
-    +'<div class="field-group"><div class="field-label">Status</div>'
-    +'<select class="field-select" id="tep_status">'
-    +'<option value="todo"'+(t.status==='todo'?' selected':'')+'>To Do</option>'
-    +'<option value="inprogress"'+(t.status==='inprogress'?' selected':'')+'>In Progress</option>'
-    +'<option value="review"'+(t.status==='review'?' selected':'')+'>Review</option>'
-    +'<option value="done"'+(t.status==='done'?' selected':'')+'>Done</option>'
-    +'</select></div>'
-    +'<div class="field-group"><div class="field-label">Priority</div>'
-    +'<select class="field-select" id="tep_priority">'
-    +'<option value="high"'+(t.priority==='high'?' selected':'')+'>High</option>'
-    +'<option value="medium"'+(t.priority==='medium'?' selected':'')+'>Medium</option>'
-    +'<option value="low"'+(t.priority==='low'?' selected':'')+'>Low</option>'
-    +'</select></div>'
-    +'<div class="field-group"><div class="field-label">Assign To</div>'
-    +'<input class="field-input" id="tep_assignee" list="tepAssigneeList" value="'+esc(t.assignee_name||'')+'" placeholder="Type a name..."/>'
-    +'<datalist id="tepAssigneeList"></datalist></div>'
-    +'<div class="field-group"><div class="field-label">Due Date</div>'
-    +'<input class="field-date" id="tep_due" type="date" value="'+dateInput(t.due_date||'')+'"/></div>'
-    +'</div>'
-    +'<div class="field-group" style="margin-bottom:12px"><div class="field-label">Notes / Description</div>'
-    +'<textarea class="field-textarea" id="tep_notes" style="min-height:70px">'+esc(t.description||'')+'</textarea></div>'
-    +'<div style="display:flex;gap:8px">'
-    +'<button class="btn btn-primary btn-sm" onclick="saveTaskEdit(\''+taskId+'\',\''+projId+'\')">Save</button>'
-    +'<button class="btn btn-secondary btn-sm" onclick="document.getElementById(\'taskEditPanel\').remove()">Cancel</button>'
-    +'<button class="btn btn-sm" style="background:#DC2626;color:#fff;margin-left:auto" onclick="deleteTask('+taskId+',event)">Delete Task</button>'
-    +'</div>'
-    +'</div></td>';
+  const m=$('taskEditModal');
+  if(!m) return;
+  m.setAttribute('data-panelfor',taskId);
+  m.setAttribute('data-projid',projId);
 
-  // Insert after the clicked row
-  row.parentNode.insertBefore(panel, row.nextSibling);
+  // Fill fields
+  $('tep_title').value=t.title||'';
+  $('tep_status').value=t.status||'todo';
+  $('tep_priority').value=t.priority||'medium';
+  $('tep_assignee').value=t.assignee_name||'';
+  $('tep_due').value=dateInput(t.due_date||'');
+  $('tep_notes').value=t.description||'';
+  $('tep_project_name').textContent=p.title;
 
-  // Populate assignee datalist
+  // Populate assignee datalist — Marketing first
   loadUsersForAssignee().then(function(users){
-    const dl=document.getElementById('tepAssigneeList');
+    const dl=$('tepAssigneeList');
     if(!dl) return;
-    const sorted=[
-      ...users.filter(u=>(u.department||'').toLowerCase()==='marketing'),
-      ...users.filter(u=>(u.department||'').toLowerCase()!=='marketing')
-        .sort((a,b)=>(a.full_name||'').localeCompare(b.full_name||''))
-    ];
-    dl.innerHTML=sorted.map(u=>'<option value="'+esc(u.full_name)+'" label="'+esc(u.full_name+(u.department?' ('+u.department+')':''))+'">').join('');
+    const mkt=users.filter(u=>(u.department||'').toLowerCase()==='marketing');
+    const rest=users.filter(u=>(u.department||'').toLowerCase()!=='marketing')
+      .sort((a,b)=>(a.department||'').localeCompare(b.department||'')||(a.full_name||'').localeCompare(b.full_name||''));
+    dl.innerHTML=[...mkt,...rest].map(function(u){
+      return '<option value="'+esc(u.full_name)+'" label="'+esc(u.full_name+(u.department?' ('+u.department+')':''))+'"></option>';
+    }).join('');
   });
 
-  // Scroll into view
-  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  showModal('taskEditModal');
 }
 
+// Keep old name as alias for any remaining calls
+function openTaskEditPanel(taskId,projId){openTaskEditModal(taskId,projId);}
+
 async function saveTaskEdit(taskId, projId) {
-  const title=document.getElementById('tep_title')?.value.trim();
+  const title=$('tep_title')?.value.trim();
   if(!title){toast('Title cannot be empty.','error');return;}
-  const newAssignee=document.getElementById('tep_assignee')?.value.trim();
+  const newAssignee=($('tep_assignee')?.value||'').trim();
   const prevTask=(projectTasksCache[projId]||[]).find(x=>String(x.id)===String(taskId));
   const prevAssignee=prevTask?.assignee_name||'';
   const data={
     title,
-    status:document.getElementById('tep_status')?.value||'todo',
-    priority:document.getElementById('tep_priority')?.value||'medium',
+    status:$('tep_status')?.value||'todo',
+    priority:$('tep_priority')?.value||'medium',
     assignee_name:newAssignee,
-    due_date:document.getElementById('tep_due')?.value||null,
-    description:document.getElementById('tep_notes')?.value||''
+    due_date:$('tep_due')?.value||null,
+    description:$('tep_notes')?.value||''
   };
+  const btn=$('tepSaveBtn');
+  if(btn){btn.disabled=true;btn.textContent='Saving...';}
   try{
     await dbUpdate('project_tasks',taskId,data);
-    // If assignee changed, trigger the banner for the new assignee
-    if(newAssignee && newAssignee!==prevAssignee){
+    if(newAssignee&&newAssignee!==prevAssignee){
       const users=window._allUsers||[];
-      const assignedUser=users.find(u=>u.full_name===newAssignee||(u.full_name||'').toLowerCase()===newAssignee.toLowerCase());
+      const assignedUser=users.find(u=>
+        u.full_name===newAssignee||(u.full_name||'').toLowerCase()===newAssignee.toLowerCase()
+      );
       if(assignedUser){
-        await assignTask(assignedUser.id, assignedUser.full_name, title,
-          data.description||'', 'projects', parseInt(projId));
+        await assignTask(assignedUser.id,assignedUser.full_name,title,data.description||'','projects',parseInt(projId));
       }
       toast('Task saved and assigned to '+newAssignee+'.');
     } else {
       toast('Task saved.');
     }
-    logActivity('edited','Updated task: '+title, parseInt(projId));
-    document.getElementById('taskEditPanel')?.remove();
+    logActivity('edited','Updated task: '+title,parseInt(projId));
+    closeModal('taskEditModal');
+    await loadProjects();
+    if(projectView==='table') renderProjectTable();
+    else renderKanban();
+  }catch(e){
+    toast('Error: '+e.message,'error');
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent='Save Task';}
+  }
+}
+
+async function deleteTaskFromModal(){
+  const m=$('taskEditModal');
+  if(!m) return;
+  const taskId=m.getAttribute('data-panelfor');
+  const projId=m.getAttribute('data-projid');
+  if(!taskId){toast('No task selected','error');return;}
+  if(!confirm('Delete this task? This cannot be undone.')) return;
+  try{
+    await sbFetch('project_tasks?id=eq.'+taskId,{method:'DELETE'});
+    toast('Task deleted.');
+    closeModal('taskEditModal');
     await loadProjects();
     if(projectView==='table') renderProjectTable();
   }catch(e){toast('Error: '+e.message,'error');}
 }
+
 
 
 async function deleteProjectFromModal(){
@@ -2657,6 +2708,26 @@ document.addEventListener('click', e=>{
   if(e.target.closest('[data-noopen]')) return;
   const tr=e.target.closest('tr[data-hropen]');
   if(tr) openHRModal(tr.getAttribute('data-hropen'));
+});
+
+/* Projects page — whole task row opens edit modal */
+document.addEventListener('click', function(e){
+  if(!$('pg-projects')?.classList.contains('active')) return;
+  if(e.target.closest('[data-noopen]')) return;
+  if(e.target.closest('button')||e.target.tagName==='BUTTON') return;
+  if(e.target.closest('input')||e.target.closest('select')||e.target.closest('label')) return;
+  /* Task row */
+  const taskRow=e.target.closest('tr[data-taskopen]');
+  if(taskRow){
+    openTaskEditModal(taskRow.getAttribute('data-taskopen'), taskRow.getAttribute('data-projid'));
+    return;
+  }
+  /* Project row (no tasks) */
+  const projRow=e.target.closest('tr[data-popen]');
+  if(projRow){ openProjectModal(projRow.getAttribute('data-popen')); return; }
+  /* Kanban card */
+  const card=e.target.closest('[data-popen]');
+  if(card) openProjectModal(card.getAttribute('data-popen'));
 });
 document.addEventListener('change', e=>{
   const inp=e.target.closest('input[data-hrtoggle]');
