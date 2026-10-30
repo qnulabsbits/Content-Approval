@@ -862,13 +862,13 @@ async function doLogin() {
     $('loginPw').value='';
     logActivity('login','Signed in');
     setTimeout(initChatBadge, 2000);
-    setTimeout(loadLoginBanner, 3000);
+    setTimeout(function(){if(typeof loadLoginBanner==='function')loadLoginBanner();},3000);
     sbFetch('user_profiles?id=eq.'+SESSION.user_id,{method:'PATCH',body:JSON.stringify({last_login:new Date().toISOString()})}).catch(()=>{});
     buildSidebar();
     setScreen('app');
     goHome();
   } catch(e) {
-    $('loginErr').textContent='Could not connect. Please try again.'; $('loginErr').classList.add('show');
+    $('loginErr').textContent='Could not connect ('+(e&&e.message?e.message:'check console')+').'; $('loginErr').classList.add('show');
   } finally { btn.disabled=false; btn.textContent='Sign In'; }
 }
 
@@ -2656,23 +2656,38 @@ function renderAdminUsers() {
           ${esc(m.label)}
         </label>`).join('')}
       </div>
+      <button class="btn btn-secondary btn-sm" id="savePerms_${u.id}" onclick="saveUserPerms('${u.id}')" style="width:100%;margin-top:10px">Save Permissions</button>
     </div>`;
   });
   c.innerHTML=h;
 }
 
-async function toggleModulePerm(input) {
-  const uid=input.getAttribute('data-uid'), mod=input.getAttribute('data-mod');
-  const user=adminUsers.find(u=>u.id===uid); if(!user) return;
-  const perms=safeJSON(user.module_permissions,'{}');
+function toggleModulePerm(input) {
+  var uid=input.getAttribute('data-uid'), mod=input.getAttribute('data-mod');
+  var user=adminUsers.find(function(u){return u.id===uid;}); if(!user) return;
+  var perms=safeJSON(user.module_permissions,'{}');
   perms[mod]=input.checked;
-  try {
+  user.module_permissions=perms;
+  var btn=document.getElementById('savePerms_'+uid);
+  if(btn){btn.textContent='Save Changes';btn.style.background='var(--accent)';btn.style.color='#fff';}
+}
+
+async function saveUserPerms(uid) {
+  var user=adminUsers.find(function(u){return u.id===uid;}); if(!user) return;
+  var btn=document.getElementById('savePerms_'+uid);
+  if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    var perms=safeJSON(user.module_permissions,'{}');
     await sbFetch('user_profiles?id=eq.'+uid,{method:'PATCH',body:JSON.stringify({module_permissions:perms})});
     user.module_permissions=perms;
-    const label=mod==='inventory_write'?'Inventory Write':mod.charAt(0).toUpperCase()+mod.slice(1);
     if(uid===SESSION?.user_id){SESSION.module_permissions=perms;saveSession();buildSidebar();}
-    toast((input.checked?'✓ '+label+' access granted':label+' access removed')+' for '+(user.full_name||user.email||'user')+'.');
-  } catch(e){input.checked=!input.checked;toast('Could not update permission: '+e.message,'error');}
+    toast('Permissions saved for '+(user.full_name||user.email||'user')+'.');
+    if(btn){btn.disabled=false;btn.textContent='Saved ✓';btn.style.background='var(--green)';btn.style.color='#fff';}
+    setTimeout(function(){if(btn){btn.textContent='Save Permissions';btn.style.background='';btn.style.color='';}},2500);
+  }catch(e){
+    toast('Could not save: '+e.message,'error');
+    if(btn){btn.disabled=false;btn.textContent='Save Permissions';btn.style.background='';btn.style.color='';}
+  }
 }
 
 // Create/Edit/Reset/Delete user
@@ -2867,7 +2882,11 @@ async function initChatBadge() {
       if(last&&last.sender_id!==SESSION.user_id&&new Date(last.created_at)>new Date(m.last_read_at)) unread++;
     }
     const badge=cq('chatFabBadge');
-    if(badge){badge.textContent=unread>9?'9+':unread;badge.classList.toggle('show',unread>0);}
+    if(badge){
+      const prev=parseInt(badge.textContent)||0, n=Math.min(99,unread);
+      badge.textContent=n>9?'9+':n; badge.classList.toggle('show',n>0);
+      if(n>prev&&n>0){badge.style.animation='none';requestAnimationFrame(function(){badge.style.animation='';});}
+    }
   } catch(_){}
 }
 
@@ -3234,7 +3253,7 @@ function subscribeRealtime(){
       }
     }
     await loadConversations();
-  },4000);
+  },3000);
 }
 
 /* ── create DM ── */
@@ -3412,6 +3431,44 @@ async function assignTask(assignedToId, assignedToName, taskTitle, taskDesc, mod
 }
 
 
+
+async function loadLoginBanner(){
+  if(!SESSION) return;
+  const items=[];
+  try{
+    const tasks=await sbFetch("task_assignments?assigned_to=eq."+SESSION.user_id+"&completed=eq.false&dismissed=eq.false&select=*")||[];
+    tasks.forEach(t=>items.push({html:"<b>Task</b> from "+esc(t.assigned_by_name||"Admin")+": "+esc(t.task_title),type:"task",id:t.id}));
+  }catch(_){}
+  try{
+    const role=SESSION.role;
+    const fm={seo:"writer_approved=eq.true&seo_approved=eq.false",cmo:"seo_approved=eq.true&cmo_approved=eq.false",designer:"cmo_approved=eq.true&designer_approved=eq.false",writer:"writer_approved=eq.false"};
+    if(fm[role]){
+      const pending=await sbFetch("content_approvals?"+fm[role]+"&select=id,title")||[];
+      pending.slice(0,5).forEach(c=>items.push({html:"<b>Content pending "+role.toUpperCase()+"</b>: "+esc(c.title),type:"content",id:c.id}));
+    }
+  }catch(_){}
+  try{
+    if(SESSION.full_name){
+      const pt=await sbFetch("project_tasks?assignee_name=eq."+encodeURIComponent(SESSION.full_name)+"&status=neq.done&select=id,title,project_id")||[];
+      pt.slice(0,5).forEach(t=>items.push({html:"<b>Project task</b>: "+esc(t.title),type:"project",id:t.project_id}));
+    }
+  }catch(_){}
+  if(!items.length) return;
+  const track=document.getElementById("bannerTrack"), banner=document.getElementById("loginBanner");
+  if(!track||!banner) return;
+  const all=[...items,...items,...items];
+  track.innerHTML=all.map(it=>"<div class=\"banner-item\" onclick=\"bannerClick('"+it.type+"','"+it.id+"')\">"+it.html+"</div>").join("");
+  banner.classList.add("show");
+  const am=document.querySelector(".app-main"); if(am) am.style.marginTop="34px";
+}
+function bannerClick(type,id){
+  if(type==="content") showPage("content");
+  else { showPage("projects"); if(id&&id!=="undefined") setTimeout(function(){try{openProjectModal(id);}catch(_){}},600); }
+}
+function closeBanner(){
+  var b=document.getElementById("loginBanner"); if(b) b.classList.remove("show");
+  var am=document.querySelector(".app-main"); if(am) am.style.marginTop="";
+}
 </script>
 
 <!-- ═══════════════ FLOATING CHAT BUTTON ═══════════════ -->
