@@ -170,13 +170,21 @@
       </div>
       <div class="section-header">
         <div class="section-title">Projects</div>
-        <div class="filter-tabs">
-          <button class="ftab active" onclick="projectFilter='all';loadProjects()">All</button>
-          <button class="ftab" onclick="projectFilter='campaign';loadProjects()">Campaigns</button>
-          <button class="ftab" onclick="projectFilter='event';loadProjects()">Events</button>
-          <button class="ftab" onclick="projectFilter='launch';loadProjects()">Launches</button>
-          <button class="ftab" onclick="projectFilter='ad';loadProjects()">Ads</button>
-        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+            <label style="font-size:11px;color:var(--muted);font-weight:600">Filter:</label>
+            <select id="projFilterSelect" onchange="applyProjectFilter(this.value)" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;min-width:220px;color:var(--text)">
+              <option value="all">All projects</option>
+              <optgroup label="── Sub-division ──">
+                <option value="div:Excellence &amp; Digital Marketing">Excellence &amp; Digital Marketing</option>
+                <option value="div:Design &amp; Creative">Design &amp; Creative</option>
+                <option value="div:Content &amp; Thought">Content &amp; Thought</option>
+                <option value="div:Brand + Marcom">Brand + Marcom</option>
+              </optgroup>
+              <optgroup label="── By Owner ──" id="projOwnerOptions">
+                <option value="" disabled>Loading users...</option>
+              </optgroup>
+            </select>
+          </div>
       </div>
       <div id="projectContent"><div class="loading-row"><span class="spinner"></span> Loading...</div></div>
     </div>
@@ -696,7 +704,12 @@
     <div class="field-group" style="margin-bottom:4px">
       <div class="field-label">Department</div>
       <select class="field-select" id="admEditDept" onchange="toggleCustomDept('admEditDeptCustom',this.value)"><option value="">Select department...</option>
-            <option value="Marketing">Marketing</option>
+            <optgroup label="── Marketing Sub-divisions ──">
+              <option value="Marketing - Excellence &amp; Digital">Excellence &amp; Digital Marketing</option>
+              <option value="Marketing - Design &amp; Creative">Design &amp; Creative</option>
+              <option value="Marketing - Content &amp; Thought">Content &amp; Thought</option>
+              <option value="Marketing - Brand &amp; Marcom">Brand + Marcom</option>
+            </optgroup>
             <option value="Sales">Sales</option>
             <option value="Engineering">Engineering</option>
             <option value="HR">HR</option>
@@ -1050,7 +1063,7 @@ function toWord(title, bodyHtml) {
 
 
 <!-- ═══ TASK EDIT MODAL ═══ -->
-<div class="modal-overlay" id="taskEditModal">
+<div class="modal-overlay" id="taskEditModal" style="z-index:10000">
   <div class="modal" style="max-width:680px;width:100%">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
       <div>
@@ -1685,7 +1698,7 @@ function contentSetFilter(f,btn) {
 /* ═══════════════════════════════════════════════════
    PROJECT TRACKER MODULE
 ═══════════════════════════════════════════════════ */
-let projects=[], projectFilter='all', projectView='table', activeProject=null, activeTask=null;
+let projects=[], projectFilter='all', projectFilterMode='all', projectView='table', activeProject=null, activeTask=null;
 let projectKPICache={}, projectTasksCache={}, pendingImportChanges=[];
 
 const PROJECT_STATUSES=['todo','inprogress','review','done'];
@@ -1696,6 +1709,7 @@ let projectTaskCounts = {}; // projectId → {total, done}
 
 async function loadProjects() {
   loadUsersForAssignee();
+  setTimeout(populateOwnerFilterDropdown,600);
   // Sync view toggle buttons
   ['kanban','table'].forEach(v=>{
     const btn=$('projView_'+v);
@@ -1799,7 +1813,27 @@ function renderProjectTable() {
   }
   actionBar+='<button class="btn btn-secondary btn-sm" onclick="downloadProjectsExcel()" style="margin-left:auto;font-size:12px">Download Excel</button></div>';
 
-  const filtered=projects.filter(p=>projectFilter==='all'||p.type===projectFilter);
+  const filtered=projects.filter(function(p){
+    if(!projectFilterMode||projectFilterMode==='all') return true;
+    const tasks=projectTasksCache[p.id]||[];
+    const allUsers=window._allUsers||[];
+    if(projectFilterMode.startsWith('div:')){
+      const divKey=projectFilterMode.slice(4).toLowerCase();
+      const divMap={'excellence & digital marketing':'excellence & digital','design & creative':'design & creative','content & thought':'content & thought','brand + marcom':'brand & marcom'};
+      const deptKey=divMap[divKey]||divKey;
+      const owners=[p.owner_name,...tasks.map(function(t){return t.assignee_name;})].filter(Boolean);
+      return owners.some(function(name){
+        const u=allUsers.find(function(x){return (x.full_name||'').toLowerCase()===(name||'').toLowerCase();});
+        return u&&(u.department||'').toLowerCase().indexOf(deptKey)!==-1;
+      });
+    }
+    if(projectFilterMode.startsWith('owner:')){
+      const ownerName=projectFilterMode.slice(6).toLowerCase();
+      return (p.owner_name||'').toLowerCase()===ownerName
+        ||tasks.some(function(t){return(t.assignee_name||'').toLowerCase()===ownerName;});
+    }
+    return true;
+  });
   if(!filtered.length){ c.innerHTML=actionBar+'<div class="empty-state"><div class="empty-title">No projects yet</div></div>'; return; }
 
   /* ── Table ── */
@@ -2242,6 +2276,27 @@ function downloadProjectsExcel(){
   XLSX.utils.book_append_sheet(wb,'Weekly Tracker',ws);
   XLSX.writeFile(wb,'QNu_Project_Tracker_'+new Date().toISOString().slice(0,10)+'.xlsx');
   toast('Excel downloaded.');
+}
+
+
+function applyProjectFilter(val) {
+  projectFilterMode = val || 'all';
+  if(projectView==='kanban') renderKanban(); else renderProjectTable();
+}
+
+function populateOwnerFilterDropdown() {
+  loadUsersForAssignee().then(function(users) {
+    const mktUsers = users.filter(function(u) {
+      return (u.department||'').toLowerCase().indexOf('marketing') !== -1;
+    });
+    const opts = document.getElementById('projOwnerOptions');
+    if(!opts) return;
+    opts.innerHTML = mktUsers.length
+      ? mktUsers.map(function(u){
+          return '<option value="owner:' + esc(u.full_name) + '">' + esc(u.full_name) + '</option>';
+        }).join('')
+      : '<option value="" disabled>No marketing users</option>';
+  });
 }
 
 function switchProjectView(view) {
