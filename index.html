@@ -403,7 +403,7 @@
         <div style="font-size:18px;font-weight:700" id="pmTitle">Project</div>
         
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="closeModal('projectModal')">Close</button>
+      <div style="display:flex;gap:8px"><button class="btn btn-sm" style="background:#DC2626;color:#fff" onclick="deleteProjectFromModal()">Delete Project</button><button class="btn btn-secondary btn-sm" onclick="closeModal('projectModal')">Close</button></div>
     </div>
     <div class="field-grid" style="margin-bottom:16px">
       <div class="card card-pad">
@@ -679,7 +679,11 @@ let notifTimer = null;
 ═══════════════════════════════════════════════════ */
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-const safeJSON = (s, fb) => { try { return s ? JSON.parse(s) : fb; } catch (_) { return fb; } };
+const safeJSON = (s, fb) => {
+  if (s === null || s === undefined) return fb;
+  if (typeof s === 'object') return s;  // already parsed (Supabase JSONB)
+  try { return JSON.parse(s); } catch (_) { return fb; }
+};
 const safeId = (s) => String(s).replace(/[^a-zA-Z0-9]/g,'_');
 const slugify = (t) => String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'untitled';
 const formatDate = (s) => { if (!s) return '-'; const d = new Date(s); return isNaN(d) ? '-' : d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); };
@@ -856,7 +860,11 @@ async function doLogin() {
     SESSION = {
       user_id:d.user.id, email:d.user.email, access_token:d.access_token, refresh_token:d.refresh_token,
       expires_at:d.expires_at||(Math.floor(Date.now()/1000)+(d.expires_in||3600)),
-      role:p.role, full_name:p.full_name, module_permissions:p.module_permissions||{}
+      role:p.role, full_name:p.full_name,
+      // Supabase returns JSONB as object directly — use as-is, never parse
+      module_permissions: (typeof p.module_permissions==='object' && p.module_permissions!==null)
+        ? p.module_permissions
+        : (p.module_permissions ? JSON.parse(p.module_permissions) : {})
     };
     saveSession();
     $('loginPw').value='';
@@ -1663,6 +1671,19 @@ function renderProjectTable() {
   c.innerHTML=h;
 }
 
+async function deleteProjectFromModal(){
+  if(!activeProject) return;
+  if(!confirm('Delete project "'+activeProject.title+'" and ALL its tasks and KPIs? This cannot be undone.')) return;
+  try{
+    await sbFetch('project_tasks?project_id=eq.'+activeProject.id,{method:'DELETE'}).catch(function(){});
+    await sbFetch('project_kpis?project_id=eq.'+activeProject.id,{method:'DELETE'}).catch(function(){});
+    await sbFetch('projects?id=eq.'+activeProject.id,{method:'DELETE'});
+    toast('Project deleted.'); closeModal('projectModal'); activeProject=null;
+    logActivity('deleted','Deleted project: '+activeProject?.title||'');
+    await loadProjects();
+  }catch(e){toast('Error: '+e.message,'error');}
+}
+
 async function deleteAllProjects(){
   if(!projects.length){toast('No projects to delete.','error');return;}
   if(!confirm('Delete ALL '+projects.length+' projects with all tasks and KPIs? This cannot be undone.')) return;
@@ -1675,6 +1696,169 @@ async function deleteAllProjects(){
     toast('All projects deleted.'); logActivity('bulk_delete','Admin deleted all projects'); await loadProjects();
   }catch(e){toast('Error: '+e.message,'error');}
 }
+
+
+async function openProjectModal(id) {
+  const p=projects.find(x=>String(x.id)===String(id)); if(!p) return;
+  activeProject=p;
+  $('pmTitle').textContent=p.title;
+  const descEl=$('pmDesc'); if(descEl) descEl.value=p.description||'';
+  const _tags=(()=>{try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
+  if($('pmTitleEdit')) $('pmTitleEdit').value=p.title||'';
+  if($('pmStatusEdit')) $('pmStatusEdit').value=p.status||'todo';
+  if($('pmPriorityEdit')) $('pmPriorityEdit').value=p.priority||'medium';
+  if($('pmOwnerEdit')) $('pmOwnerEdit').value=p.owner_name||'';
+  if($('pmDueEdit')) $('pmDueEdit').value=dateInput(p.due_date||'');
+  if($('pmTypeEdit')) $('pmTypeEdit').value=p.type||'campaign';
+  if($('pmBudgetEdit')) $('pmBudgetEdit').value=p.budget||'';
+  if($('pmSourceEdit')) $('pmSourceEdit').value=_tags.join(', ');
+  await loadProjectTasks(p.id);
+  await loadProjectKPIs(p.id);
+  await populateAssigneeDropdown();
+  showModal('projectModal');
+}
+
+async function loadProjectTasks(projectId) {
+  const tasks=await sbFetch('project_tasks?project_id=eq.'+projectId+'&order=sort_order.asc&select=*')||[];
+  const c=$('pmTasks');
+  if(!tasks.length){c.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No tasks yet.</div>';return;}
+  let h='';
+  tasks.forEach(t=>{
+    const days=daysUntil(t.due_date), overdue=days!==null&&days<0&&t.status!=='done';
+    h+=`<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <input type="checkbox" ${t.status==='done'?'checked':''} data-taskid="${t.id}" onchange="toggleTask(this)" style="flex-shrink:0;margin-top:3px"/>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <div style="font-size:13px;font-weight:600;${t.status==='done'?'text-decoration:line-through;color:var(--muted)':''}">${esc(t.title)}</div>
+            <span class="badge ${t.priority||'medium'}" style="font-size:9px">${esc(t.priority||'medium')}</span>
+            <span class="badge ${t.status||'todo'}" style="font-size:9px">${STATUS_LABELS[t.status]||t.status}</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(t.assignee_name||'Unassigned')}${t.due_date?` · <span style="${overdue?'color:var(--accent);font-weight:600':''}">` +formatDate(t.due_date)+'</span>':''}</div>
+          ${t.description?`<div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;background:var(--surface2);border-radius:6px;padding:5px 8px;white-space:pre-wrap">${esc(t.description)}</div>`:''}
+          <button style="margin-top:6px;background:none;border:1px solid #FECACA;color:#DC2626;border-radius:5px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Inter,sans-serif" onclick="deleteTask(${t.id},event)">Delete task</button>
+        </div>
+      </div>
+    </div>`;
+  });
+  c.innerHTML=h;
+}
+
+async function loadProjectKPIs(projectId) {
+  const kpis=await sbFetch('project_kpis?project_id=eq.'+projectId+'&order=created_at.asc&select=*')||[];
+  const c=$('pmKPIs');
+  if(!kpis.length){c.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No KPIs yet.</div>';return;}
+  const typeColors={individual:'var(--accent)',shared:'var(--blue)',team:'var(--purple)'};
+  const typeLabels={individual:'Individual',shared:'Shared',team:'Team'};
+  let h='<div class="kpi-row" style="margin-top:8px">';
+  kpis.forEach(k=>{
+    const p=pct(k.current_value||0,k.target_value||1);
+    const cls=p>=80?'good':p>=40?'warn':'bad';
+    const tcolor=typeColors[k.kpi_type||'individual']||'var(--accent)';
+    const tlabel=typeLabels[k.kpi_type||'individual']||'KPI';
+    h+=`<div class="kpi-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div class="kpi-title">${esc(k.title)}</div>
+        <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:${tcolor}22;color:${tcolor};text-transform:uppercase">${tlabel}</span>
+      </div>
+      <div class="kpi-sub">${esc(k.owner_name||'')}</div>
+      <div class="kpi-progress"><div class="kpi-bar" style="width:${p}%;background:${p>=80?'var(--green)':p>=40?'var(--yellow)':'var(--accent)'}"></div></div>
+      <div class="kpi-numbers">
+        <span class="kpi-current">${esc(String(k.current_value||0))}${esc(k.unit||'')}</span>
+        <span class="kpi-target">/ ${esc(String(k.target_value||0))}${esc(k.unit||'')}</span>
+        <span class="kpi-pct ${cls}">${p}%</span>
+      </div>
+    </div>`;
+  });
+  h+='</div>';
+  c.innerHTML=h;
+}
+
+async function toggleTask(input) {
+  const id=input.getAttribute('data-taskid'), done=input.checked;
+  try{
+    await dbUpdate('project_tasks',id,{status:done?'done':'todo',completed_at:done?new Date().toISOString():null});
+    if(activeProject) loadProjectTasks(activeProject.id);
+    await loadProjects();
+  }catch(e){toast('Could not update task: '+e.message,'error');input.checked=!input.checked;}
+}
+
+async function deleteTask(taskId,evt){
+  if(evt){evt.stopPropagation();evt.preventDefault();}
+  if(!confirm('Delete this task? This cannot be undone.')) return;
+  try{
+    await sbFetch('project_tasks?id=eq.'+taskId,{method:'DELETE'});
+    toast('Task deleted.');
+    if(activeProject) await loadProjectTasks(activeProject.id);
+    await loadProjects();
+  }catch(e){toast('Error: '+e.message,'error');}
+}
+
+async function saveProjectTask() {
+  if(!activeProject) return;
+  const title=$('ptTaskTitle').value.trim();
+  if(!title){toast('Please enter a task title.','error');return;}
+  const btn=$('ptSaveBtn'); btn.disabled=true; btn.textContent='Saving...';
+  try {
+    await dbInsert('project_tasks',{
+      project_id:activeProject.id, title, status:$('ptTaskStatus').value,
+      priority:$('ptTaskPriority').value, assignee_name:$('ptTaskAssignee').value,
+      assignee_id:null, due_date:$('ptTaskDue').value||null,
+      description:$('ptTaskDesc')?.value||'', helpers:JSON.stringify([])
+    });
+    toast('Task added.');
+    $('ptTaskTitle').value=''; if($('ptTaskDesc')) $('ptTaskDesc').value='';
+    await loadProjectTasks(activeProject.id);
+    await loadProjects();
+  } catch(e){toast('Could not add task: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Add Task';}
+}
+
+async function saveProjectKPI() {
+  if(!activeProject) return;
+  const title=$('pkKPITitle').value.trim();
+  if(!title){toast('Please enter a KPI title.','error');return;}
+  const btn=$('pkSaveBtn'); btn.disabled=true; btn.textContent='Saving...';
+  try {
+    await dbInsert('project_kpis',{
+      project_id:activeProject.id, title, kpi_type:$('pkKPIType').value,
+      target_value:parseFloat($('pkTarget').value)||0, current_value:parseFloat($('pkCurrent').value)||0,
+      unit:$('pkUnit').value, owner_name:$('pkOwner').value, due_date:$('pkDue')?.value||null
+    });
+    toast('KPI added.');
+    $('pkKPITitle').value=''; $('pkTarget').value=''; $('pkCurrent').value=''; $('pkUnit').value='';
+    await loadProjectKPIs(activeProject.id);
+  } catch(e){toast('Could not add KPI: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Add KPI';}
+}
+
+function openAddProject() {
+  $('apTitle').value=''; $('apType').value='campaign'; $('apStatus').value='todo';
+  $('apPriority').value='medium'; $('apOwner').value=SESSION?.full_name||'';
+  $('apStartDate').value=''; $('apDueDate').value=''; $('apBudget').value=''; $('apDesc').value='';
+  showModal('addProjectModal');
+}
+
+async function saveNewProject() {
+  const title=$('apTitle').value.trim();
+  if(!title){toast('Please enter a project title.','error');return;}
+  const btn=$('apSaveBtn'); btn.disabled=true; btn.textContent='Saving...';
+  try {
+    await dbInsert('projects',{
+      title,type:$('apType').value,status:$('apStatus').value,priority:$('apPriority').value,
+      owner_name:$('apOwner').value,owner_id:SESSION?.user_id,
+      start_date:$('apStartDate').value||null,due_date:$('apDueDate').value||null,
+      budget:$('apBudget').value||null,description:$('apDesc').value,
+      created_by:SESSION?.user_id,team_members:JSON.stringify([])
+    });
+    toast('Project created.');
+    logActivity('created','New project: '+title);
+    closeModal('addProjectModal');
+    await loadProjects();
+  } catch(e){toast('Could not create project: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Create Project';}
+}
+
 
 
 function downloadProjectsExcel(){
@@ -2515,7 +2699,7 @@ function renderAdminUsers() {
           <button class="btn btn-secondary btn-xs" style="color:var(--accent);border-color:var(--accent-border)" onclick="deleteUser('${u.id}','${esc(u.email)}')">Delete</button>
         </div>
       </div>
-      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px">Module Permissions</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px">Module Permissions</div><div style="display:flex;gap:6px"><button class="btn btn-secondary btn-xs" onclick="grantAllPerms('${u.id}')">Grant All</button><button class="btn btn-secondary btn-xs" onclick="revokeAllPerms('${u.id}')">Revoke All</button></div></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${MODS.map(m=>`<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px">
           <input type="checkbox" ${perms[m.id]?'checked':''} data-uid="${u.id}" data-mod="${m.id}" onchange="toggleModulePerm(this)"/>
@@ -2538,19 +2722,54 @@ function toggleModulePerm(input) {
   if(btn){btn.textContent='Save Changes';btn.style.background='var(--accent)';btn.style.color='#fff';}
 }
 
+function grantAllPerms(uid){
+  var user=adminUsers.find(function(u){return u.id===uid;}); if(!user) return;
+  var perms={};
+  ['content','projects','crm','analytics','reports','inventory','inventory_write','hr'].forEach(function(m){perms[m]=true;});
+  user.module_permissions=perms;
+  // Re-render checkboxes for this user
+  document.querySelectorAll('input[data-uid="'+uid+'"]').forEach(function(cb){cb.checked=true;});
+  var btn=document.getElementById('savePerms_'+uid);
+  if(btn){btn.textContent='Save Changes';btn.style.background='var(--accent)';btn.style.color='#fff';}
+}
+function revokeAllPerms(uid){
+  var user=adminUsers.find(function(u){return u.id===uid;}); if(!user) return;
+  user.module_permissions={};
+  document.querySelectorAll('input[data-uid="'+uid+'"]').forEach(function(cb){cb.checked=false;});
+  var btn=document.getElementById('savePerms_'+uid);
+  if(btn){btn.textContent='Save Changes';btn.style.background='var(--accent)';btn.style.color='#fff';}
+}
+
 async function saveUserPerms(uid) {
   var user=adminUsers.find(function(u){return u.id===uid;}); if(!user) return;
   var btn=document.getElementById('savePerms_'+uid);
   if(btn){btn.disabled=true;btn.textContent='Saving...';}
   try{
-    var perms=safeJSON(user.module_permissions,'{}');
-    await sbFetch('user_profiles?id=eq.'+uid,{method:'PATCH',body:JSON.stringify({module_permissions:perms})});
+    // user.module_permissions is already the updated object (set by toggleModulePerm)
+    var perms=user.module_permissions||{};
+    if(typeof perms==='string') perms=JSON.parse(perms); // safety
+    // Send to Supabase
+    await sbFetch('user_profiles?id=eq.'+uid,{
+      method:'PATCH',
+      body:JSON.stringify({module_permissions:perms})
+    });
+    // Update local cache
     user.module_permissions=perms;
-    if(uid===SESSION?.user_id){SESSION.module_permissions=perms;saveSession();buildSidebar();}
+    // If this is the current logged-in user, update SESSION so sidebar rebuilds
+    if(uid===SESSION?.user_id){
+      SESSION.module_permissions=perms;
+      saveSession();
+      buildSidebar();
+    }
     toast('Permissions saved for '+(user.full_name||user.email||'user')+'.');
     if(btn){btn.disabled=false;btn.textContent='Saved ✓';btn.style.background='var(--green)';btn.style.color='#fff';}
-    setTimeout(function(){if(btn){btn.textContent='Save Permissions';btn.style.background='';btn.style.color='';}},2500);
+    // Reload users from DB so the UI reflects actual saved state
+    setTimeout(async function(){
+      await loadUsers();
+      if(btn){btn.textContent='Save Permissions';btn.style.background='';btn.style.color='';}
+    },2000);
   }catch(e){
+    console.error('saveUserPerms error:',e);
     toast('Could not save: '+e.message,'error');
     if(btn){btn.disabled=false;btn.textContent='Save Permissions';btn.style.background='';btn.style.color='';}
   }
