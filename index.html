@@ -1654,17 +1654,12 @@ function renderKanban() {
 function renderProjectTable() {
   const c=$('projectContent'); if(!c) return;
   const isAdmin=SESSION?.role==='admin';
-  const rows=projects.filter(p=>projectFilter==='all'||p.type===projectFilter);
-  // Action bar: only show 'Delete' button by default.
-  // Clicking it reveals checkboxes + Delete Selected + Delete All + Cancel.
+
+  /* ── Action bar ── */
   let actionBar='<div id="projActionBar" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
   if(isAdmin){
-    // Default state — just a Delete button
-    actionBar+='\
-      <button class="btn btn-secondary btn-sm" id="projDeleteToggle" onclick="toggleProjectDeleteMode()" '
-        +'style="color:#DC2626;border-color:#FECACA;font-size:12px">Delete</button>'
-      // Hidden bulk-delete controls (shown after clicking Delete)
-      +'<span id="projDeleteControls" style="display:none;display:contents">'
+    actionBar+='<button class="btn btn-secondary btn-sm" id="projDeleteToggle" onclick="toggleProjectDeleteMode()" style="color:#DC2626;border-color:#FECACA;font-size:12px">Delete</button>'
+      +'<span id="projDeleteControls" style="display:none">'
       +'<input type="checkbox" id="selectAllProj" onchange="toggleSelectAll(this,\'projectChk\')" title="Select all"/>'
       +'<label for="selectAllProj" style="font-size:12px;color:var(--muted);margin-right:4px">Select all</label>'
       +'<button class="btn btn-sm" style="background:#DC2626;color:#fff;font-size:12px" onclick="bulkDeleteProjects()">Delete Selected</button>'
@@ -1673,37 +1668,216 @@ function renderProjectTable() {
       +'</span>';
   }
   actionBar+='<button class="btn btn-secondary btn-sm" onclick="downloadProjectsExcel()" style="margin-left:auto;font-size:12px">Download Excel</button></div>';
-  if(!rows.length){ c.innerHTML=actionBar+'<div class="empty-state"><div class="empty-title">No projects yet</div></div>'; return; }
-  const cols=['Theme / Project','Item / Tasks','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Notes','Source'];
-  let h=actionBar+'<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>'
-    +(isAdmin?'<th style="width:32px"></th>':'')
-    +cols.map(x=>'<th style="white-space:nowrap;font-size:11px">'+x+'</th>').join('')
+
+  const filtered=projects.filter(p=>projectFilter==='all'||p.type===projectFilter);
+  if(!filtered.length){ c.innerHTML=actionBar+'<div class="empty-state"><div class="empty-title">No projects yet</div></div>'; return; }
+
+  /* ── Table ── */
+  const COLS=['Theme / Project','Item','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Detailed Comments and Notes','Source'];
+  let h=actionBar+'<div class="table-wrap" style="overflow-x:auto"><table style="min-width:1200px"><thead><tr>'
+    +(isAdmin?'<th class="projChkHdr" style="width:32px;display:none"></th>':'')
+    +COLS.map(function(x){return '<th style="white-space:nowrap;font-size:11px;padding:10px 12px">'+x+'</th>';}).join('')
     +'</tr></thead><tbody>';
-  rows.forEach(function(p){
+
+  filtered.forEach(function(p){
     const pkpis=projectKPICache[p.id]||[];
     const tasks=projectTasksCache[p.id]||[];
     const tags=(function(){try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
+    const source=tags[0]||'—';
     const indKPIs=pkpis.filter(function(k){return k.kpi_type==='individual';}).map(function(k){return k.title;}).join('; ')||'—';
     const teamKPIs=pkpis.filter(function(k){return k.kpi_type==='team';}).map(function(k){return k.title;}).join('; ')||'—';
     const sharedKPIs=pkpis.filter(function(k){return k.kpi_type==='shared';}).map(function(k){return k.title;}).join('; ')||'—';
-    const taskList=tasks.map(function(t){return t.title;}).slice(0,3).join(', ')+(tasks.length>3?'…':'');
-    h+='<tr data-popen="'+p.id+'" style="cursor:pointer">'
-      +(isAdmin?'<td data-noopen="1" onclick="event.stopPropagation()" class="projChkCell" style="display:none"><input type="checkbox" class="projectChk" value="'+p.id+'"/></td>':'')
-      +'<td style="font-weight:700;min-width:160px">'+esc(p.title)+'</td>'
-      +'<td style="font-size:11px;color:var(--muted);min-width:180px">'+esc(taskList||'—')+'</td>'
-      +'<td><span class="badge '+(p.status||'todo')+'">'+(STATUS_LABELS[p.status]||p.status)+'</span></td>'
-      +'<td><span class="badge '+(p.priority||'medium')+'">'+esc(p.priority||'medium')+'</span></td>'
-      +'<td class="td-muted" style="min-width:120px">'+esc(p.owner_name||'—')+'</td>'
-      +'<td style="font-size:11px;color:var(--muted);max-width:160px;white-space:normal">'+esc(indKPIs)+'</td>'
-      +'<td style="font-size:11px;color:var(--muted);max-width:160px;white-space:normal">'+esc(teamKPIs)+'</td>'
-      +'<td style="font-size:11px;color:var(--muted);max-width:160px;white-space:normal">'+esc(sharedKPIs)+'</td>'
-      +'<td style="font-size:11px;color:var(--muted);max-width:200px;white-space:normal">'+esc((p.description||'').split('\n')[0].slice(0,80)||'—')+'</td>'
-      +'<td style="font-size:11px;color:var(--muted);min-width:100px">'+esc(tags[0]||'—')+'</td>'
-      +'</tr>';
+
+    if(!tasks.length){
+      /* Project with no tasks — one row */
+      h+='<tr data-popen="'+p.id+'" class="proj-row" style="cursor:pointer">'
+        +(isAdmin?'<td class="projChkCell" data-noopen="1" onclick="event.stopPropagation()" style="display:none"><input type="checkbox" class="projectChk" value="'+p.id+'"/></td>':'')
+        +'<td style="font-weight:700;min-width:170px;vertical-align:top;padding:10px 12px">'+esc(p.title)+'</td>'
+        +'<td style="font-size:12px;color:var(--muted);padding:10px 12px">—</td>'
+        +'<td style="padding:10px 12px"><span class="badge '+(p.status||'todo')+'">'+(STATUS_LABELS[p.status]||p.status)+'</span></td>'
+        +'<td style="padding:10px 12px"><span class="badge '+(p.priority||'medium')+'">'+esc(p.priority||'medium')+'</span></td>'
+        +'<td style="font-size:12px;color:var(--muted);padding:10px 12px">'+esc(p.owner_name||'—')+'</td>'
+        +'<td style="font-size:11px;color:var(--muted);max-width:200px;white-space:normal;padding:10px 12px">'+esc(indKPIs)+'</td>'
+        +'<td style="font-size:11px;color:var(--muted);max-width:200px;white-space:normal;padding:10px 12px">'+esc(teamKPIs)+'</td>'
+        +'<td style="font-size:11px;color:var(--muted);max-width:200px;white-space:normal;padding:10px 12px">'+esc(sharedKPIs)+'</td>'
+        +'<td style="font-size:11px;color:var(--muted);max-width:220px;white-space:normal;padding:10px 12px">'+esc((p.description||'').slice(0,120)||'—')+'</td>'
+        +'<td style="font-size:11px;color:var(--muted);padding:10px 12px">'+esc(source)+'</td>'
+        +'</tr>';
+    } else {
+      /* One row per task — theme name only on first row */
+      tasks.forEach(function(t,ti){
+        const isFirst=ti===0;
+        const rowspan=tasks.length;
+        /* Gather this task's own source from description field */
+        const taskDesc=t.description||'';
+        const taskSource=taskDesc.match(/Source: (.+)/)?.[1]||source;
+        const cleanDesc=taskDesc.replace(/\nSource: .+$/,'').replace(/\nIndividual KPI: .+$/,'').replace(/\nTeam KPI: .+$/,'').replace(/\nShared KPI: .+$/,'');
+        /* Per-task KPIs stored in description lines */
+        const tIndKPI=taskDesc.match(/Individual KPI: ([^\n]+)/)?.[1]||'';
+        const tTeamKPI=taskDesc.match(/Team KPI: ([^\n]+)/)?.[1]||'';
+        const tSharedKPI=taskDesc.match(/Shared KPI: ([^\n]+)/)?.[1]||'';
+        const overdue=t.due_date&&daysUntil(t.due_date)<0&&t.status!=='done';
+        h+='<tr data-taskopen="'+t.id+'" data-projid="'+p.id+'" class="task-row" style="cursor:pointer;border-top:'+(isFirst?'2px solid var(--border2)':'1px solid var(--border)')+'">'; 
+        if(isAdmin){
+          h+='<td class="projChkCell" data-noopen="1" onclick="event.stopPropagation()" style="display:none">'
+            +(isFirst?'<input type="checkbox" class="projectChk" value="'+p.id+'"/>':'')
+            +'</td>';
+        }
+        /* Theme/Project — only on first row, spans all task rows visually */
+        if(isFirst){
+          h+='<td style="font-weight:700;min-width:170px;vertical-align:top;padding:12px 12px 4px;background:var(--surface2)" rowspan="'+rowspan+'">'
+            +'<div>'+esc(p.title)+'</div>'
+            +'<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">'
+            +'<span class="badge '+(p.status||'todo')+'" style="font-size:9px">'+(STATUS_LABELS[p.status]||p.status)+'</span>'
+            +'<span class="badge '+(p.priority||'medium')+'" style="font-size:9px">'+esc(p.priority||'medium')+'</span>'
+            +'</div>'
+            +'<div style="font-size:10px;color:var(--muted);margin-top:4px">'+esc(p.owner_name||'')+'</div>'
+            +'<button onclick="event.stopPropagation();openProjectModal(\''+p.id+'\')" style="margin-top:8px;font-size:10px;background:var(--accent);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">Edit Project</button>'
+            +'</td>';
+        }
+        /* Task item */
+        h+='<td style="font-size:13px;font-weight:500;min-width:200px;padding:10px 12px">'
+          +'<div onclick="event.stopPropagation();openTaskEditPanel(\''+t.id+'\',\''+p.id+'\')" style="cursor:pointer">'
+          +esc(t.title)
+          +'<div style="font-size:10px;color:var(--muted);margin-top:2px">'+esc(t.assignee_name||'Unassigned')+(t.due_date?'  ·  <span style="'+(overdue?'color:#DC2626;font-weight:600':'')+'">'+formatDate(t.due_date)+'</span>':'')+'</div>'
+          +'</div>'
+          +'</td>'
+        /* Status */
+        +'<td style="padding:10px 12px"><span class="badge '+(t.status||'todo')+'">'+(STATUS_LABELS[t.status]||t.status)+'</span></td>'
+        /* Priority */
+        +'<td style="padding:10px 12px"><span class="badge '+(t.priority||'medium')+'">'+esc(t.priority||'medium')+'</span></td>'
+        /* Owner */
+        +'<td style="font-size:12px;color:var(--muted);padding:10px 12px">'+esc(t.assignee_name||'—')+'</td>'
+        /* KPIs — project-level on first row, task-specific lines on others */
+        +'<td style="font-size:11px;color:var(--muted);max-width:180px;white-space:normal;padding:10px 12px">'+esc(tIndKPI||isFirst?indKPIs:tIndKPI||'—')+'</td>'
+        +'<td style="font-size:11px;color:var(--muted);max-width:180px;white-space:normal;padding:10px 12px">'+esc(tTeamKPI||isFirst?teamKPIs:tTeamKPI||'—')+'</td>'
+        +'<td style="font-size:11px;color:var(--muted);max-width:180px;white-space:normal;padding:10px 12px">'+esc(tSharedKPI||isFirst?sharedKPIs:tSharedKPI||'—')+'</td>'
+        /* Notes */
+        +'<td style="font-size:11px;color:var(--muted);max-width:220px;white-space:normal;padding:10px 12px">'+esc(cleanDesc.slice(0,150)||(isFirst?(p.description||'').slice(0,150):'')||'—')+'</td>'
+        /* Source */
+        +'<td style="font-size:11px;color:var(--muted);padding:10px 12px">'+esc(taskSource)+'</td>'
+        +'</tr>';
+      });
+    }
   });
   h+='</tbody></table></div>';
   c.innerHTML=h;
 }
+
+/* ── Inline task edit panel ── */
+function openTaskEditPanel(taskId, projId) {
+  // Remove any existing panel
+  const existing=document.getElementById('taskEditPanel');
+  if(existing) existing.remove();
+
+  // Find the task row
+  const row=document.querySelector('tr[data-taskopen="'+taskId+'"]');
+  if(!row) return;
+
+  // Find the task data
+  const p=projects.find(x=>String(x.id)===String(projId));
+  const tasks=projectTasksCache[projId]||[];
+  const t=tasks.find(x=>String(x.id)===String(taskId));
+  if(!t||!p) return;
+
+  activeProject=p;
+
+  // Build panel row
+  const panel=document.createElement('tr');
+  panel.id='taskEditPanel';
+  panel.setAttribute('data-panelfor', taskId);
+  const colspan=(SESSION?.role==='admin')?11:10;
+  panel.innerHTML='<td colspan="'+colspan+'" style="padding:0;background:var(--accent-light);border:2px solid var(--accent-border)">'
+    +'<div style="padding:16px 20px">'
+    +'<div style="font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">'
+    +'<span>Edit Task: '+esc(t.title)+'</span>'
+    +'<button onclick="document.getElementById(\'taskEditPanel\').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted)">✕</button>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px">'
+    +'<div class="field-group"><div class="field-label">Task Title</div>'
+    +'<input class="field-input" id="tep_title" value="'+esc(t.title)+'"/></div>'
+    +'<div class="field-group"><div class="field-label">Status</div>'
+    +'<select class="field-select" id="tep_status">'
+    +'<option value="todo"'+(t.status==='todo'?' selected':'')+'>To Do</option>'
+    +'<option value="inprogress"'+(t.status==='inprogress'?' selected':'')+'>In Progress</option>'
+    +'<option value="review"'+(t.status==='review'?' selected':'')+'>Review</option>'
+    +'<option value="done"'+(t.status==='done'?' selected':'')+'>Done</option>'
+    +'</select></div>'
+    +'<div class="field-group"><div class="field-label">Priority</div>'
+    +'<select class="field-select" id="tep_priority">'
+    +'<option value="high"'+(t.priority==='high'?' selected':'')+'>High</option>'
+    +'<option value="medium"'+(t.priority==='medium'?' selected':'')+'>Medium</option>'
+    +'<option value="low"'+(t.priority==='low'?' selected':'')+'>Low</option>'
+    +'</select></div>'
+    +'<div class="field-group"><div class="field-label">Assign To</div>'
+    +'<input class="field-input" id="tep_assignee" list="tepAssigneeList" value="'+esc(t.assignee_name||'')+'" placeholder="Type a name..."/>'
+    +'<datalist id="tepAssigneeList"></datalist></div>'
+    +'<div class="field-group"><div class="field-label">Due Date</div>'
+    +'<input class="field-date" id="tep_due" type="date" value="'+dateInput(t.due_date||'')+'"/></div>'
+    +'</div>'
+    +'<div class="field-group" style="margin-bottom:12px"><div class="field-label">Notes / Description</div>'
+    +'<textarea class="field-textarea" id="tep_notes" style="min-height:70px">'+esc(t.description||'')+'</textarea></div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button class="btn btn-primary btn-sm" onclick="saveTaskEdit(\''+taskId+'\',\''+projId+'\')">Save</button>'
+    +'<button class="btn btn-secondary btn-sm" onclick="document.getElementById(\'taskEditPanel\').remove()">Cancel</button>'
+    +'<button class="btn btn-sm" style="background:#DC2626;color:#fff;margin-left:auto" onclick="deleteTask('+taskId+',event)">Delete Task</button>'
+    +'</div>'
+    +'</div></td>';
+
+  // Insert after the clicked row
+  row.parentNode.insertBefore(panel, row.nextSibling);
+
+  // Populate assignee datalist
+  loadUsersForAssignee().then(function(users){
+    const dl=document.getElementById('tepAssigneeList');
+    if(!dl) return;
+    const sorted=[
+      ...users.filter(u=>(u.department||'').toLowerCase()==='marketing'),
+      ...users.filter(u=>(u.department||'').toLowerCase()!=='marketing')
+        .sort((a,b)=>(a.full_name||'').localeCompare(b.full_name||''))
+    ];
+    dl.innerHTML=sorted.map(u=>'<option value="'+esc(u.full_name)+'" label="'+esc(u.full_name+(u.department?' ('+u.department+')':''))+'">').join('');
+  });
+
+  // Scroll into view
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+async function saveTaskEdit(taskId, projId) {
+  const title=document.getElementById('tep_title')?.value.trim();
+  if(!title){toast('Title cannot be empty.','error');return;}
+  const newAssignee=document.getElementById('tep_assignee')?.value.trim();
+  const prevTask=(projectTasksCache[projId]||[]).find(x=>String(x.id)===String(taskId));
+  const prevAssignee=prevTask?.assignee_name||'';
+  const data={
+    title,
+    status:document.getElementById('tep_status')?.value||'todo',
+    priority:document.getElementById('tep_priority')?.value||'medium',
+    assignee_name:newAssignee,
+    due_date:document.getElementById('tep_due')?.value||null,
+    description:document.getElementById('tep_notes')?.value||''
+  };
+  try{
+    await dbUpdate('project_tasks',taskId,data);
+    // If assignee changed, trigger the banner for the new assignee
+    if(newAssignee && newAssignee!==prevAssignee){
+      const users=window._allUsers||[];
+      const assignedUser=users.find(u=>u.full_name===newAssignee||(u.full_name||'').toLowerCase()===newAssignee.toLowerCase());
+      if(assignedUser){
+        await assignTask(assignedUser.id, assignedUser.full_name, title,
+          data.description||'', 'projects', parseInt(projId));
+      }
+      toast('Task saved and assigned to '+newAssignee+'.');
+    } else {
+      toast('Task saved.');
+    }
+    logActivity('edited','Updated task: '+title, parseInt(projId));
+    document.getElementById('taskEditPanel')?.remove();
+    await loadProjects();
+    if(projectView==='table') renderProjectTable();
+  }catch(e){toast('Error: '+e.message,'error');}
+}
+
 
 async function deleteProjectFromModal(){
   if(!activeProject) return;
@@ -1722,19 +1896,18 @@ function toggleProjectDeleteMode(){
   const controls=document.getElementById('projDeleteControls');
   const toggle=document.getElementById('projDeleteToggle');
   const cells=document.querySelectorAll('.projChkCell');
-  const isOn=controls&&controls.style.display!=='none'&&controls.style.display!=='';
+  const hdrs=document.querySelectorAll('.projChkHdr');
+  const isOn=controls&&controls.style.display!==''&&controls.style.display!=='none';
   if(isOn){
-    // Turn OFF — hide controls + checkboxes + uncheck all
-    if(controls) controls.style.display='none';
-    if(toggle){toggle.style.color='#DC2626';toggle.textContent='Delete';}
+    if(controls){controls.style.display='none';}
     cells.forEach(function(c){c.style.display='none';});
+    hdrs.forEach(function(h){h.style.display='none';});
     document.querySelectorAll('.projectChk').forEach(function(c){c.checked=false;});
     const sa=document.getElementById('selectAllProj'); if(sa) sa.checked=false;
   } else {
-    // Turn ON — show controls + checkboxes
-    if(controls) controls.style.display='';
-    if(toggle){toggle.style.color='var(--muted)';toggle.textContent='Delete';}
-    cells.forEach(function(c){c.style.display='';});
+    if(controls){controls.style.display='inline-flex';controls.style.alignItems='center';controls.style.gap='6px';}
+    cells.forEach(function(c){c.style.display='table-cell';});
+    hdrs.forEach(function(h){h.style.display='table-cell';});
   }
 }
 
@@ -1926,48 +2099,28 @@ function downloadProjectsExcel(){
   if(typeof XLSX==='undefined'){toast('XLSX library not loaded','error');return;}
   const rows=[['Theme / Project','Item','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Detailed Comments and Notes','Source']];
   for(const p of projects){
-    const tags=(()=>{try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
+    const tags=(function(){try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
     const pkpis=projectKPICache[p.id]||[];
     const tasks=projectTasksCache[p.id]||[];
+    const indKPIs=pkpis.filter(k=>k.kpi_type==='individual').map(k=>k.title).join('; ');
+    const teamKPIs=pkpis.filter(k=>k.kpi_type==='team').map(k=>k.title).join('; ');
+    const sharedKPIs=pkpis.filter(k=>k.kpi_type==='shared').map(k=>k.title).join('; ');
     if(!tasks.length){
-      rows.push([p.title,'',STATUS_LABELS[p.status]||p.status,p.priority||'',p.owner_name||'',pkpis.filter(k=>k.kpi_type==='individual').map(k=>k.title).join('; '),pkpis.filter(k=>k.kpi_type==='team').map(k=>k.title).join('; '),pkpis.filter(k=>k.kpi_type==='shared').map(k=>k.title).join('; '),p.description||'',tags.join('; ')]);
+      rows.push([p.title,'',STATUS_LABELS[p.status]||p.status,p.priority||'',p.owner_name||'',indKPIs,teamKPIs,sharedKPIs,p.description||'',tags.join('; ')]);
     } else {
-      tasks.forEach((t,i)=>{rows.push([i===0?p.title:'',t.title,STATUS_LABELS[t.status]||t.status,t.priority||'',t.assignee_name||'',i===0?pkpis.filter(k=>k.kpi_type==='individual').map(k=>k.title).join('; '):'',i===0?pkpis.filter(k=>k.kpi_type==='team').map(k=>k.title).join('; '):'',i===0?pkpis.filter(k=>k.kpi_type==='shared').map(k=>k.title).join('; '):'',t.description||'',i===0?tags.join('; '):'']);});
+      tasks.forEach(function(t,i){
+        rows.push([i===0?p.title:'',t.title,STATUS_LABELS[t.status]||t.status,t.priority||'',t.assignee_name||'',
+          i===0?indKPIs:'',i===0?teamKPIs:'',i===0?sharedKPIs:'',
+          t.description||'',i===0?tags.join('; '):'']);
+      });
     }
   }
-  const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[20,30,12,10,18,30,30,30,40,25].map(w=>({wch:w}));
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,'Weekly Tracker',ws);
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[22,30,12,10,18,30,30,30,45,25].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,'Weekly Tracker',ws);
   XLSX.writeFile(wb,'QNu_Project_Tracker_'+new Date().toISOString().slice(0,10)+'.xlsx');
   toast('Excel downloaded.');
-}
-
-async function saveProjectDetails(){
-  if(!activeProject) return;
-  const src=$('pmSourceEdit')?.value||'';
-  const title=$('pmTitleEdit')?.value.trim()||activeProject.title;
-  const data={title,status:$('pmStatusEdit')?.value||'todo',priority:$('pmPriorityEdit')?.value||'medium',
-    owner_name:$('pmOwnerEdit')?.value||'',due_date:$('pmDueEdit')?.value||null,
-    type:$('pmTypeEdit')?.value||'campaign',budget:$('pmBudgetEdit')?.value||null,
-    tags:src?JSON.stringify([src]):'[]',updated_at:new Date().toISOString()};
-  try{
-    await dbUpdate('projects',activeProject.id,data);
-    Object.assign(activeProject,data);
-    const p=projects.find(x=>x.id===activeProject.id);if(p) Object.assign(p,data);
-    if($('pmTitle')) $('pmTitle').textContent=title;
-    toast('Project saved.');
-    if(projectView==='kanban') renderKanban(); else renderProjectTable();
-  }catch(e){toast('Could not save: '+e.message,'error');}
-}
-
-async function saveProjectDesc(){
-  if(!activeProject) return;
-  const val=$('pmDesc')?.value||'';
-  try{
-    await dbUpdate('projects',activeProject.id,{description:val,updated_at:new Date().toISOString()});
-    activeProject.description=val;
-    const p=projects.find(x=>x.id===activeProject.id);if(p) p.description=val;
-    toast('Notes saved.');
-  }catch(e){toast('Could not save: '+e.message,'error');}
 }
 
 function switchProjectView(view) {
