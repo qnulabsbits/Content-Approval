@@ -135,6 +135,11 @@
           <button class="ftab" onclick="contentSetFilter('posted',this)">Posted</button>
         </div>
       </div>
+      <div id="contentBulkBar" style="display:none;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" style="color:var(--accent);border-color:var(--accent-border)" onclick="bulkDeleteContent()">Delete Selected</button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleSelectAll({checked:true},'contentChk')">Select All</button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleSelectAll({checked:false},'contentChk')">Clear</button>
+      </div>
       <div class="table-wrap"><div id="contentTable"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
     </div>
 
@@ -396,19 +401,25 @@
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
       <div>
         <div style="font-size:18px;font-weight:700" id="pmTitle">Project</div>
-        <div style="display:flex;gap:8px;margin-top:6px"><span id="pmStatus"></span><span id="pmPriority"></span></div>
+        
       </div>
       <button class="btn btn-secondary btn-sm" onclick="closeModal('projectModal')">Close</button>
     </div>
     <div class="field-grid" style="margin-bottom:16px">
       <div class="card card-pad">
-        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Details</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px">
-          <div><span style="color:var(--muted);font-size:11px">Owner</span><div id="pmOwner" style="font-weight:600">-</div></div>
-          <div><span style="color:var(--muted);font-size:11px">Due Date</span><div id="pmDue" style="font-weight:600">-</div></div>
-          <div><span style="color:var(--muted);font-size:11px">Type</span><div id="pmType" style="font-weight:600">-</div></div>
-          <div><span style="color:var(--muted);font-size:11px">Budget</span><div id="pmBudget" style="font-weight:600">-</div></div>
-          <div><span style="color:var(--muted);font-size:11px">Source</span><div id="pmSource" style="font-weight:600">-</div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Edit Project</div>
+          <button class="btn btn-primary btn-xs" onclick="saveProjectDetails()">Save All</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field-group full"><div class="field-label">Title</div><input class="field-input" id="pmTitleEdit" style="font-size:13px;font-weight:600"/></div>
+          <div class="field-group"><div class="field-label">Status</div><select class="field-select" id="pmStatusEdit" style="font-size:12px"><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="review">Review</option><option value="done">Done</option></select></div>
+          <div class="field-group"><div class="field-label">Priority</div><select class="field-select" id="pmPriorityEdit" style="font-size:12px"><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
+          <div class="field-group"><div class="field-label">Primary Owner</div><input class="field-input" id="pmOwnerEdit" style="font-size:12px"/></div>
+          <div class="field-group"><div class="field-label">Due Date</div><input type="date" class="field-date" id="pmDueEdit"/></div>
+          <div class="field-group"><div class="field-label">Type</div><select class="field-select" id="pmTypeEdit" style="font-size:12px"><option value="campaign">Campaign</option><option value="event">Event</option><option value="launch">Product Launch</option><option value="ad">Ad</option><option value="internal">Internal</option></select></div>
+          <div class="field-group"><div class="field-label">Budget (INR)</div><input type="number" class="field-input" id="pmBudgetEdit" style="font-size:12px"/></div>
+          <div class="field-group full"><div class="field-label">Source</div><input class="field-input" id="pmSourceEdit" style="font-size:12px"/></div>
         </div>
       </div>
       <div class="card card-pad">
@@ -850,6 +861,8 @@ async function doLogin() {
     saveSession();
     $('loginPw').value='';
     logActivity('login','Signed in');
+    setTimeout(initChatBadge, 2000);
+    setTimeout(loadLoginBanner, 3000);
     sbFetch('user_profiles?id=eq.'+SESSION.user_id,{method:'PATCH',body:JSON.stringify({last_login:new Date().toISOString()})}).catch(()=>{});
     buildSidebar();
     setScreen('app');
@@ -1117,6 +1130,7 @@ async function loadContent() {
     contentRenderTable();
     const lu=$('contentLastUpdated');
     if (lu) lu.textContent='Updated '+new Date().toLocaleTimeString();
+    if(SESSION?.role==='admin'){const b=$('contentBulkBar');if(b)b.style.display='flex';}
     if (!contentPolling) contentPolling=setInterval(()=>loadContent(),20000);
   } catch(e) {
     if (c) c.innerHTML=`<div class="empty-state"><div class="empty-title">Could not load</div><div class="empty-sub">${esc(e.message)}</div></div>`;
@@ -1147,7 +1161,8 @@ function contentRenderTable() {
   if (!rows.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">Nothing here yet</div><div class="empty-sub">No content matches this filter.</div></div>';return;}
   const status=r=>contentGetStatus(r);
   const infoForRemind=s=>CONTENT_REMIND[s];
-  let h='<table><thead><tr>';
+  const isAdminView=SESSION?.role==='admin';
+  let h='<table><thead><tr>'+(isAdminView?'<th></th>':'');
   const cols=['#','Title','Type','Writer','Date','Approve','Download','Status'];
   if (role==='cmo') cols.splice(4,0,'SEO');
   if (role==='designer') { cols.splice(3,1,'Section'); cols.splice(4,0,'Webflow'); }
@@ -1173,7 +1188,7 @@ function contentRenderTable() {
     cells+=`<td data-noopen="1">${dl}</td>`;
     if (role==='designer') cells+=`<td>${row.posted_to_webflow?`<span style="color:var(--green);font-size:12px;font-weight:600">${row.webflow_status==='live'?'Live':'Draft'}</span>`:'<span class="td-muted">Not posted</span>'}</td>`;
     cells+=`<td><div style="display:flex;align-items:center;gap:6px">${contentBadge(s)}${bell}</div></td>`;
-    h+=`<tr${can?` data-copen="${row.id}"`:' class="disabled-row"'}>${cells}</tr>`;
+    const chkCell=isAdminView?`<td data-noopen="1"><input type="checkbox" class="contentChk" value="${row.id}"/></td>`:'';h+=`<tr${can?` data-copen="${row.id}"`:' class="disabled-row"'}>${chkCell}${cells}</tr>`;
   });
   h+='</tbody></table>';
   c.innerHTML=h;
@@ -1467,6 +1482,41 @@ async function contentBulkWord() {
   toast(`Downloaded ${rows.length} item(s).`);
 }
 
+function toggleSelectAll(chk,cls){document.querySelectorAll('.'+cls).forEach(c=>c.checked=chk.checked);}
+
+async function bulkDeleteContent(){
+  const ids=[...document.querySelectorAll('.contentChk:checked')].map(c=>c.value);
+  if(!ids.length){toast('Select items to delete','error');return;}
+  if(!confirm('Delete '+ids.length+' content item(s)? This cannot be undone.')) return;
+  for(const id of ids) await sbFetch('content_approvals?id=eq.'+id,{method:'DELETE'}).catch(()=>{});
+  toast(ids.length+' item(s) deleted.'); logActivity('bulk_delete','Deleted '+ids.length+' content items'); await loadContent();
+}
+async function bulkDeleteProjects(){
+  const ids=[...document.querySelectorAll('.projectChk:checked')].map(c=>c.value);
+  if(!ids.length){toast('Select projects to delete','error');return;}
+  if(!confirm('Delete '+ids.length+' project(s) and all their tasks/KPIs?')) return;
+  for(const id of ids){
+    await sbFetch('project_tasks?project_id=eq.'+id,{method:'DELETE'}).catch(()=>{});
+    await sbFetch('project_kpis?project_id=eq.'+id,{method:'DELETE'}).catch(()=>{});
+    await sbFetch('projects?id=eq.'+id,{method:'DELETE'}).catch(()=>{});
+  }
+  toast(ids.length+' project(s) deleted.'); await loadProjects();
+}
+async function bulkDeleteInventory(){
+  const ids=[...document.querySelectorAll('.invChk:checked')].map(c=>c.value);
+  if(!ids.length){toast('Select items to delete','error');return;}
+  if(!confirm('Delete '+ids.length+' inventory item(s)?')) return;
+  for(const id of ids) await sbFetch('inventory_items?id=eq.'+id,{method:'DELETE'}).catch(()=>{});
+  toast(ids.length+' item(s) deleted.'); await loadInventory();
+}
+async function bulkDeleteHR(){
+  const ids=[...document.querySelectorAll('.hrChk:checked')].map(c=>c.value);
+  if(!ids.length){toast('Select postings to delete','error');return;}
+  if(!confirm('Delete '+ids.length+' HR posting(s)?')) return;
+  for(const id of ids) await sbFetch('hr_posts?id=eq.'+id,{method:'DELETE'}).catch(()=>{});
+  toast(ids.length+' posting(s) deleted.'); await loadHR();
+}
+
 function contentSetFilter(f,btn) {
   contentFilter=f;
   document.querySelectorAll('#contentFilterTabs .ftab').forEach(t=>t.classList.remove('active'));
@@ -1480,6 +1530,7 @@ function contentSetFilter(f,btn) {
    PROJECT TRACKER MODULE
 ═══════════════════════════════════════════════════ */
 let projects=[], projectFilter='all', projectView='kanban', activeProject=null, activeTask=null;
+let projectKPICache={}, projectTasksCache={}, pendingImportChanges=[];
 
 const PROJECT_STATUSES=['todo','inprogress','review','done'];
 const STATUS_LABELS={todo:'To Do',inprogress:'In Progress',review:'Review',done:'Done'};
@@ -1493,13 +1544,19 @@ async function loadProjects() {
     projects = await sbFetch('projects?order=created_at.desc&select=*')||[];
     // Fetch task counts for all projects in one call
     try {
-      const allTasks = await sbFetch('project_tasks?select=project_id,status')||[];
+      const allTasks=await sbFetch('project_tasks?select=*')||[];
+      projectTasksCache={};
       projectTaskCounts = {};
       allTasks.forEach(t=>{
         if(!projectTaskCounts[t.project_id]) projectTaskCounts[t.project_id]={total:0,done:0};
         projectTaskCounts[t.project_id].total++;
         if(t.status==='done') projectTaskCounts[t.project_id].done++;
+        if(!projectTasksCache[t.project_id]) projectTasksCache[t.project_id]=[];
+        projectTasksCache[t.project_id].push(t);
       });
+      const allKPIs=await sbFetch('project_kpis?select=*')||[];
+      projectKPICache={};
+      allKPIs.forEach(k=>{if(!projectKPICache[k.project_id])projectKPICache[k.project_id]=[];projectKPICache[k.project_id].push(k);});
     } catch(_){}
     renderProjectStats();
     if(projectView==='kanban') renderKanban();
@@ -1566,7 +1623,14 @@ function renderProjectTable() {
   const c=$('projectContent'); if(!c) return;
   const rows=projects.filter(p=>projectFilter==='all'||p.type===projectFilter);
   if(!rows.length){c.innerHTML='<div class="empty-state"><div class="empty-title">No projects yet</div></div>';return;}
-  let h=`<div class="table-wrap"><table><thead><tr>${['#','Theme / Project','Status','Priority','Primary Owner','Tasks','Source'].map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`;
+  const isAdminProj=SESSION?.role==='admin';
+  let h=`<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px">
+    ${isAdminProj?'<button class=\"btn btn-secondary btn-sm\" style=\"color:var(--accent)\" onclick=\"bulkDeleteProjects()\">Delete Selected</button>':''}
+    <button class="btn btn-secondary btn-sm" onclick="downloadProjectsExcel()">Download Excel</button>
+  </div><div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
+    ${isAdminProj?'<th><input type=\"checkbox\" onchange=\"toggleSelectAll(this,\'projectChk\')\"/></th>':''}
+    ${['Theme / Project','Item / Tasks','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Notes','Source'].map(x=>`<th style="white-space:nowrap">${x}</th>`).join('')}
+  </tr></thead><tbody>`;
   rows.forEach((p,i)=>{
     const tc=projectTaskCounts[p.id];
     const taskText=tc&&tc.total?`${tc.done}/${tc.total} done`:'—';
@@ -1601,14 +1665,16 @@ async function openProjectModal(id) {
   const p=projects.find(x=>String(x.id)===String(id)); if(!p) return;
   activeProject=p;
   $('pmTitle').textContent=p.title;
-  $('pmStatus').innerHTML=`<span class="badge ${p.status}">${STATUS_LABELS[p.status]||p.status}</span>`;
-  $('pmPriority').innerHTML=`<span class="badge ${p.priority||'medium'}">${p.priority||'medium'}</span>`;
-  $('pmOwner').textContent=p.owner_name||'-';
-  $('pmDue').textContent=p.due_date?formatDate(p.due_date):'-';
-  $('pmType').textContent=p.type||'-';
-  $('pmBudget').textContent=p.budget?'₹'+Number(p.budget).toLocaleString('en-IN'):'-';
   const descEl=$('pmDesc'); if(descEl) descEl.value=p.description||'';
-  const pmSrc=$('pmSource'); if(pmSrc){const tags=(()=>{try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();pmSrc.textContent=tags.length?tags.join(', '):'-';}
+  const _tags=(()=>{try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
+  if($('pmTitleEdit')) $('pmTitleEdit').value=p.title||'';
+  if($('pmStatusEdit')) $('pmStatusEdit').value=p.status||'todo';
+  if($('pmPriorityEdit')) $('pmPriorityEdit').value=p.priority||'medium';
+  if($('pmOwnerEdit')) $('pmOwnerEdit').value=p.owner_name||'';
+  if($('pmDueEdit')) $('pmDueEdit').value=dateInput(p.due_date||'');
+  if($('pmTypeEdit')) $('pmTypeEdit').value=p.type||'campaign';
+  if($('pmBudgetEdit')) $('pmBudgetEdit').value=p.budget||'';
+  if($('pmSourceEdit')) $('pmSourceEdit').value=_tags.join(', ');
   await loadProjectTasks(p.id);
   await loadProjectKPIs(p.id);
   await populateAssigneeDropdown();
@@ -1743,6 +1809,54 @@ async function saveProjectKPI() {
     await loadProjectKPIs(activeProject.id);
   } catch(e){toast('Could not add KPI: '+e.message,'error');}
   finally{btn.disabled=false;btn.textContent='Add KPI';}
+}
+
+function downloadProjectsExcel(){
+  if(typeof XLSX==='undefined'){toast('XLSX library not loaded','error');return;}
+  const rows=[['Theme / Project','Item','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Detailed Comments and Notes','Source']];
+  for(const p of projects){
+    const tags=(()=>{try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
+    const pkpis=projectKPICache[p.id]||[];
+    const tasks=projectTasksCache[p.id]||[];
+    if(!tasks.length){
+      rows.push([p.title,'',STATUS_LABELS[p.status]||p.status,p.priority||'',p.owner_name||'',pkpis.filter(k=>k.kpi_type==='individual').map(k=>k.title).join('; '),pkpis.filter(k=>k.kpi_type==='team').map(k=>k.title).join('; '),pkpis.filter(k=>k.kpi_type==='shared').map(k=>k.title).join('; '),p.description||'',tags.join('; ')]);
+    } else {
+      tasks.forEach((t,i)=>{rows.push([i===0?p.title:'',t.title,STATUS_LABELS[t.status]||t.status,t.priority||'',t.assignee_name||'',i===0?pkpis.filter(k=>k.kpi_type==='individual').map(k=>k.title).join('; '):'',i===0?pkpis.filter(k=>k.kpi_type==='team').map(k=>k.title).join('; '):'',i===0?pkpis.filter(k=>k.kpi_type==='shared').map(k=>k.title).join('; '):'',t.description||'',i===0?tags.join('; '):'']);});
+    }
+  }
+  const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[20,30,12,10,18,30,30,30,40,25].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,'Weekly Tracker',ws);
+  XLSX.writeFile(wb,'QNu_Project_Tracker_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('Excel downloaded.');
+}
+
+async function saveProjectDetails(){
+  if(!activeProject) return;
+  const src=$('pmSourceEdit')?.value||'';
+  const title=$('pmTitleEdit')?.value.trim()||activeProject.title;
+  const data={title,status:$('pmStatusEdit')?.value||'todo',priority:$('pmPriorityEdit')?.value||'medium',
+    owner_name:$('pmOwnerEdit')?.value||'',due_date:$('pmDueEdit')?.value||null,
+    type:$('pmTypeEdit')?.value||'campaign',budget:$('pmBudgetEdit')?.value||null,
+    tags:src?JSON.stringify([src]):'[]',updated_at:new Date().toISOString()};
+  try{
+    await dbUpdate('projects',activeProject.id,data);
+    Object.assign(activeProject,data);
+    const p=projects.find(x=>x.id===activeProject.id);if(p) Object.assign(p,data);
+    if($('pmTitle')) $('pmTitle').textContent=title;
+    toast('Project saved.');
+    if(projectView==='kanban') renderKanban(); else renderProjectTable();
+  }catch(e){toast('Could not save: '+e.message,'error');}
+}
+
+async function saveProjectDesc(){
+  if(!activeProject) return;
+  const val=$('pmDesc')?.value||'';
+  try{
+    await dbUpdate('projects',activeProject.id,{description:val,updated_at:new Date().toISOString()});
+    activeProject.description=val;
+    const p=projects.find(x=>x.id===activeProject.id);if(p) p.description=val;
+    toast('Notes saved.');
+  }catch(e){toast('Could not save: '+e.message,'error');}
 }
 
 function switchProjectView(view) {
@@ -1945,12 +2059,21 @@ async function importProjectsFromData(rows) {
         helpers:       '[]',
         sort_order:    sortOrder++
       };
+      for(const [ktype,kval] of [['individual',indKPI],['team',teamKPI],['shared',sharedKPI]]){
+        if(!kval) continue;
+        const dup=await sbFetch('project_kpis?project_id=eq.'+projectId+'&kpi_type=eq.'+ktype+'&title=eq.'+encodeURIComponent(kval)+'&select=id').catch(()=>null);
+        if(!dup||!dup.length) await dbInsert('project_kpis',{project_id:projectId,title:kval,kpi_type:ktype,owner_name:taskOwner,target_value:1,current_value:0,unit:''}).catch(()=>{});
+      }
 
       try{
         const existingTask=existingTasks.find(t=>t.title.toLowerCase().trim()===item.toLowerCase().trim());
         if(existingTask){
-          await dbUpdate('project_tasks',existingTask.id,taskData);
-          tasksUpdated++;
+          const changed=[];
+          if(existingTask.status!==taskStatus) changed.push('Status: "'+((STATUS_LABELS[existingTask.status])||existingTask.status)+'" → "'+(STATUS_LABELS[taskStatus]||taskStatus)+'"');
+          if((existingTask.priority||'medium')!==(taskPriority||'medium')) changed.push('Priority: "'+(existingTask.priority||'medium')+'" → "'+(taskPriority||'medium')+'"');
+          if((existingTask.assignee_name||'')!==(taskOwner||'')) changed.push('Owner: "'+(existingTask.assignee_name||'—')+'" → "'+(taskOwner||'—')+'"');
+          if(changed.length){ pendingImportChanges.push({existingId:existingTask.id,newData:taskData,item,project:theme,changes:changed}); }
+          else { await dbUpdate('project_tasks',existingTask.id,taskData); tasksUpdated++; }
         } else {
           await dbInsert('project_tasks',taskData);
           tasksCreated++;
@@ -1970,7 +2093,21 @@ async function importProjectsFromData(rows) {
   if(tasksUpdated)    parts.push(tasksUpdated+' task'+(tasksUpdated>1?'s':'')+' updated');
   if(errors)          parts.push(errors+' error'+(errors>1?'s':'')+'(check console)');
   toast(parts.length?parts.join(', ')+'.':'Nothing imported — check headers.', errors&&!projectsCreated?'error':'success');
+  if(pendingImportChanges.length) setTimeout(showImportChangesDialog,600);
 }
+
+function showImportChangesDialog(){
+  const modal=$('importChangesModal'),list=$('importChangesList');
+  if(!modal||!list) return;
+  list.innerHTML=pendingImportChanges.map((c,i)=>`<div id="icd_${i}" style="padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px"><div style="font-weight:600;font-size:13px">${esc(c.item)}</div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">in ${esc(c.project)}</div>${c.changes.map(ch=>`<div style="font-size:11px;background:var(--yellow-light);border-radius:4px;padding:3px 8px;margin-bottom:3px">${esc(ch)}</div>`).join('')}<div style="display:flex;gap:6px;margin-top:8px"><button class="btn btn-primary btn-xs" onclick="applyImportChange(${i})">Apply Change</button><button class="btn btn-secondary btn-xs" onclick="skipImportChange(${i})">Keep Original</button></div></div>`).join('');
+  modal.classList.add('show');
+}
+async function applyImportChange(i){
+  const c=pendingImportChanges[i];if(!c)return;
+  try{await dbUpdate('project_tasks',c.existingId,c.newData);const el=$('icd_'+i);if(el){el.style.opacity='0.4';el.querySelectorAll('button').forEach(b=>b.disabled=true);}toast('Applied: '+c.item);await loadProjects();}catch(e){toast('Error: '+e.message,'error');}
+}
+function skipImportChange(i){const el=$('icd_'+i);if(el){el.style.opacity='0.4';el.querySelectorAll('button').forEach(b=>b.disabled=true);}toast('Kept original: '+(pendingImportChanges[i]?.item||''));}
+function closeImportChanges(){$('importChangesModal')?.classList.remove('show');pendingImportChanges=[];}
 
 /* ═══════════════════════════════════════════════════
    INVENTORY MODULE
@@ -2532,7 +2669,9 @@ async function toggleModulePerm(input) {
   try {
     await sbFetch('user_profiles?id=eq.'+uid,{method:'PATCH',body:JSON.stringify({module_permissions:perms})});
     user.module_permissions=perms;
-    toast(input.checked?`${mod} access granted.`:`${mod} access removed.`);
+    const label=mod==='inventory_write'?'Inventory Write':mod.charAt(0).toUpperCase()+mod.slice(1);
+    if(uid===SESSION?.user_id){SESSION.module_permissions=perms;saveSession();buildSidebar();}
+    toast((input.checked?'✓ '+label+' access granted':label+' access removed')+' for '+(user.full_name||user.email||'user')+'.');
   } catch(e){input.checked=!input.checked;toast('Could not update permission: '+e.message,'error');}
 }
 
@@ -2710,7 +2849,26 @@ async function initChat() {
   loadTaskAssignments();
   setInterval(loadTaskAssignments, 30000);
   setInterval(cleanExpiredTyping, 4000);
-  cleanOldMessages(); // 15-day cleanup — runs in background, no pg_cron needed
+  setInterval(loadConversations, 15000);
+  cleanOldMessages();
+}
+
+async function initChatBadge() {
+  if(!SESSION) return;
+  try {
+    const memberships=await sbFetch('chat_members?user_id=eq.'+SESSION.user_id+'&select=conversation_id,last_read_at')||[];
+    if(!memberships.length) return;
+    const ids=memberships.map(m=>m.conversation_id);
+    const lastMsgs=await sbFetch('chat_messages?conversation_id=in.('+ids.join(',')+')'
+      +'&order=created_at.desc&select=conversation_id,sender_id,created_at')||[];
+    let unread=0;
+    for(const m of memberships){
+      const last=lastMsgs.find(msg=>msg.conversation_id===m.conversation_id);
+      if(last&&last.sender_id!==SESSION.user_id&&new Date(last.created_at)>new Date(m.last_read_at)) unread++;
+    }
+    const badge=cq('chatFabBadge');
+    if(badge){badge.textContent=unread>9?'9+':unread;badge.classList.toggle('show',unread>0);}
+  } catch(_){}
 }
 
 async function cleanOldMessages() {
@@ -3257,6 +3415,7 @@ async function assignTask(assignedToId, assignedToName, taskTitle, taskDesc, mod
 </script>
 
 <!-- ═══════════════ FLOATING CHAT BUTTON ═══════════════ -->
+<div class="login-banner" id="loginBanner"><div class="login-banner-inner"><div class="login-banner-track" id="bannerTrack"></div><button class="banner-close" onclick="closeBanner()">✕</button></div></div>
 <button class="chat-fab" id="chatFab" onclick="toggleChat()" title="Team Chat">
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
   <span class="chat-fab-badge" id="chatFabBadge">0</span>
