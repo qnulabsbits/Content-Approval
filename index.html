@@ -69,9 +69,12 @@
   </div>
 
   <!-- SIDEBAR -->
-  <div class="app-sidebar">
-    <div style="padding:16px 20px 8px">
-      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px">Modules</div>
+  <div class="app-sidebar" id="appSidebar">
+    <div class="sidebar-header">
+      <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle sidebar" id="sidebarToggleBtn">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="sidebar-modules-label">Modules</div>
     </div>
     <div id="sidebarNav"></div>
   </div>
@@ -1520,14 +1523,14 @@ function buildSidebar() {
     if (!hasPerm && !m.coming) return;
     if (!hasPerm && m.coming) return; // coming soon only shown if permitted
     if (m.coming) {
-      html += `<div class="sidebar-coming" title="Coming soon"><span class="si-icon">${m.icon}</span>${esc(m.label)}<span class="coming-tag">Soon</span></div>`;
+      html += `<div class="sidebar-coming" title="${esc(m.label)} (Coming soon)"><span class="si-icon">${m.icon}</span><span class="si-label">${esc(m.label)}<span class="coming-tag">Soon</span></span></div>`;
     } else {
-      html += `<div class="sidebar-item" data-page="${m.id}" onclick="showPage('${m.id}')" title="${esc(m.label)}"><span class="si-icon">${m.icon}</span>${esc(m.label)}</div>`;
+      html += `<div class="sidebar-item" data-page="${m.id}" onclick="showPage('${m.id}')" title="${esc(m.label)}"><span class="si-icon">${m.icon}</span><span class="si-label">${esc(m.label)}</span></div>`;
     }
   });
   if (isAdmin) {
     html += '<div class="sidebar-divider"></div>';
-    html += `<div class="sidebar-item" data-page="admin" onclick="showPage('admin')" title="Admin"><span class="si-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg></span>Admin Settings</div>`;
+    html += `<div class="sidebar-item" data-page="admin" onclick="showPage('admin')" title="Admin Settings"><span class="si-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg></span><span class="si-label">Admin Settings</span></div>`;
   }
   $('sidebarNav').innerHTML = html;
 }
@@ -3773,14 +3776,32 @@ async function adminCreateUser(){
   const btn=$('admCreateBtn'); btn.disabled=true; btn.textContent='Creating...';
   try {
     let uid=null;
-    const r1=await fetch(SUPA_URL+'/auth/v1/admin/users',{method:'POST',headers:{apikey:SUPA_KEY,'Authorization':'Bearer '+(await getToken()),'Content-Type':'application/json'},body:JSON.stringify({email,password,email_confirm:true})});
+    // Try admin endpoint first (works if service_role key is in use)
+    const token = await getToken();
+    const r1=await fetch(SUPA_URL+'/auth/v1/admin/users',{
+      method:'POST',
+      headers:{apikey:SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({email,password,email_confirm:true,app_metadata:{},user_metadata:{full_name:name}})
+    });
     const d1=await r1.json();
-    if(r1.ok&&d1.id) uid=d1.id;
-    else{
-      const r2=await fetch(SUPA_URL+'/auth/v1/signup',{method:'POST',headers:{apikey:SUPA_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
-      const d2=await r2.json(); uid=(d2.user?.id)||d2.id;
+    if(r1.ok&&(d1.id||d1.user?.id)){
+      uid=d1.id||d1.user?.id;
+    } else {
+      // Fallback: signup (works with anon key, user gets confirmation email)
+      const r2=await fetch(SUPA_URL+'/auth/v1/signup',{
+        method:'POST',
+        headers:{apikey:SUPA_KEY,'Content-Type':'application/json'},
+        body:JSON.stringify({email,password,data:{full_name:name}})
+      });
+      const d2=await r2.json();
+      uid=(d2.user?.id)||d2.id||null;
+      if(!uid){
+        const errMsg=d2.msg||d2.message||d2.error_description||JSON.stringify(d2);
+        toast('Auth error: '+errMsg,'error');
+        return;
+      }
     }
-    if(!uid){toast('Could not create auth user. Check Supabase logs.','error');return;}
+    if(!uid){toast('Could not get user ID. Check Supabase Auth settings.','error');return;}
     const defaultPerms={content:false,projects:false,crm:false,analytics:false,reports:false,inventory:false,inventory_write:false,hr:false};
     defaultPerms[['content','projects','inventory'].includes(role)?role:'content']=true;
     if(role==='admin') Object.keys(defaultPerms).forEach(k=>defaultPerms[k]=true);
@@ -4864,6 +4885,13 @@ function normaliseName(name) {
   if(!name) return name;
   const key = name.trim().toLowerCase();
   return NAME_ALIASES[key] || name;
+}
+
+/* ── Sidebar collapse/expand toggle ── */
+function toggleSidebar() {
+  const sb = document.getElementById('appSidebar');
+  if(!sb) return;
+  sb.classList.toggle('expanded');
 }
 </script>
 </body>
