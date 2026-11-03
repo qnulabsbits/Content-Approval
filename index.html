@@ -704,7 +704,8 @@
     <div class="field-group" style="margin-bottom:4px">
       <div class="field-label">Department</div>
       <select class="field-select" id="admEditDept" onchange="toggleCustomDept('admEditDeptCustom',this.value)"><option value="">Select department...</option>
-            <optgroup label="── Marketing Sub-divisions ──">
+            <optgroup label="── Marketing ──">
+              <option value="Marketing">Marketing (All / CMO)</option>
               <option value="Marketing - Excellence &amp; Digital">Excellence &amp; Digital Marketing</option>
               <option value="Marketing - Design &amp; Creative">Design &amp; Creative</option>
               <option value="Marketing - Content &amp; Thought">Content &amp; Thought</option>
@@ -1062,81 +1063,7 @@ function toWord(title, bodyHtml) {
   const shell = `\ufeff<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font-family:Arial;font-size:11pt;line-height:1.5;margin:30px}h1{font-size:16pt;color:#E8450A}h2{font-size:13pt;margin-top:22px;border-top:1px solid #ccc;padding-top:12px}p{margin:4px 0}label{font-size:8pt;font-weight:bold;color:#666;text-transform:uppercase;display:block;margin-top:12px}hr{border:none;border-top:1px solid #ddd;margin:20px 0}</style></head><body>${bodyHtml}
 
 
-<!-- ═══ TASK EDIT MODAL ═══ -->
-<div class="modal-overlay" id="taskEditModal" style="z-index:10000">
-  <div class="modal" style="max-width:680px;width:100%">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <div>
-        <div style="font-size:17px;font-weight:700">Edit Task</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px">in <b id="tep_project_name"></b></div>
-      </div>
-      <button class="btn btn-secondary btn-sm" onclick="closeModal('taskEditModal')">✕ Close</button>
-    </div>
-    <hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
-    <!-- Row 1: Title -->
-    <div class="field-group" style="margin-bottom:14px">
-      <div class="field-label">Task Title <span class="req">*</span></div>
-      <input class="field-input" id="tep_title" placeholder="Task name" style="font-size:14px;font-weight:500"/>
-    </div>
-    <!-- Row 2: Status / Priority / Due -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
-      <div class="field-group">
-        <div class="field-label">Status</div>
-        <select class="field-select" id="tep_status">
-          <option value="todo">To Do</option>
-          <option value="inprogress">In Progress</option>
-          <option value="review">Review</option>
-          <option value="done">Done</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Priority</div>
-        <select class="field-select" id="tep_priority">
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Due Date</div>
-        <input class="field-date" id="tep_due" type="date"/>
-      </div>
-    </div>
-    <!-- Row 3: Assign To -->
-    <div class="field-group" style="margin-bottom:14px">
-      <div class="field-label">Assign To <span style="font-size:10px;color:var(--muted);font-weight:400">(Marketing users shown first)</span></div>
-      <input class="field-input" id="tep_assignee" list="tepAssigneeList"
-        placeholder="Start typing a name..." autocomplete="off" style="font-size:13px"/>
-      <datalist id="tepAssigneeList"></datalist>
-    </div>
-    <!-- Row 4: Notes — big textarea -->
-    <div class="field-group" style="margin-bottom:18px">
-      <div class="field-label">Notes / Description</div>
-      <textarea class="field-textarea" id="tep_notes"
-        style="min-height:160px;font-size:13px;line-height:1.7;resize:vertical"
-        placeholder="Add notes, context, links or progress updates..."></textarea>
-    </div>
-    <!-- Footer -->
-    <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn btn-primary" id="tepSaveBtn"
-        onclick="saveTaskEdit(document.getElementById('taskEditModal').getAttribute('data-panelfor'), document.getElementById('taskEditModal').getAttribute('data-projid'))">
-        Save Task
-      </button>
-      <button class="btn btn-secondary" onclick="closeModal('taskEditModal')">Cancel</button>
-      <button class="btn btn-sm" style="background:#DC2626;color:#fff;margin-left:auto"
-        onclick="deleteTaskFromModal()">Delete Task</button>
-    </div>
-  </div>
-</div>
 
-</body></html>`;
-  return shell;
-}
-
-/* ═══════════════════════════════════════════════════
-   CONTENT APPROVAL MODULE
-   (ported from the single-file app with full test coverage)
-═══════════════════════════════════════════════════ */
 const CONTENT_TABLE = 'content_approvals';
 const MAIN_SLUG = { Blog:'blog-content', Whitepaper:'whitepaper-content', Newsletter:'pr-description', Other:'casestudy-content' };
 const IMAGE_SLUG = { Blog:'blog-Image', Whitepaper:'whitepaper-image', Newsletter:'pr-bg-img', Other:'whitepaper-image' };
@@ -1960,7 +1887,7 @@ async function openTaskEditModal(taskId, projId) {
   loadUsersForAssignee().then(function(users){
     const dl=$('tepAssigneeList');
     if(!dl) return;
-    const mkt=users.filter(u=>(u.department||'').toLowerCase()==='marketing');
+    const mkt=users.filter(u=>(u.department||'').toLowerCase().indexOf('marketing')!==-1);
     const rest=users.filter(u=>(u.department||'').toLowerCase()!=='marketing')
       .sort((a,b)=>(a.department||'').localeCompare(b.department||'')||(a.full_name||'').localeCompare(b.full_name||''));
     dl.innerHTML=[...mkt,...rest].map(function(u){
@@ -4113,4 +4040,67 @@ function toggleSettingsPw(id,btn){const el=document.getElementById(id);if(!el)re
 
 <!-- ═══════════════ TASK ASSIGNMENT FLOATING BOX ═══════════════ -->
 <div class="task-assign-box" id="taskAssignBox"></div>
+
+<!-- ═══ TASK EDIT MODAL ═══ -->
+<div class="modal-overlay" id="taskEditModal" style="z-index:10000">
+  <div class="modal" style="max-width:680px;width:100%">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div>
+        <div style="font-size:17px;font-weight:700">Edit Task</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">in <b id="tep_project_name"></b></div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('taskEditModal')">&#x2715; Close</button>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
+    <div class="field-group" style="margin-bottom:14px">
+      <div class="field-label">Task Title <span class="req">*</span></div>
+      <input class="field-input" id="tep_title" placeholder="Task name" style="font-size:14px;font-weight:500"/>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="field-group">
+        <div class="field-label">Status</div>
+        <select class="field-select" id="tep_status">
+          <option value="todo">To Do</option>
+          <option value="inprogress">In Progress</option>
+          <option value="review">Review</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Priority</div>
+        <select class="field-select" id="tep_priority">
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Due Date</div>
+        <input class="field-date" id="tep_due" type="date"/>
+      </div>
+    </div>
+    <div class="field-group" style="margin-bottom:14px">
+      <div class="field-label">Assign To <span style="font-size:10px;color:var(--muted);font-weight:400">(Marketing users shown first)</span></div>
+      <input class="field-input" id="tep_assignee" list="tepAssigneeList"
+        placeholder="Start typing a name..." autocomplete="off" style="font-size:13px"/>
+      <datalist id="tepAssigneeList"></datalist>
+    </div>
+    <div class="field-group" style="margin-bottom:18px">
+      <div class="field-label">Notes / Description</div>
+      <textarea class="field-textarea" id="tep_notes"
+        style="min-height:160px;font-size:13px;line-height:1.7;resize:vertical"
+        placeholder="Add notes, context, links or progress updates..."></textarea>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-primary" id="tepSaveBtn"
+        onclick="saveTaskEdit(document.getElementById('taskEditModal').getAttribute('data-panelfor'), document.getElementById('taskEditModal').getAttribute('data-projid'))">
+        Save Task
+      </button>
+      <button class="btn btn-secondary" onclick="closeModal('taskEditModal')">Cancel</button>
+      <button class="btn btn-sm" style="background:#DC2626;color:#fff;margin-left:auto"
+        onclick="deleteTaskFromModal()">Delete Task</button>
+    </div>
+  </div>
+</div>
+
 </body></html>
