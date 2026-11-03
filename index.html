@@ -1017,7 +1017,7 @@
   </div>
 </div>
 
-</body></html<div style="margin-bottom:12px">
+<div style="margin-bottom:12px">
         <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Add KPI</div>
         <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end">
           <div class="field-group">
@@ -3796,8 +3796,21 @@ async function adminCreateUser(){
       const d2=await r2.json();
       uid=(d2.user?.id)||d2.id||null;
       if(!uid){
-        const errMsg=d2.msg||d2.message||d2.error_description||JSON.stringify(d2);
-        toast('Auth error: '+errMsg,'error');
+        // "User already registered" — auth user exists but profile may be missing
+        const errMsg=d2.msg||d2.message||d2.error_description||'';
+        if(errMsg.toLowerCase().includes('already registered')||errMsg.toLowerCase().includes('already been registered')){
+          // Try to find the existing auth user by fetching their profile
+          // If profile exists, tell admin. If not, we need their UUID.
+          const existCheck=await sbFetch('user_profiles?email=eq.'+encodeURIComponent(email)+'&select=id,email,full_name').catch(()=>null);
+          if(existCheck&&existCheck.length){
+            toast('User "'+email+'" already exists in the system.','error');
+          } else {
+            // Auth user exists but no profile — we can't get their UUID from browser without service_role
+            toast('Auth user exists but has no profile. Please delete "'+email+'" from Supabase Auth dashboard and try again.','error');
+          }
+        } else {
+          toast('Auth error: '+errMsg,'error');
+        }
         return;
       }
     }
@@ -3806,7 +3819,18 @@ async function adminCreateUser(){
     defaultPerms[['content','projects','inventory'].includes(role)?role:'content']=true;
     if(role==='admin') Object.keys(defaultPerms).forEach(k=>defaultPerms[k]=true);
     const newDept=$('admNewDept').value==='custom'?$('admNewDeptCustom').value.trim():$('admNewDept').value;
-    await dbInsert('user_profiles',{id:uid,email,full_name:name,role,department:newDept||null,module_permissions:defaultPerms});
+    // Upsert profile — handles case where auth user already exists without a profile
+    try {
+      await dbInsert('user_profiles',{id:uid,email,full_name:name,role,department:newDept||null,module_permissions:defaultPerms});
+    } catch(profileErr) {
+      // Profile may already exist (duplicate) — try update instead
+      const existing=await sbFetch('user_profiles?id=eq.'+uid+'&select=id').catch(()=>null);
+      if(existing&&existing.length){
+        await sbFetch('user_profiles?id=eq.'+uid,{method:'PATCH',body:JSON.stringify({full_name:name,role,department:newDept||null,module_permissions:defaultPerms})});
+      } else {
+        throw profileErr;
+      }
+    }
     toast('User created.');
     logActivity('user_created','Created user '+email+' ('+role+')');
     closeModal('admCreateModal'); await loadAdmin();
