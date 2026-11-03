@@ -217,8 +217,13 @@
           <div class="page-title">Inventory</div>
           <div class="page-sub">Marketing assets — banners, brochures, merchandise</div>
         </div>
-        <div class="page-actions">
+        <div class="page-actions" style="display:flex;gap:8px;align-items:center">
           <button class="btn btn-primary btn-sm" onclick="openAddItem()" id="addItemBtn">+ Add Item</button>
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0" title="Upload items from Excel">
+            📥 Import Excel
+            <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importInventoryExcel(this)"/>
+          </label>
+          <a href="#" onclick="downloadInventoryTemplate(event)" class="btn btn-secondary btn-sm" style="font-size:11px">⬇ Template</a>
         </div>
       </div>
       <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
@@ -669,13 +674,29 @@
 </div>
 
 <div class="modal-overlay" id="requestItemModal">
-  <div class="modal modal-sm">
-    <div class="modal-title">Request Item</div>
+  <div class="modal modal-md">
+    <div class="modal-title">Request Inventory Item</div>
     <div class="modal-sub" id="reqItemName"></div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:16px" id="reqAvailable"></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px" id="reqAvailable"></div>
     <input type="hidden" id="reqItemId"/>
-    <div class="field-group" style="margin-bottom:12px"><div class="field-label">Quantity Needed</div><input class="field-input" id="reqQty" type="number" value="1" min="1"/></div>
-    <div class="field-group" style="margin-bottom:4px"><div class="field-label">Purpose / Reason <span class="req">*</span></div><textarea class="field-textarea" id="reqPurpose" placeholder="What do you need this for?" style="min-height:70px"></textarea></div>
+    <div class="field-grid">
+      <div class="field-group"><div class="field-label">Quantity Needed <span class="req">*</span></div><input class="field-input" id="reqQty" type="number" value="1" min="1"/></div>
+      <div class="field-group"><div class="field-label">Event / Purpose Name <span class="req">*</span></div><input class="field-input" id="reqEventName" placeholder="e.g. QNu Annual Summit 2025"/></div>
+      <div class="field-group"><div class="field-label">Event Date <span class="req">*</span></div><input class="field-date" id="reqEventDate" type="date"/></div>
+      <div class="field-group"><div class="field-label">Location</div><input class="field-input" id="reqLocation" placeholder="e.g. Bengaluru, Hotel XYZ"/></div>
+      <div class="field-group full"><div class="field-label">Particulars / Details</div><textarea class="field-textarea" id="reqPurpose" placeholder="Describe what you need, how items will be used, return date if applicable..." style="min-height:70px"></textarea></div>
+      <div class="field-group full">
+        <div class="field-label" style="margin-bottom:6px">Or upload request details via Excel</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0">
+            📥 Upload Excel
+            <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadRequestFromExcel(this)"/>
+          </label>
+          <a href="#" onclick="downloadRequestTemplate(event)" style="font-size:12px;color:var(--accent)">⬇ Download template</a>
+          <span id="reqExcelStatus" style="font-size:11px;color:var(--green)"></span>
+        </div>
+      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('requestItemModal')">Cancel</button>
       <button class="btn btn-primary" id="reqSubmitBtn" onclick="submitRequest()">Submit Request</button>
@@ -1884,6 +1905,85 @@ async function bulkDeleteInventory(){
   for(const id of ids) await sbFetch('inventory_items?id=eq.'+id,{method:'DELETE'}).catch(()=>{});
   toast(ids.length+' item(s) deleted.'); await loadInventory();
 }
+
+/* ── Inventory Excel import ── */
+function downloadInventoryTemplate(e) {
+  e.preventDefault();
+  if(typeof XLSX==='undefined'){toast('XLSX library not loaded','error');return;}
+  const ws=XLSX.utils.aoa_to_sheet([
+    ['Item Name','Item Type','Quantity'],
+    ['QNu Roll-up Banner','banners',5],
+    ['Product Brochure','brochures',100],
+  ]);
+  ws['!cols']=[{wch:30},{wch:20},{wch:12}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,'Inventory',ws);
+  XLSX.writeFile(wb,'Inventory_Import_Template.xlsx');
+  toast('Template downloaded.');
+}
+
+async function importInventoryExcel(input) {
+  const file=input.files[0]; if(!file) return;
+  if(typeof XLSX==='undefined'){toast('XLSX library not loaded','error');return;}
+  toast('Reading file...');
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    try {
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!rows.length){toast('No data found in file.','error');return;}
+      // Map headers case-insensitively
+      const getVal=(row,keys)=>{
+        for(const k of keys){
+          const v=row[k]; if(v!==undefined&&v!==null&&String(v).trim()!=='') return String(v).trim();
+        }
+        for(const rk of Object.keys(row)){
+          if(keys.some(k=>k.toLowerCase()===rk.toLowerCase())){
+            const v=row[rk]; if(v!==undefined&&v!==null&&String(v).trim()!=='') return String(v).trim();
+          }
+        }
+        return '';
+      };
+      // Validate category
+      const validCats=['banners','brochures','merchandise','digital','other'];
+      const normCat=(s)=>{
+        const sl=s.toLowerCase().trim();
+        return validCats.find(c=>sl.includes(c))||'other';
+      };
+      let created=0, skipped=0, errors=0;
+      for(const row of rows){
+        const name=getVal(row,['Item Name','item name','Name','name']);
+        if(!name){skipped++;continue;}
+        const catRaw=getVal(row,['Item Type','item type','Category','category','Type','type']);
+        const qty=parseInt(getVal(row,['Quantity','quantity','Qty','qty']))||0;
+        const cat=normCat(catRaw||'other');
+        try{
+          // Check if item already exists
+          const exist=await sbFetch('inventory_items?name=eq.'+encodeURIComponent(name)+'&select=id,quantity').catch(()=>null);
+          if(exist&&exist.length){
+            // Update quantity only
+            await sbFetch('inventory_items?id=eq.'+exist[0].id,{method:'PATCH',
+              body:JSON.stringify({quantity:exist[0].quantity+qty,updated_by:SESSION?.user_id,updated_at:new Date().toISOString()})
+            });
+          } else {
+            await dbInsert('inventory_items',{
+              name,category:cat,quantity:qty,quantity_min:0,
+              unit:'pcs',location:'',notes:'',
+              created_by:SESSION?.user_id,updated_by:SESSION?.user_id
+            });
+          }
+          created++;
+        }catch(err){console.error('Inv import row error',name,err);errors++;}
+      }
+      toast(created+' item(s) imported'+(errors?' ('+errors+' errors)':'')+'.',errors&&!created?'error':'success');
+      logActivity('import','Imported '+created+' inventory items from Excel');
+      await loadInventory();
+    } catch(err){toast('Could not read file: '+err.message,'error');}
+  };
+  reader.readAsBinaryString(file);
+  input.value='';
+}
 async function bulkDeleteHR(){
   const ids=[...document.querySelectorAll('.hrChk:checked')].map(c=>c.value);
   if(!ids.length){toast('Select postings to delete','error');return;}
@@ -2038,12 +2138,28 @@ function renderProjectTable() {
     const allUsers=window._allUsers||[];
     if(projectFilterMode.startsWith('div:')){
       const divKey=projectFilterMode.slice(4).toLowerCase();
-      const divMap={'excellence & digital marketing':'excellence & digital','design & creative':'design & creative','content & thought':'content & thought','brand + marcom':'brand & marcom'};
-      const deptKey=divMap[divKey]||divKey;
+      // Match option values to DB department strings (partial match)
+      const deptKey=divKey; // use raw divKey for partial matching below
       const owners=[p.owner_name,...tasks.map(function(t){return t.assignee_name;})].filter(Boolean);
-      return owners.some(function(name){
+      // Also include project owner name directly
+      const allOwners=[p.owner_name,...tasks.map(function(t){return t.assignee_name||'';})].filter(Boolean);
+      // Check if ANY owner/assignee belongs to this sub-division
+      // Match by checking if dept contains the divKey words (flexible matching)
+      return allOwners.some(function(name){
         const u=allUsers.find(function(x){return (x.full_name||'').toLowerCase()===(name||'').toLowerCase();});
-        return u&&(u.department||'').toLowerCase().indexOf(deptKey)!==-1;
+        if(!u) return false;
+        const dept=(u.department||'').toLowerCase();
+        // Direct substring match — covers "Marketing - Excellence & Digital" etc
+        if(dept.indexOf(deptKey)!==-1) return true;
+        // Also match abbreviated keys
+        const abbrevMap={
+          'excellence & digital marketing': ['excellence','digital'],
+          'design & creative': ['design','creative'],
+          'content & thought': ['content','thought'],
+          'brand + marcom': ['brand','marcom']
+        };
+        const words=abbrevMap[divKey]||[];
+        return words.length>0&&words.some(function(w){return dept.indexOf(w)!==-1;});
       });
     }
     if(projectFilterMode.startsWith('owner:')){
@@ -2591,16 +2707,19 @@ function applyProjectFilter(val) {
 
 function populateOwnerFilterDropdown() {
   loadUsersForAssignee().then(function(users) {
-    const mktUsers = users.filter(function(u) {
-      return (u.department||'').toLowerCase().indexOf('marketing') !== -1;
-    });
     const opts = document.getElementById('projOwnerOptions');
     if(!opts) return;
-    opts.innerHTML = mktUsers.length
-      ? mktUsers.map(function(u){
-          return '<option value="owner:' + esc(u.full_name) + '">' + esc(u.full_name) + '</option>';
+    // Show ALL users — sorted with marketing first
+    const sorted = [
+      ...users.filter(function(u){ return (u.department||'').toLowerCase().indexOf('marketing')!==-1; }),
+      ...users.filter(function(u){ return (u.department||'').toLowerCase().indexOf('marketing')===-1; })
+    ];
+    opts.innerHTML = sorted.length
+      ? sorted.map(function(u){
+          const dept=u.department?' ('+u.department+')':'';
+          return '<option value="owner:' + esc(u.full_name) + '">' + esc(u.full_name) + esc(dept) + '</option>';
         }).join('')
-      : '<option value="" disabled>No marketing users</option>';
+      : '<option value="" disabled>No users found</option>';
   });
 }
 
@@ -2999,27 +3118,104 @@ function openRequestItem(id) {
   const item=inventoryItems.find(i=>String(i.id)===String(id)); if(!item) return;
   $('reqItemId').value=id;
   $('reqItemName').textContent=item.name;
-  $('reqAvailable').textContent=`${item.quantity||0} ${item.unit||'pcs'} available`;
-  $('reqQty').value=1; $('reqPurpose').value='';
+  $('reqAvailable').textContent=(item.quantity||0)+' '+(item.unit||'pcs')+' available';
+  $('reqQty').value=1;
+  if($('reqPurpose')) $('reqPurpose').value='';
+  if($('reqEventName')) $('reqEventName').value='';
+  if($('reqEventDate')) $('reqEventDate').value='';
+  if($('reqLocation')) $('reqLocation').value='';
+  if($('reqExcelStatus')) $('reqExcelStatus').textContent='';
   showModal('requestItemModal');
+}
+
+function downloadRequestTemplate(e) {
+  e.preventDefault();
+  if(typeof XLSX==='undefined'){toast('XLSX library not loaded','error');return;}
+  const ws=XLSX.utils.aoa_to_sheet([
+    ['Item Name','Quantity','Event Name','Event Date','Location','Details / Particulars'],
+    ['QNu Roll-up Banner',2,'QNu Annual Summit','2025-03-15','Bengaluru, Hotel XYZ','Need for main stage backdrop. Return after event.'],
+  ]);
+  ws['!cols']=[{wch:25},{wch:10},{wch:25},{wch:15},{wch:20},{wch:40}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,'Request',ws);
+  XLSX.writeFile(wb,'Inventory_Request_Template.xlsx');
+  toast('Template downloaded.');
+}
+
+function loadRequestFromExcel(input) {
+  const file=input.files[0]; if(!file) return;
+  if(typeof XLSX==='undefined'){toast('XLSX library not loaded','error');return;}
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!rows.length){toast('No data found.','error');return;}
+      const row=rows[0]; // take first row as the request details
+      const getV=(keys)=>{for(const k of keys){for(const rk of Object.keys(row)){if(rk.toLowerCase().includes(k.toLowerCase())&&String(row[rk]).trim())return String(row[rk]).trim();}}return '';};
+      const qty=parseInt(getV(['quantity','qty']))||1;
+      const event=getV(['event name','event','purpose','name']);
+      const date=getV(['date']);
+      const loc=getV(['location','venue','place']);
+      const details=getV(['details','particulars','reason','notes']);
+      if($('reqQty')) $('reqQty').value=qty;
+      if($('reqEventName')) $('reqEventName').value=event;
+      if($('reqEventDate')&&date){
+        // Try to parse date
+        try{const d=new Date(date);if(!isNaN(d))$('reqEventDate').value=d.toISOString().slice(0,10);}catch(_){}
+      }
+      if($('reqLocation')) $('reqLocation').value=loc;
+      if($('reqPurpose')) $('reqPurpose').value=details;
+      const status=$('reqExcelStatus');
+      if(status) status.textContent='✓ Details loaded from Excel';
+      toast('Request details loaded from Excel.');
+      // If multiple rows, show summary
+      if(rows.length>1) toast('Note: Only first row was loaded for single-item request.','error');
+    }catch(err){toast('Could not read file: '+err.message,'error');}
+  };
+  reader.readAsBinaryString(file);
+  input.value='';
 }
 
 async function submitRequest() {
   const itemId=$('reqItemId').value;
   const qty=parseInt($('reqQty').value)||1;
-  const purpose=$('reqPurpose').value.trim();
-  if(!purpose){toast('Please explain the purpose of your request.','error');return;}
+  const eventName=($('reqEventName')?.value||'').trim();
+  const eventDate=($('reqEventDate')?.value||'').trim();
+  const location=($('reqLocation')?.value||'').trim();
+  const purpose=($('reqPurpose')?.value||'').trim();
+  if(!eventName){toast('Please enter the event or purpose name.','error');return;}
+  if(!eventDate){toast('Please enter the event date.','error');return;}
   const item=inventoryItems.find(i=>String(i.id)===String(itemId));
   const btn=$('reqSubmitBtn'); btn.disabled=true; btn.textContent='Submitting...';
+  const fullDetails=[
+    purpose,
+    location?'Location: '+location:'',
+  ].filter(Boolean).join('\n');
   try {
     await dbInsert('inventory_requests',{
       item_id:parseInt(itemId), item_name:item?.name||'',
-      quantity_requested:qty, purpose,
-      requested_by:SESSION?.user_id, requested_by_name:SESSION?.full_name||SESSION?.email,
+      quantity_requested:qty,
+      purpose:fullDetails||eventName,
+      event_name:eventName,
+      event_date:eventDate||null,
+      location:location||null,
+      requested_by:SESSION?.user_id,
+      requested_by_name:SESSION?.full_name||SESSION?.email,
       status:'pending'
     });
-    toast('Request submitted. You will be notified when approved.');
-    logActivity('request','Requested '+qty+' '+(item?.unit||'pcs')+' of '+(item?.name||'item'));
+    // Notify all admins and CMOs
+    try{
+      const admins=await sbFetch('user_profiles?role=in.(admin,cmo)&select=id,full_name,role')||[];
+      for(const a of admins){
+        await sendNotification(a.id,'Inventory Request: '+eventName,
+          (SESSION?.full_name||'Someone')+' requested '+qty+' x '+(item?.name||'item')+' for '+eventName,
+          'info','inventory',parseInt(itemId));
+      }
+    }catch(_){}
+    toast('Request submitted. Admin/CMO will be notified for approval.');
+    logActivity('request','Requested '+qty+' '+(item?.unit||'pcs')+' of '+(item?.name||'item')+' for '+eventName);
     closeModal('requestItemModal');
   } catch(e){toast('Could not submit request: '+e.message,'error');}
   finally{btn.disabled=false;btn.textContent='Submit Request';}
@@ -3033,15 +3229,19 @@ async function loadInventoryRequests() {
     if(!reqs.length){c.innerHTML='<div style="font-size:12px;color:var(--muted);padding:12px">No pending requests.</div>';return;}
     let h='';
     reqs.forEach(r=>{
-      h+=`<div class="user-card" style="margin-bottom:8px">
-        <div>
-          <div style="font-weight:600">${esc(r.item_name||'-')}</div>
-          <div style="font-size:12px;color:var(--muted)">${esc(r.requested_by_name||'-')} · ${r.quantity_requested} unit(s)</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">Purpose: ${esc(r.purpose||'-')}</div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-green btn-xs" onclick="approveRequest(${r.id},${r.item_id},${r.quantity_requested})">Approve</button>
-          <button class="btn btn-secondary btn-xs" style="color:var(--accent)" onclick="rejectRequest(${r.id})">Reject</button>
+      h+=`<div class="user-card" style="margin-bottom:8px;flex-direction:column;align-items:stretch;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
+          <div>
+            <div style="font-weight:600">${esc(r.item_name||'-')} <span style="font-size:11px;color:var(--muted);font-weight:400">× ${r.quantity_requested}</span></div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px">By: ${esc(r.requested_by_name||'-')} · ${formatDate(r.created_at)}</div>
+            ${r.event_name?`<div style="font-size:12px;font-weight:600;color:var(--blue);margin-top:3px">📅 ${esc(r.event_name)}${r.event_date?' — '+formatDate(r.event_date):''}</div>`:''}
+            ${r.location?`<div style="font-size:11px;color:var(--muted)">📍 ${esc(r.location)}</div>`:''}
+            ${r.purpose?`<div style="font-size:11px;color:var(--muted);margin-top:3px;white-space:pre-wrap">${esc(r.purpose)}</div>`:''}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn btn-green btn-xs" onclick="approveRequest(${r.id},${r.item_id},${r.quantity_requested})">Approve</button>
+            <button class="btn btn-secondary btn-xs" style="color:var(--accent)" onclick="rejectRequest(${r.id})">Reject</button>
+          </div>
         </div>
       </div>`;
     });
