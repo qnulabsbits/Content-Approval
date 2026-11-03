@@ -714,7 +714,8 @@
     <div class="field-group" style="margin-bottom:12px"><div class="field-label">Email</div><input class="field-input" type="email" id="admNewEmail" placeholder="priya@qnulabs.com"/></div>
     <div class="field-group" style="margin-bottom:12px"><div class="field-label">Password</div><input class="field-input" type="password" id="admNewPassword" placeholder="Min 6 characters"/></div>
     <div class="field-group" style="margin-bottom:12px"><div class="field-label">Role</div>
-      <select class="field-select" id="admNewRole"><option value="writer">Writer</option><option value="seo">SEO Team</option><option value="cmo">CMO</option><option value="designer">Designer</option><option value="hr">HR Executive</option><option value="admin">Admin</option></select>
+      <select class="field-select" id="admNewRole" onchange="toggleCustomRole('admNewRoleCustom',this.value)"><option value="writer">Writer</option><option value="seo">SEO Team</option><option value="cmo">CMO</option><option value="designer">Designer</option><option value="hr">HR Executive</option><option value="admin">Admin</option><option value="custom">Custom (specify)...</option></select>
+    <input class="field-input" id="admNewRoleCustom" placeholder="Enter custom role name..." style="display:none;margin-top:6px;font-size:12px"/>
     </div>
     <div class="field-group" style="margin-bottom:4px">
       <div class="field-label">Department</div>
@@ -2328,11 +2329,7 @@ function renderProjectTable() {
         +'<td style="padding:10px 12px"><span class="badge '+(p.priority||'medium')+'">'+esc(p.priority||'medium')+'</span></td>'
         +'<td style="font-size:12px;font-weight:600;padding:10px 12px">'+esc(p.owner_name||'—')+'</td>'
         +'<td style="font-size:12px;color:var(--muted);padding:10px 12px">—</td>'
-        +(function(){
-          const pkpis=projectKPICache[p.id]||[];
-          const allKPIs=pkpis.map(function(k){return k.title;}).filter(Boolean).join(', ');
-          return '<td style="font-size:11px;color:var(--muted);max-width:220px;white-space:normal;padding:10px 12px">'+esc(allKPIs||'—')+'</td>';
-        })()
+        +'<td style="font-size:11px;color:var(--muted);padding:10px 12px">—</td>'
         +'<td style="font-size:11px;color:var(--muted);max-width:220px;white-space:normal;padding:10px 12px">'+esc((p.description||'').slice(0,120)||'—')+'</td>'
         +'<td style="font-size:11px;color:var(--muted);padding:10px 12px">'+esc(source)+'</td>'
         +'</tr>';
@@ -2378,14 +2375,11 @@ function renderProjectTable() {
         /* Priority */
         +'<td style="padding:10px 12px"><span class="badge '+(t.priority||'medium')+'">'+esc(t.priority||'medium')+'</span></td>'
         /* Primary Owner (project, rowspan on first row) + Assignee (task) */
-        +(isFirst?'<td style="font-size:12px;font-weight:600;padding:10px 12px" rowspan="'+rowspan+'">'+esc(p.owner_name||'—')+'</td>':'')
-        +'<td style="font-size:12px;color:var(--muted);padding:10px 12px">'+esc(t.assignee_name||'—')+'</td>'
-        /* KPI — single column, all KPIs joined */
-        +(function(){
-          const pkpis=projectKPICache[p.id]||[];
-          const allKPIs=pkpis.map(function(k){return k.title;}).filter(Boolean).join(', ');
-          return '<td style="font-size:11px;color:var(--muted);max-width:220px;white-space:normal;padding:10px 12px">'+esc(allKPIs||'—')+'</td>';
-        })()
+        +(isFirst?'<td style="font-size:12px;font-weight:600;padding:10px 12px" rowspan="'+rowspan+'">'+esc(normaliseName(p.owner_name)||'—')+'</td>':'')
+        +'<td style="font-size:12px;color:var(--muted);padding:10px 12px">'+esc(normaliseName(t.assignee_name)||'—')+'</td>'
+        /* KPI — blank in table; add via Edit Task */
+        +'<td style="font-size:11px;color:var(--muted);padding:10px 12px">—</td>'
+        +''  // placeholder
         /* Notes */
         +'<td style="font-size:11px;color:var(--muted);max-width:220px;white-space:normal;padding:10px 12px">'+esc(cleanDesc.slice(0,150)||(isFirst?(p.description||'').slice(0,150):'')||'—')+'</td>'
         /* Source */
@@ -2423,7 +2417,7 @@ async function openTaskEditModal(taskId, projId) {
   $('tep_title').value=t.title||'';
   $('tep_status').value=t.status||'todo';
   $('tep_priority').value=t.priority||'medium';
-  $('tep_assignee').value=t.assignee_name||'';
+  $('tep_assignee').value=normaliseName(t.assignee_name)||'';
   $('tep_due').value=dateInput(t.due_date||'');
   $('tep_notes').value=t.description||'';
   $('tep_project_name').textContent=p.title;
@@ -2443,7 +2437,8 @@ async function openTaskEditModal(taskId, projId) {
     const rest=users.filter(u=>(u.department||'').toLowerCase()!=='marketing')
       .sort((a,b)=>(a.department||'').localeCompare(b.department||'')||(a.full_name||'').localeCompare(b.full_name||''));
     dl.innerHTML=[...mkt,...rest].map(function(u){
-      return '<option value="'+esc(u.full_name)+'" label="'+esc(u.full_name+(u.department?' ('+u.department+')':''))+'"></option>';
+      const displayName=normaliseName(u.full_name)||u.full_name;
+      return '<option value="'+esc(displayName)+'" label="'+esc(displayName+(u.department?' ('+u.department+')':''))+'"></option>';
     }).join('');
   });
 
@@ -2617,7 +2612,7 @@ async function loadProjectTasks(projectId) {
       +'<span class="badge '+(t.status||'todo')+'" style="font-size:9px">'+(STATUS_LABELS[t.status]||t.status)+'</span>'
       +'<span style="font-size:10px;color:var(--muted)">✏ Edit</span>'
       +'</div>'
-      +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+esc(t.assignee_name||'Unassigned')+(t.due_date?' · <span style="'+(overdue?'color:var(--accent);font-weight:600':'')+'">'+ formatDate(t.due_date)+'</span>':'')+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+esc(normaliseName(t.assignee_name)||'Unassigned')+(t.due_date?' · <span style="'+(overdue?'color:var(--accent);font-weight:600':'')+'">'+ formatDate(t.due_date)+'</span>':'')+'</div>'
       +(t.description?'<div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;background:var(--surface2);border-radius:6px;padding:5px 8px;white-space:pre-wrap">'+esc(t.description)+'</div>':'')
       +'<button style="margin-top:6px;background:none;border:1px solid #FECACA;color:#DC2626;border-radius:5px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Inter,sans-serif" onclick="deleteTask('+t.id+',event)">Delete task</button>'
       +'</div></div></div>';
@@ -3572,6 +3567,12 @@ async function loadAdmin() {
   } catch(e){toast('Could not load admin data: '+e.message,'error');}
 }
 
+function toggleCustomRole(customId, val) {
+  const el=$(customId); if(!el) return;
+  el.style.display = val==='custom' ? 'block' : 'none';
+  if(val!=='custom') el.value='';
+}
+
 function toggleCustomDept(customId, val) {
   const el=$(customId); if(!el) return;
   el.style.display = val==='custom' ? 'block' : 'none';
@@ -3579,11 +3580,27 @@ function toggleCustomDept(customId, val) {
 }
 
 async function loadUsersForAssignee() {
-  // Always fetch fresh — don't cache so new users show up immediately
+  // Always fetch fresh — deduplicate near-identical names (e.g. "Bilal" vs "Md Bilal")
   try {
     const users = await sbFetch('user_profiles?order=full_name.asc&select=id,full_name,email,department,role')||[];
-    window._allUsers = users; // still cache for Grant All etc.
-    return users;
+    // Deduplicate: remove users whose full_name is a substring of another user's full_name
+    // (e.g. "Bilal" is contained in "Md Bilal" → keep "Md Bilal")
+    const deduped = users.filter(function(u, i) {
+      const nameA = (u.full_name||'').toLowerCase().trim();
+      // If another user's name contains this name as a word, skip this one
+      const hasSuperSet = users.some(function(v, j) {
+        if(i===j) return false;
+        const nameB = (v.full_name||'').toLowerCase().trim();
+        // Skip if same name
+        if(nameA===nameB) return j<i; // keep first occurrence only
+        // Skip shorter if longer contains it as full word
+        if(nameB.includes(nameA) && nameB.length > nameA.length) return true;
+        return false;
+      });
+      return !hasSuperSet;
+    });
+    window._allUsers = deduped; // cache deduped list
+    return deduped;
   } catch(_){ return window._allUsers||[]; }
 }
 
@@ -3731,6 +3748,7 @@ let resetUserId=null;
 function openCreateUser(){
   ['admNewName','admNewEmail','admNewPassword'].forEach(id=>{const el=$(id);if(el)el.value='';});
   $('admNewRole').value='writer';
+  const crc=$('admNewRoleCustom'); if(crc){crc.value='';crc.style.display='none';}
   $('admNewDept').value=''; $('admNewDeptCustom').style.display='none'; $('admNewDeptCustom').value='';
   showModal('admCreateModal');
 }
@@ -3747,7 +3765,9 @@ function openResetPw(id,email){
 }
 
 async function adminCreateUser(){
-  const name=$('admNewName').value.trim(), email=$('admNewEmail').value.trim(), password=$('admNewPassword').value, role=$('admNewRole').value;
+  const name=$('admNewName').value.trim(), email=$('admNewEmail').value.trim(), password=$('admNewPassword').value;
+  const roleRaw=$('admNewRole').value;
+  const role=roleRaw==='custom'?($('admNewRoleCustom')?.value.trim()||'writer'):roleRaw;
   if(!name||!email||!password){toast('Please fill in all fields.','error');return;}
   if(password.length<6){toast('Password needs at least 6 characters.','error');return;}
   const btn=$('admCreateBtn'); btn.disabled=true; btn.textContent='Creating...';
@@ -4078,7 +4098,7 @@ function renderMessages(convId) {
       <div class="chat-bubble" ondblclick="startReply(${msg.id})">
         ${msg.reply_to_id?`<div class="chat-reply-ref"><div class="chat-reply-ref-name">${chatEsc(msg.reply_to_sender||'')}</div><div class="chat-reply-ref-text">${chatEsc(msg.reply_to_content||'')}</div></div>`:''}
         ${msg.file_url?renderFileInBubble(msg):''}
-        ${msg.content?chatEsc(msg.content):''}
+        ${msg.content?renderChatContent(msg.content):''}
       </div>
       ${reactionHtml?`<div class="chat-reactions">${reactionHtml}</div>`:''}
       <div class="chat-bubble-meta">
@@ -4272,9 +4292,11 @@ function subscribeRealtime(){
       if(msgs){
         const prev=convMessages[activeConvId]||[];
         if(msgs.length!==prev.length||(msgs[msgs.length-1]?.id!==prev[prev.length-1]?.id)){
+          const hadNew=msgs.length>prev.length&&msgs[msgs.length-1]?.sender_id!==SESSION.user_id;
           convMessages[activeConvId]=msgs;
           renderMessages(activeConvId);
           markRead(activeConvId);
+          if(hadNew) playChatChime();
         }
       }
       // Typing
@@ -4608,7 +4630,8 @@ function toggleAddSubtask() {
       const rest=users.filter(u=>(u.department||'').toLowerCase().indexOf('marketing')===-1)
         .sort((a,b)=>(a.full_name||'').localeCompare(b.full_name||''));
       dl.innerHTML=[...mkt,...rest].map(function(u){
-        return '<option value="'+esc(u.full_name)+'" label="'+esc(u.full_name+(u.department?' ('+u.department+')':''))+'"></option>';
+        const displayName=normaliseName(u.full_name)||u.full_name;
+        return '<option value="'+esc(displayName)+'" label="'+esc(displayName+(u.department?' ('+u.department+')':''))+'"></option>';
       }).join('');
     });
     $('addSubtaskBtn').textContent='— Close';
@@ -4722,6 +4745,126 @@ function onApKPIChange(val) {
   if(wrap) wrap.style.display=(val==='__other__')?'block':'none';
 }
 
+
+/* ── Chat chime ── */
+function playChatChime(){
+  try{
+    const ac=new (window.AudioContext||window.webkitAudioContext)();
+    const osc=ac.createOscillator();
+    const gain=ac.createGain();
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.type='sine'; osc.frequency.setValueAtTime(880,ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1200,ac.currentTime+0.1);
+    gain.gain.setValueAtTime(0.3,ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.4);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime+0.4);
+  }catch(_){}
+}
+
+/* ── @mention rendering ── */
+function renderChatContent(text) {
+  if(!text) return '';
+  // Highlight @mentions
+  return chatEsc(text).replace(/@(\S+)/g, function(match, name) {
+    const isMine = SESSION && (SESSION.full_name||'').toLowerCase().startsWith(name.toLowerCase());
+    return '<span class="chat-mention'+(isMine?' me':'')+'">' + match + '</span>';
+  });
+}
+
+/* ── @mention picker ── */
+let mentionQuery = '';
+let mentionActive = false;
+
+function onChatInputMention(e) {
+  const inp = cq('chatMsgInput');
+  const val = inp.value;
+  const pos = inp.selectionStart;
+  // Find the @ symbol before cursor
+  const before = val.slice(0, pos);
+  const atIdx = before.lastIndexOf('@');
+  if(atIdx !== -1 && (atIdx === 0 || /\s/.test(before[atIdx-1]))) {
+    mentionQuery = before.slice(atIdx+1);
+    if(mentionQuery.length >= 0) {
+      showMentionPicker(mentionQuery);
+      return;
+    }
+  }
+  hideMentionPicker();
+}
+
+function showMentionPicker(query) {
+  const picker = cq('mentionPicker');
+  if(!picker) return;
+  const users = window._allUsers || [];
+  const q = query.toLowerCase();
+  const matches = users.filter(u => {
+    const name = (u.full_name||'').toLowerCase();
+    return name.includes(q) && u.id !== SESSION.user_id;
+  }).slice(0,8);
+  if(!matches.length){hideMentionPicker();return;}
+  picker.innerHTML = matches.map(u =>
+    '<div class="mention-item" onmousedown="insertMention(event,\''+chatEsc(u.full_name)+'\')">'+
+    '<div class="mention-item-avatar">'+(u.full_name||'?')[0].toUpperCase()+'</div>'+
+    '<div><div style="font-size:13px;font-weight:600">'+chatEsc(u.full_name||'')+'</div>'+
+    '<div style="font-size:11px;color:var(--muted)">'+chatEsc(u.department||u.role||'')+'</div></div></div>'
+  ).join('');
+  picker.style.display = 'block';
+  mentionActive = true;
+}
+
+function hideMentionPicker() {
+  const picker = cq('mentionPicker');
+  if(picker) picker.style.display = 'none';
+  mentionActive = false;
+}
+
+function insertMention(e, name) {
+  if(e) e.preventDefault();
+  const inp = cq('chatMsgInput');
+  const val = inp.value;
+  const pos = inp.selectionStart;
+  const before = val.slice(0, pos);
+  const atIdx = before.lastIndexOf('@');
+  const after = val.slice(pos);
+  inp.value = before.slice(0, atIdx) + '@' + name + ' ' + after;
+  inp.focus();
+  const newPos = atIdx + name.length + 2;
+  inp.setSelectionRange(newPos, newPos);
+  hideMentionPicker();
+}
+
+/* ── Auto-logout after 300s inactivity ── */
+let _autoLogoutTimer = null;
+const AUTO_LOGOUT_SECS = 300;
+
+function resetAutoLogout() {
+  if(!SESSION) return;
+  if(_autoLogoutTimer) clearTimeout(_autoLogoutTimer);
+  _autoLogoutTimer = setTimeout(function(){
+    if(SESSION){
+      toast('Session expired after 5 minutes of inactivity. Please sign in again.');
+      setTimeout(function(){ forceLogout('Session expired. Please sign in again.'); }, 1500);
+    }
+  }, AUTO_LOGOUT_SECS * 1000);
+}
+
+function initAutoLogout() {
+  ['mousemove','keydown','click','scroll','touchstart'].forEach(function(evt){
+    document.addEventListener(evt, resetAutoLogout, {passive:true});
+  });
+  resetAutoLogout();
+}
+
+/* ── Name normalisation — treat short aliases as full names ── */
+const NAME_ALIASES = {
+  'bilal': 'Md Bilal',
+  'md bilal': 'Md Bilal'
+};
+function normaliseName(name) {
+  if(!name) return name;
+  const key = name.trim().toLowerCase();
+  return NAME_ALIASES[key] || name;
+}
 </script>
 </body>
 </html>
