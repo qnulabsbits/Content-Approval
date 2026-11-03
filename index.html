@@ -469,7 +469,11 @@
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="field-group full"><div class="field-label">Title</div><input class="field-input" id="pmTitleEdit" style="font-size:13px;font-weight:600"/></div>
-          <div class="field-group"><div class="field-label">Status</div><select class="field-select" id="pmStatusEdit" style="font-size:12px"><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="review">Review</option><option value="done">Done</option></select></div>
+          <div class="field-group" id="apTypeOtherWrap" style="display:none">
+        <div class="field-label">Specify Type</div>
+        <input class="field-input" id="apTypeOther" placeholder="Describe the project type..."/>
+      </div>
+      <div class="field-group"><div class="field-label">Status</div><select class="field-select" id="pmStatusEdit" style="font-size:12px"><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="review">Review</option><option value="done">Done</option></select></div>
           <div class="field-group"><div class="field-label">Priority</div><select class="field-select" id="pmPriorityEdit" style="font-size:12px"><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
           <div class="field-group"><div class="field-label">Primary Owner</div><input class="field-input" id="pmOwnerEdit" style="font-size:12px"/></div>
           <div class="field-group"><div class="field-label">Due Date</div><input type="date" class="field-date" id="pmDueEdit"/></div>
@@ -553,9 +557,10 @@
     <div class="field-grid">
       <div class="field-group full"><div class="field-label">Title <span class="req">*</span></div><input class="field-input" id="apTitle" placeholder="Project name"/></div>
       <div class="field-group"><div class="field-label">Type</div>
-        <select class="field-select" id="apType">
+        <select class="field-select" id="apType" onchange="toggleApOther(this.value)">
           <option value="campaign">Campaign</option><option value="event">Event</option>
-          <option value="launch">Product Launch</option><option value="ad">Ad Campaign</option><option value="internal">Internal</option>
+          <option value="launch">Product Launch</option><option value="ad">Ad Campaign</option>
+          <option value="internal">Internal</option><option value="other">Other...</option>
         </select>
       </div>
       <div class="field-group"><div class="field-label">Status</div>
@@ -568,6 +573,44 @@
       <div class="field-group"><div class="field-label">Start Date</div><input class="field-date" id="apStartDate" type="date"/></div>
       <div class="field-group"><div class="field-label">Due Date</div><input class="field-date" id="apDueDate" type="date"/></div>
       <div class="field-group"><div class="field-label">Budget (INR)</div><input class="field-input" id="apBudget" type="number" placeholder="0"/></div>
+      <div class="field-group full">
+        <div class="field-label">KPI <span style="font-size:10px;color:var(--muted);font-weight:400">(optional)</span></div>
+        <select class="field-select" id="apKPI" onchange="onApKPIChange(this.value)" style="font-size:13px">
+          <option value="">Select KPI...</option>
+              <optgroup label="1. Brand, Marcom &amp; Event">
+                <option value="Brand Awareness &amp; Visibility">Brand Awareness &amp; Visibility</option>
+                <option value="Integrated Marketing &amp; Campaign Effectiveness">Integrated Marketing &amp; Campaign Effectiveness</option>
+                <option value="Event Reach &amp; Engagement">Event Reach &amp; Engagement</option>
+                <option value="Corporate &amp; Media Visibility">Corporate &amp; Media Visibility</option>
+                <option value="Brand Reputation &amp; Consistency">Brand Reputation &amp; Consistency</option>
+              </optgroup>
+              <optgroup label="2. Digital &amp; Marketing Excellence">
+                <option value="Digital Presence &amp; Engagement">Digital Presence &amp; Engagement</option>
+                <option value="Demand Generation &amp; Lead Conversion">Demand Generation &amp; Lead Conversion</option>
+                <option value="Marketing Pipeline Contribution">Marketing Pipeline Contribution</option>
+                <option value="GTM &amp; Product Launch Effectiveness">GTM &amp; Product Launch Effectiveness</option>
+                <option value="Marketing ROI &amp; Operational Efficiency">Marketing ROI &amp; Operational Efficiency</option>
+              </optgroup>
+              <optgroup label="3. Design &amp; Creative">
+                <option value="Creative Delivery &amp; Productivity">Creative Delivery &amp; Productivity</option>
+                <option value="Creative Quality &amp; Effectiveness">Creative Quality &amp; Effectiveness</option>
+                <option value="Brand Consistency">Brand Consistency</option>
+                <option value="Digital Experience Performance">Digital Experience Performance</option>
+                <option value="Creative Engagement &amp; Impact">Creative Engagement &amp; Impact</option>
+              </optgroup>
+              <optgroup label="4. Content &amp; Thought Leadership">
+                <option value="Content Production &amp; Quality">Content Production &amp; Quality</option>
+                <option value="Organic Search Performance">Organic Search Performance</option>
+                <option value="Thought Leadership &amp; Industry Positioning">Thought Leadership &amp; Industry Positioning</option>
+                <option value="Content-Driven Lead Generation">Content-Driven Lead Generation</option>
+                <option value="Customer Advocacy &amp; Success Stories">Customer Advocacy &amp; Success Stories</option>
+              </optgroup>
+              <option value="__other__">5. Others (specify below)...</option>
+        </select>
+        <div id="apKPIOtherWrap" style="display:none;margin-top:6px">
+          <input class="field-input" id="apKPIOther" placeholder="Enter custom KPI..." style="font-size:13px"/>
+        </div>
+      </div>
       <div class="field-group full"><div class="field-label">Description</div><textarea class="field-textarea" id="apDesc" placeholder="What is this project about?"></textarea></div>
     </div>
     <div class="modal-footer">
@@ -930,9 +973,9 @@
         <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Add KPI</div>
         <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end">
           <div class="field-group">
-            <div class="field-label">Category</div>
+            <div class="field-label">KPI</div>
             <select class="field-select" id="pkKPICategory" onchange="onKPICategoryChange(this.value)" style="font-size:12px">
-              <option value="">Select category...</option>
+              <option value="">Select KPI...</option>
               <optgroup label="1. Brand, Marcom &amp; Event">
                 <option value="Brand Awareness &amp; Visibility">Brand Awareness &amp; Visibility</option>
                 <option value="Integrated Marketing &amp; Campaign Effectiveness">Integrated Marketing &amp; Campaign Effectiveness</option>
@@ -2203,7 +2246,7 @@ function renderProjectTable() {
   if(!filtered.length){ c.innerHTML=actionBar+'<div class="empty-state"><div class="empty-title">No projects yet</div></div>'; return; }
 
   /* ── Table ── */
-  const COLS=['Theme / Project','Item','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Detailed Comments and Notes','Source'];
+  const COLS=['Theme / Project','Item','Status','Priority','Primary Owner','KPI','Detailed Comments and Notes','Source'];
   let h=actionBar+'<div class="table-wrap" style="overflow-x:auto"><table style="min-width:1200px"><thead><tr>'
     +(isAdmin?'<th class="projChkHdr" style="width:32px;display:none"></th>':'')
     +COLS.map(function(x){return '<th style="white-space:nowrap;font-size:11px;padding:10px 12px">'+x+'</th>';}).join('')
@@ -2227,9 +2270,11 @@ function renderProjectTable() {
         +'<td style="padding:10px 12px"><span class="badge '+(p.status||'todo')+'">'+(STATUS_LABELS[p.status]||p.status)+'</span></td>'
         +'<td style="padding:10px 12px"><span class="badge '+(p.priority||'medium')+'">'+esc(p.priority||'medium')+'</span></td>'
         +'<td style="font-size:12px;color:var(--muted);padding:10px 12px">'+esc(p.owner_name||'—')+'</td>'
-        +'<td style="font-size:11px;color:var(--muted);max-width:200px;white-space:normal;padding:10px 12px">'+esc(indKPIs)+'</td>'
-        +'<td style="font-size:11px;color:var(--muted);max-width:200px;white-space:normal;padding:10px 12px">'+esc(teamKPIs)+'</td>'
-        +'<td style="font-size:11px;color:var(--muted);max-width:200px;white-space:normal;padding:10px 12px">'+esc(sharedKPIs)+'</td>'
+        +(function(){
+          const pkpis=projectKPICache[p.id]||[];
+          const allKPIs=pkpis.map(function(k){return k.title;}).filter(Boolean).join(', ');
+          return '<td style="font-size:11px;color:var(--muted);max-width:220px;white-space:normal;padding:10px 12px">'+esc(allKPIs||'—')+'</td>';
+        })()
         +'<td style="font-size:11px;color:var(--muted);max-width:220px;white-space:normal;padding:10px 12px">'+esc((p.description||'').slice(0,120)||'—')+'</td>'
         +'<td style="font-size:11px;color:var(--muted);padding:10px 12px">'+esc(source)+'</td>'
         +'</tr>';
@@ -2276,10 +2321,12 @@ function renderProjectTable() {
         +'<td style="padding:10px 12px"><span class="badge '+(t.priority||'medium')+'">'+esc(t.priority||'medium')+'</span></td>'
         /* Owner */
         +'<td style="font-size:12px;color:var(--muted);padding:10px 12px">'+esc(t.assignee_name||'—')+'</td>'
-        /* KPIs — project-level on first row, task-specific lines on others */
-        +'<td style="font-size:11px;color:var(--muted);max-width:180px;white-space:normal;padding:10px 12px">'+esc(tIndKPI||isFirst?indKPIs:tIndKPI||'—')+'</td>'
-        +'<td style="font-size:11px;color:var(--muted);max-width:180px;white-space:normal;padding:10px 12px">'+esc(tTeamKPI||isFirst?teamKPIs:tTeamKPI||'—')+'</td>'
-        +'<td style="font-size:11px;color:var(--muted);max-width:180px;white-space:normal;padding:10px 12px">'+esc(tSharedKPI||isFirst?sharedKPIs:tSharedKPI||'—')+'</td>'
+        /* KPI — single column, all KPIs joined */
+        +(function(){
+          const pkpis=projectKPICache[p.id]||[];
+          const allKPIs=pkpis.map(function(k){return k.title;}).filter(Boolean).join(', ');
+          return '<td style="font-size:11px;color:var(--muted);max-width:220px;white-space:normal;padding:10px 12px">'+esc(allKPIs||'—')+'</td>';
+        })()
         /* Notes */
         +'<td style="font-size:11px;color:var(--muted);max-width:220px;white-space:normal;padding:10px 12px">'+esc(cleanDesc.slice(0,150)||(isFirst?(p.description||'').slice(0,150):'')||'—')+'</td>'
         /* Source */
@@ -2496,26 +2543,14 @@ async function loadProjectKPIs(projectId) {
   const kpis=await sbFetch('project_kpis?project_id=eq.'+projectId+'&order=created_at.asc&select=*')||[];
   const c=$('pmKPIs');
   if(!kpis.length){c.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0">No KPIs yet.</div>';return;}
-  const typeColors={individual:'var(--accent)',shared:'var(--blue)',team:'var(--purple)'};
-  const typeLabels={individual:'Individual',shared:'Shared',team:'Team'};
-  let h='<div class="kpi-row" style="margin-top:8px">';
-  kpis.forEach(k=>{
-    const p=pct(k.current_value||0,k.target_value||1);
-    const cls=p>=80?'good':p>=40?'warn':'bad';
-    const tcolor=typeColors[k.kpi_type||'individual']||'var(--accent)';
-    const tlabel=typeLabels[k.kpi_type||'individual']||'KPI';
-    h+=`<div class="kpi-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <div class="kpi-title">${esc(k.title)}</div>
-        <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:${tcolor}22;color:${tcolor};text-transform:uppercase">${tlabel}</span>
+  let h='<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">';
+  kpis.forEach((k,i)=>{
+    h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:7px;border:1px solid var(--border)">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${esc(k.title)}</div>
+        ${k.owner_name?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(k.owner_name)}</div>`:''}
       </div>
-      <div class="kpi-sub">${esc(k.owner_name||'')}</div>
-      <div class="kpi-progress"><div class="kpi-bar" style="width:${p}%;background:${p>=80?'var(--green)':p>=40?'var(--yellow)':'var(--accent)'}"></div></div>
-      <div class="kpi-numbers">
-        <span class="kpi-current">${esc(String(k.current_value||0))}${esc(k.unit||'')}</span>
-        <span class="kpi-target">/ ${esc(String(k.target_value||0))}${esc(k.unit||'')}</span>
-        <span class="kpi-pct ${cls}">${p}%</span>
-      </div>
+      <button onclick="deleteKPI(${k.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;padding:0 4px" title="Remove KPI">×</button>
     </div>`;
   });
   h+='</div>';
@@ -2526,9 +2561,27 @@ async function toggleTask(input) {
   const id=input.getAttribute('data-taskid'), done=input.checked;
   try{
     await dbUpdate('project_tasks',id,{status:done?'done':'todo',completed_at:done?new Date().toISOString():null});
-    if(activeProject) loadProjectTasks(activeProject.id);
+    if(activeProject){
+      await loadProjectTasks(activeProject.id);
+      await checkProjectCompletion(activeProject.id);
+    }
     await loadProjects();
   }catch(e){toast('Could not update task: '+e.message,'error');input.checked=!input.checked;}
+}
+
+async function checkProjectCompletion(projectId){
+  try{
+    const tasks=await sbFetch('project_tasks?project_id=eq.'+projectId+'&select=id,status')||[];
+    // Only check non-subtask tasks (no parent_task_id or parent_task_id is null)
+    const mainTasks=tasks.filter(t=>!t.parent_task_id);
+    if(!mainTasks.length) return;
+    const allDone=mainTasks.every(t=>t.status==='done');
+    const proj=projects.find(p=>String(p.id)===String(projectId));
+    if(allDone && proj && proj.status!=='done'){
+      await dbUpdate('projects',projectId,{status:'done'});
+      toast('All tasks done — project marked as Completed!');
+    }
+  }catch(_){}
 }
 
 async function deleteTask(taskId,evt){
@@ -2591,6 +2644,11 @@ function openAddProject() {
   $('apTitle').value=''; $('apType').value='campaign'; $('apStatus').value='todo';
   $('apPriority').value='medium'; $('apOwner').value=SESSION?.full_name||'';
   $('apStartDate').value=''; $('apDueDate').value=''; $('apBudget').value=''; $('apDesc').value='';
+  if($('apKPI')) $('apKPI').value='';
+  if($('apKPIOther')) $('apKPIOther').value='';
+  if($('apKPIOtherWrap')) $('apKPIOtherWrap').style.display='none';
+  if($('apTypeOtherWrap')) $('apTypeOtherWrap').style.display='none';
+  if($('apTypeOther')) $('apTypeOther').value='';
   showModal('addProjectModal');
 }
 
@@ -2599,13 +2657,26 @@ async function saveNewProject() {
   if(!title){toast('Please enter a project title.','error');return;}
   const btn=$('apSaveBtn'); btn.disabled=true; btn.textContent='Saving...';
   try {
-    await dbInsert('projects',{
-      title,type:$('apType').value,status:$('apStatus').value,priority:$('apPriority').value,
+    const apTypeVal=$('apType').value==='other'?($('apTypeOther')?.value.trim()||'other'):$('apType').value;
+    const res=await dbInsert('projects',{
+      title,type:apTypeVal,status:$('apStatus').value,priority:$('apPriority').value,
       owner_name:$('apOwner').value,owner_id:SESSION?.user_id,
       start_date:$('apStartDate').value||null,due_date:$('apDueDate').value||null,
       budget:$('apBudget').value||null,description:$('apDesc').value,
       created_by:SESSION?.user_id,team_members:JSON.stringify([])
     });
+    const newId=Array.isArray(res)?res[0].id:res.id;
+    // Save KPI if selected
+    const kpiVal=$('apKPI')?.value;
+    if(kpiVal&&kpiVal!==''){
+      const kpiTitle=(kpiVal==='__other__'?($('apKPIOther')?.value.trim()||''):kpiVal);
+      if(kpiTitle){
+        await dbInsert('project_kpis',{
+          project_id:newId, title:kpiTitle, kpi_type:'individual',
+          target_value:0, current_value:0, unit:'', owner_name:$('apOwner').value||''
+        }).catch(()=>{});
+      }
+    }
     toast('Project created.');
     logActivity('created','New project: '+title);
     closeModal('addProjectModal');
@@ -2618,7 +2689,7 @@ async function saveNewProject() {
 
 function downloadProjectsExcel(){
   if(typeof XLSX==='undefined'){toast('XLSX library not loaded','error');return;}
-  const rows=[['Theme / Project','Item','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Detailed Comments and Notes','Source']];
+  const rows=[['Theme / Project','Item','Status','Priority','Primary Owner','KPI','Detailed Comments and Notes','Source']];
   for(const p of projects){
     const tags=(function(){try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
     const pkpis=projectKPICache[p.id]||[];
@@ -2627,12 +2698,13 @@ function downloadProjectsExcel(){
     const teamKPIs=pkpis.filter(k=>k.kpi_type==='team').map(k=>k.title).join('; ');
     const sharedKPIs=pkpis.filter(k=>k.kpi_type==='shared').map(k=>k.title).join('; ');
     if(!tasks.length){
-      rows.push([p.title,'',STATUS_LABELS[p.status]||p.status,p.priority||'',p.owner_name||'',indKPIs,teamKPIs,sharedKPIs,p.description||'',tags.join('; ')]);
+      const allKPIsStr=(projectKPICache[p.id]||[]).map(k=>k.title).join('; ');
+      rows.push([p.title,'',STATUS_LABELS[p.status]||p.status,p.priority||'',p.owner_name||'',allKPIsStr,p.description||'',tags.join('; ')]);
     } else {
+      const allKPIsStr=(projectKPICache[p.id]||[]).map(k=>k.title).join('; ');
       tasks.forEach(function(t,i){
         rows.push([i===0?p.title:'',t.title,STATUS_LABELS[t.status]||t.status,t.priority||'',t.assignee_name||'',
-          i===0?indKPIs:'',i===0?teamKPIs:'',i===0?sharedKPIs:'',
-          t.description||'',i===0?tags.join('; '):'']);
+          i===0?allKPIsStr:'',t.description||'',i===0?tags.join('; '):'']);
       });
     }
   }
@@ -4521,6 +4593,17 @@ async function deleteSubtask(subId, parentId, projId) {
     await loadSubtasks(parentId, projId);
     await loadProjects();
   } catch(e){toast('Error: '+e.message,'error');}
+}
+
+
+function toggleApOther(val) {
+  const wrap=$('apTypeOtherWrap');
+  if(wrap) wrap.style.display=(val==='other')?'block':'none';
+}
+
+function onApKPIChange(val) {
+  const wrap=$('apKPIOtherWrap');
+  if(wrap) wrap.style.display=(val==='__other__')?'block':'none';
 }
 
 </script>
