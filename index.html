@@ -3534,8 +3534,13 @@ async function adminCreateUser(){
   const btn=$('admCreateBtn'); btn.disabled=true; btn.textContent='Creating...';
   try {
     let uid=null;
-    // Try admin endpoint first (works if service_role key is in use)
     const token = await getToken();
+    const newDept=$('admNewDept').value==='custom'?$('admNewDeptCustom').value.trim():$('admNewDept').value;
+    const defaultPerms={content:false,projects:false,crm:false,analytics:false,reports:false,inventory:false,inventory_write:false,hr:false};
+    defaultPerms[['content','projects','inventory'].includes(role)?role:'content']=true;
+    if(role==='admin') Object.keys(defaultPerms).forEach(k=>defaultPerms[k]=true);
+
+    // Step 1: Try admin endpoint (works with service_role key)
     const r1=await fetch(SUPA_URL+'/auth/v1/admin/users',{
       method:'POST',
       headers:{apikey:SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'},
@@ -3545,7 +3550,7 @@ async function adminCreateUser(){
     if(r1.ok&&(d1.id||d1.user?.id)){
       uid=d1.id||d1.user?.id;
     } else {
-      // Fallback: signup (works with anon key, user gets confirmation email)
+      // Step 2: Fallback signup
       const r2=await fetch(SUPA_URL+'/auth/v1/signup',{
         method:'POST',
         headers:{apikey:SUPA_KEY,'Content-Type':'application/json'},
@@ -3553,43 +3558,67 @@ async function adminCreateUser(){
       });
       const d2=await r2.json();
       uid=(d2.user?.id)||d2.id||null;
+
       if(!uid){
-        // "User already registered" — auth user exists but profile may be missing
-        const errMsg=d2.msg||d2.message||d2.error_description||'';
-        if(errMsg.toLowerCase().includes('already registered')||errMsg.toLowerCase().includes('already been registered')){
-          // Try to find the existing auth user by fetching their profile
-          // If profile exists, tell admin. If not, we need their UUID.
-          const existCheck=await sbFetch('user_profiles?email=eq.'+encodeURIComponent(email)+'&select=id,email,full_name').catch(()=>null);
-          if(existCheck&&existCheck.length){
-            toast('User "'+email+'" already exists in the system.','error');
+        const errMsg=(d2.msg||d2.message||d2.error_description||'').toLowerCase();
+        const isAlreadyReg=errMsg.includes('already registered')||errMsg.includes('already been registered');
+
+        if(isAlreadyReg){
+          // Step 3: Auth user exists — find their UUID via a password-reset trick:
+          // We can look them up in user_profiles by email
+          btn.textContent='Checking profile...';
+          const existProfile=await sbFetch('user_profiles?email=eq.'+encodeURIComponent(email)+'&select=id,email,full_name,role').catch(()=>null);
+          if(existProfile&&existProfile.length){
+            // Profile already exists — just update it with the new details
+            uid=existProfile[0].id;
+            await sbFetch('user_profiles?id=eq.'+uid,{method:'PATCH',
+              body:JSON.stringify({full_name:name,role,department:newDept||null,module_permissions:defaultPerms})
+            });
+            toast('User "'+email+'" already existed — profile updated with new role and permissions.');
+            logActivity('user_updated','Updated existing user '+email+' ('+role+')');
+            closeModal('admCreateModal'); await loadAdmin();
+            return;
           } else {
-            // Auth user exists but no profile — we can't get their UUID from browser without service_role
-            toast('Auth user exists but has no profile. Please delete "'+email+'" from Supabase Auth dashboard and try again.','error');
+            // Auth user exists but NO profile — attempt to recover by re-signing them in
+            // to get their UUID (only works if we know the password, which we just set)
+            btn.textContent='Recovering UID...';
+            const r3=await fetch(SUPA_URL+'/auth/v1/token?grant_type=password',{
+              method:'POST',
+              headers:{apikey:SUPA_KEY,'Content-Type':'application/json'},
+              body:JSON.stringify({email,password})
+            });
+            const d3=await r3.json();
+            uid=d3.user?.id||null;
+            if(!uid){
+              toast('Account exists in Supabase Auth but the password you entered may not match. Go to Supabase → Authentication → Users → find "'+email+'" → copy their UUID, then contact support to link it manually.','error');
+              return;
+            }
+            // Got UID — create the missing profile
           }
         } else {
-          toast('Auth error: '+errMsg,'error');
+          toast('Auth error: '+(d2.msg||d2.message||d2.error_description||JSON.stringify(d2)),'error');
+          return;
         }
-        return;
       }
     }
     if(!uid){toast('Could not get user ID. Check Supabase Auth settings.','error');return;}
-    const defaultPerms={content:false,projects:false,crm:false,analytics:false,reports:false,inventory:false,inventory_write:false,hr:false};
-    defaultPerms[['content','projects','inventory'].includes(role)?role:'content']=true;
-    if(role==='admin') Object.keys(defaultPerms).forEach(k=>defaultPerms[k]=true);
-    const newDept=$('admNewDept').value==='custom'?$('admNewDeptCustom').value.trim():$('admNewDept').value;
-    // Upsert profile — handles case where auth user already exists without a profile
+
+    // Step 4: Upsert profile
+    const profileData={id:uid,email,full_name:name,role,department:newDept||null,module_permissions:defaultPerms};
     try {
-      await dbInsert('user_profiles',{id:uid,email,full_name:name,role,department:newDept||null,module_permissions:defaultPerms});
+      await dbInsert('user_profiles',profileData);
     } catch(profileErr) {
-      // Profile may already exist (duplicate) — try update instead
+      // Already exists — patch instead
       const existing=await sbFetch('user_profiles?id=eq.'+uid+'&select=id').catch(()=>null);
       if(existing&&existing.length){
-        await sbFetch('user_profiles?id=eq.'+uid,{method:'PATCH',body:JSON.stringify({full_name:name,role,department:newDept||null,module_permissions:defaultPerms})});
+        await sbFetch('user_profiles?id=eq.'+uid,{method:'PATCH',
+          body:JSON.stringify({full_name:name,role,department:newDept||null,module_permissions:defaultPerms})
+        });
       } else {
         throw profileErr;
       }
     }
-    toast('User created.');
+    toast('User "'+email+'" created successfully.');
     logActivity('user_created','Created user '+email+' ('+role+')');
     closeModal('admCreateModal'); await loadAdmin();
   } catch(e){toast('Error: '+e.message,'error');}
