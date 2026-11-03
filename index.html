@@ -1060,10 +1060,14 @@ function saveBlob(content, type, filename) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 function toWord(title, bodyHtml) {
-  const shell = `\ufeff<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font-family:Arial;font-size:11pt;line-height:1.5;margin:30px}h1{font-size:16pt;color:#E8450A}h2{font-size:13pt;margin-top:22px;border-top:1px solid #ccc;padding-top:12px}p{margin:4px 0}label{font-size:8pt;font-weight:bold;color:#666;text-transform:uppercase;display:block;margin-top:12px}hr{border:none;border-top:1px solid #ddd;margin:20px 0}</style></head><body>${bodyHtml}
-
-
-
+  const shell = `\ufeff<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font-family:Arial;font-size:11pt;line-height:1.5;margin:30px}h1{font-size:16pt;color:#E8450A}h2{font-size:13pt;margin-top:22px;border-top:1px solid #ccc;padding-top:12px}p{margin:4px 0}label{font-size:8pt;font-weight:bold;color:#666;text-transform:uppercase;display:block;margin-top:12px}hr{border:none;border-top:1px solid #ddd;margin:20px 0}</style></head><body>${bodyHtml}</body></html>`;
+  const blob = new Blob([shell], {type:'application/msword'});
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob), download: title+'.doc'
+  });
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
 const CONTENT_TABLE = 'content_approvals';
 const MAIN_SLUG = { Blog:'blog-content', Whitepaper:'whitepaper-content', Newsletter:'pr-description', Other:'casestudy-content' };
 const IMAGE_SLUG = { Blog:'blog-Image', Whitepaper:'whitepaper-image', Newsletter:'pr-bg-img', Other:'whitepaper-image' };
