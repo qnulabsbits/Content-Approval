@@ -791,7 +791,7 @@
 
 <!-- ═══════════════ FLOATING CHAT BUTTON ═══════════════ -->
 <div class="login-banner" id="loginBanner"><div class="login-banner-inner"><div class="login-banner-track" id="bannerTrack"></div><button class="banner-close" onclick="closeBanner()">✕</button></div></div>
-<button class="chat-fab" id="chatFab" onclick="toggleChat()" title="Team Chat">
+<button class="chat-fab" id="chatFab" onclick="toggleChat()" title="Team Chat" style="display:none">
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
   <span class="chat-fab-badge" id="chatFabBadge">0</span>
 </button>
@@ -1017,255 +1017,6 @@
   </div>
 </div>
 
-<div style="margin-bottom:12px">
-        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Add KPI</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end">
-          <div class="field-group">
-            <div class="field-label">KPI</div>
-            <select class="field-select" id="pkKPICategory" onchange="onKPICategoryChange(this.value)" style="font-size:12px">
-              <option value="">Select KPI...</option>
-              <optgroup label="1. Brand, Marcom &amp; Event">
-                <option value="Brand Awareness &amp; Visibility">Brand Awareness &amp; Visibility</option>
-                <option value="Integrated Marketing &amp; Campaign Effectiveness">Integrated Marketing &amp; Campaign Effectiveness</option>
-                <option value="Event Reach &amp; Engagement">Event Reach &amp; Engagement</option>
-                <option value="Corporate &amp; Media Visibility">Corporate &amp; Media Visibility</option>
-                <option value="Brand Reputation &amp; Consistency">Brand Reputation &amp; Consistency</option>
-              </optgroup>
-              <optgroup label="2. Digital &amp; Marketing Excellence">
-                <option value="Digital Presence &amp; Engagement">Digital Presence &amp; Engagement</option>
-                <option value="Demand Generation &amp; Lead Conversion">Demand Generation &amp; Lead Conversion</option>
-                <option value="Marketing Pipeline Contribution">Marketing Pipeline Contribution</option>
-                <option value="GTM &amp; Product Launch Effectiveness">GTM &amp; Product Launch Effectiveness</option>
-                <option value="Marketing ROI &amp; Operational Efficiency">Marketing ROI &amp; Operational Efficiency</option>
-              </optgroup>
-              <optgroup label="3. Design &amp; Creative">
-                <option value="Creative Delivery &amp; Productivity">Creative Delivery &amp; Productivity</option>
-                <option value="Creative Quality &amp; Effectiveness">Creative Quality &amp; Effectiveness</option>
-                <option value="Brand Consistency">Brand Consistency</option>
-                <option value="Digital Experience Performance">Digital Experience Performance</option>
-                <option value="Creative Engagement &amp; Impact">Creative Engagement &amp; Impact</option>
-              </optgroup>
-              <optgroup label="4. Content &amp; Thought Leadership">
-                <option value="Content Production &amp; Quality">Content Production &amp; Quality</option>
-                <option value="Organic Search Performance">Organic Search Performance</option>
-                <option value="Thought Leadership &amp; Industry Positioning">Thought Leadership &amp; Industry Positioning</option>
-                <option value="Content-Driven Lead Generation">Content-Driven Lead Generation</option>
-                <option value="Customer Advocacy &amp; Success Stories">Customer Advocacy &amp; Success Stories</option>
-              </optgroup>
-              <option value="__other__">5. Others (specify below)...</option>
-            </select>
-          </div>
-          <div class="field-group" id="pkOtherWrap" style="display:none">
-            <div class="field-label">Specify KPI</div>
-            <input class="field-input" id="pkKPITitle" placeholder="Enter custom KPI..." style="font-size:12px"/>
-          </div>
-          <div class="field-group">
-            <div class="field-label">Owner</div>
-            <input class="field-input" id="pkOwner" placeholder="Person name" style="font-size:12px"/>
-          </div>
-          <button class="btn btn-primary btn-sm" id="pkSaveBtn" onclick="saveProjectKPI()" style="align-self:end">Add KPI</button>
-        </div>
-      </div>
-      <div id="pmKPIs"><div class="loading-row"><span class="spinner"></span></div></div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════ ADD PROJECT MODAL ═══════════════ -->
-<div class="modal-overlay" id="addProjectModal">
-  <div class="modal modal-md">
-    <div class="modal-title">New Project</div>
-    <div class="modal-sub">Create a new marketing project</div>
-    <div class="field-grid">
-      <div class="field-group full"><div class="field-label">Title <span class="req">*</span></div><input class="field-input" id="apTitle" placeholder="Project name"/></div>
-      <div class="field-group"><div class="field-label">Type</div>
-        <select class="field-select" id="apType">
-          <option value="campaign">Campaign</option><option value="event">Event</option>
-          <option value="launch">Product Launch</option><option value="ad">Ad Campaign</option><option value="internal">Internal</option>
-        </select>
-      </div>
-      <div class="field-group"><div class="field-label">Status</div>
-        <select class="field-select" id="apStatus"><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="review">Review</option><option value="done">Done</option></select>
-      </div>
-      <div class="field-group"><div class="field-label">Priority</div>
-        <select class="field-select" id="apPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>
-      </div>
-      <div class="field-group"><div class="field-label">Owner</div><input class="field-input" id="apOwner" placeholder="Project owner"/></div>
-      <div class="field-group"><div class="field-label">Start Date</div><input class="field-date" id="apStartDate" type="date"/></div>
-      <div class="field-group"><div class="field-label">Due Date</div><input class="field-date" id="apDueDate" type="date"/></div>
-      <div class="field-group"><div class="field-label">Budget (INR)</div><input class="field-input" id="apBudget" type="number" placeholder="0"/></div>
-      <div class="field-group full"><div class="field-label">Description</div><textarea class="field-textarea" id="apDesc" placeholder="What is this project about?"></textarea></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('addProjectModal')">Cancel</button>
-      <button class="btn btn-primary" id="apSaveBtn" onclick="saveNewProject()">Create Project</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════ INVENTORY MODALS ═══════════════ -->
-<div class="modal-overlay" id="addItemModal">
-  <div class="modal modal-md">
-    <div class="modal-title">Add Inventory Item</div>
-    <div class="modal-sub">Add a new marketing asset to inventory</div>
-    <div class="field-grid">
-      <div class="field-group full"><div class="field-label">Item Name <span class="req">*</span></div><input class="field-input" id="invName" placeholder="e.g. QNu Roll-up Banner"/></div>
-      <div class="field-group"><div class="field-label">Category</div>
-        <select class="field-select" id="invCategory"><option value="banners">Banners</option><option value="brochures">Brochures</option><option value="merchandise">Merchandise</option><option value="digital">Digital Assets</option><option value="other" selected>Other</option></select>
-      </div>
-      <div class="field-group"><div class="field-label">Unit</div><input class="field-input" id="invUnit" placeholder="pcs" value="pcs"/></div>
-      <div class="field-group"><div class="field-label">Quantity</div><input class="field-input" id="invQty" type="number" value="0" min="0"/></div>
-      <div class="field-group"><div class="field-label">Minimum Stock Alert</div><input class="field-input" id="invMinQty" type="number" value="0" min="0"/></div>
-      <div class="field-group"><div class="field-label">Location</div><input class="field-input" id="invLocation" placeholder="e.g. Office Storeroom"/></div>
-      <div class="field-group full"><div class="field-label">Notes</div><textarea class="field-textarea" id="invNotes" placeholder="Any additional notes..." style="min-height:60px"></textarea></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('addItemModal')">Cancel</button>
-      <button class="btn btn-primary" id="invSaveBtn" onclick="saveNewItem()">Add Item</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="editItemModal">
-  <div class="modal modal-md">
-    <div class="modal-title">Edit Inventory Item</div>
-    <input type="hidden" id="editInvId"/>
-    <div class="field-grid">
-      <div class="field-group full"><div class="field-label">Item Name <span class="req">*</span></div><input class="field-input" id="editInvName"/></div>
-      <div class="field-group"><div class="field-label">Category</div>
-        <select class="field-select" id="editInvCategory"><option value="banners">Banners</option><option value="brochures">Brochures</option><option value="merchandise">Merchandise</option><option value="digital">Digital Assets</option><option value="other">Other</option></select>
-      </div>
-      <div class="field-group"><div class="field-label">Unit</div><input class="field-input" id="editInvUnit"/></div>
-      <div class="field-group"><div class="field-label">Quantity</div><input class="field-input" id="editInvQty" type="number" min="0"/></div>
-      <div class="field-group"><div class="field-label">Min Stock Alert</div><input class="field-input" id="editInvMinQty" type="number" min="0"/></div>
-      <div class="field-group"><div class="field-label">Location</div><input class="field-input" id="editInvLocation"/></div>
-      <div class="field-group full"><div class="field-label">Notes</div><textarea class="field-textarea" id="editInvNotes" style="min-height:60px"></textarea></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('editItemModal')">Cancel</button>
-      <button class="btn btn-primary" id="editInvSaveBtn" onclick="saveEditItem()">Save Changes</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="requestItemModal">
-  <div class="modal modal-sm">
-    <div class="modal-title">Request Item</div>
-    <div class="modal-sub" id="reqItemName"></div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:16px" id="reqAvailable"></div>
-    <input type="hidden" id="reqItemId"/>
-    <div class="field-group" style="margin-bottom:12px"><div class="field-label">Quantity Needed</div><input class="field-input" id="reqQty" type="number" value="1" min="1"/></div>
-    <div class="field-group" style="margin-bottom:4px"><div class="field-label">Purpose / Reason <span class="req">*</span></div><textarea class="field-textarea" id="reqPurpose" placeholder="What do you need this for?" style="min-height:70px"></textarea></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('requestItemModal')">Cancel</button>
-      <button class="btn btn-primary" id="reqSubmitBtn" onclick="submitRequest()">Submit Request</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════ HR ADD JOB MODAL ═══════════════ -->
-<div class="modal-overlay" id="addJobModal">
-  <div class="modal modal-lg">
-    <div class="modal-title">New Job Posting</div>
-    <div class="modal-sub">Create a job posting to go through HR approval then Designer to Webflow</div>
-    <div class="field-grid">
-      <div class="field-group full"><div class="field-label">Job Title <span class="req">*</span></div><input class="field-input" id="jpTitle" placeholder="e.g. Senior Marketing Manager"/></div>
-      <div class="field-group"><div class="field-label">Department</div><input class="field-input" id="jpDept" placeholder="e.g. Marketing"/></div>
-      <div class="field-group"><div class="field-label">Job Type</div>
-        <select class="field-select" id="jpJobType"><option value="full-time">Full-time</option><option value="part-time">Part-time</option><option value="contract">Contract</option><option value="internship">Internship</option></select>
-      </div>
-      <div class="field-group"><div class="field-label">Location</div><input class="field-input" id="jpLocation" placeholder="e.g. Bengaluru / Remote"/></div>
-      <div class="field-group"><div class="field-label">Salary Range</div><input class="field-input" id="jpSalary" placeholder="e.g. 8–12 LPA"/></div>
-      <div class="field-group"><div class="field-label">Submitted by</div><input class="field-input" id="jpSubmitter" placeholder="Your name" readonly/></div>
-      <div class="field-group full"><div class="field-label">Job Description <span class="req">*</span></div><textarea class="field-textarea" id="jpDesc" placeholder="Describe the role..." style="min-height:100px"></textarea></div>
-      <div class="field-group full"><div class="field-label">Requirements</div><textarea class="field-textarea" id="jpReq" placeholder="Skills, experience, qualifications..." style="min-height:80px"></textarea></div>
-      <div class="field-group full"><div class="field-label">Responsibilities</div><textarea class="field-textarea" id="jpResp" placeholder="Key responsibilities and deliverables..." style="min-height:80px"></textarea></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('addJobModal')">Cancel</button>
-      <button class="btn btn-primary" id="jpSaveBtn" onclick="saveJobPosting()">Save Job Posting</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════ ADMIN MODALS ═══════════════ -->
-<div class="modal-overlay" id="admCreateModal">
-  <div class="modal modal-sm">
-    <div class="modal-title">Create User</div>
-    <div class="modal-sub">New user will be able to sign in immediately</div>
-    <div class="field-group" style="margin-bottom:12px"><div class="field-label">Full Name</div><input class="field-input" id="admNewName" placeholder="e.g. Priya Sharma"/></div>
-    <div class="field-group" style="margin-bottom:12px"><div class="field-label">Email</div><input class="field-input" type="email" id="admNewEmail" placeholder="priya@qnulabs.com"/></div>
-    <div class="field-group" style="margin-bottom:12px"><div class="field-label">Password</div><input class="field-input" type="password" id="admNewPassword" placeholder="Min 6 characters"/></div>
-    <div class="field-group" style="margin-bottom:12px"><div class="field-label">Role</div>
-      <select class="field-select" id="admNewRole"><option value="writer">Writer</option><option value="seo">SEO Team</option><option value="cmo">CMO</option><option value="designer">Designer</option><option value="hr">HR Executive</option><option value="admin">Admin</option></select>
-    </div>
-    <div class="field-group" style="margin-bottom:4px">
-      <div class="field-label">Department</div>
-      <select class="field-select" id="admNewDept" onchange="toggleCustomDept('admNewDeptCustom',this.value)"><option value="">Select department...</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Sales">Sales</option>
-            <option value="Engineering">Engineering</option>
-            <option value="HR">HR</option>
-            <option value="Leadership">Leadership</option>
-            <option value="Finance">Finance</option>
-            <option value="Operations">Operations</option>
-            <option value="custom">Other (type below)</option></select>
-      <input class="field-input" id="admNewDeptCustom" placeholder="Type department name" style="display:none;margin-top:6px"/>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('admCreateModal')">Cancel</button>
-      <button class="btn btn-primary" id="admCreateBtn" onclick="adminCreateUser()">Create User</button>
-    </div>
-  </div>
-</div>
-<div class="modal-overlay" id="admEditModal">
-  <div class="modal modal-sm">
-    <div class="modal-title">Edit User</div>
-    <input type="hidden" id="admEditId"/>
-    <div class="field-group" style="margin-bottom:12px"><div class="field-label">Full Name</div><input class="field-input" id="admEditName"/></div>
-    <div class="field-group" style="margin-bottom:12px"><div class="field-label">Email (display only)</div><input class="field-input" id="admEditEmail"/></div>
-    <div class="field-group" style="margin-bottom:12px"><div class="field-label">Role</div>
-      <select class="field-select" id="admEditRole"><option value="writer">Writer</option><option value="seo">SEO Team</option><option value="cmo">CMO</option><option value="designer">Designer</option><option value="hr">HR Executive</option><option value="admin">Admin</option></select>
-    </div>
-    <div class="field-group" style="margin-bottom:4px">
-      <div class="field-label">Department</div>
-      <select class="field-select" id="admEditDept" onchange="toggleCustomDept('admEditDeptCustom',this.value)"><option value="">Select department...</option>
-            <optgroup label="── Marketing ──">
-              <option value="Marketing">Marketing (All / CMO)</option>
-              <option value="Marketing - Excellence &amp; Digital">Excellence &amp; Digital Marketing</option>
-              <option value="Marketing - Design &amp; Creative">Design &amp; Creative</option>
-              <option value="Marketing - Content &amp; Thought">Content &amp; Thought</option>
-              <option value="Marketing - Brand &amp; Marcom">Brand + Marcom</option>
-            </optgroup>
-            <option value="Sales">Sales</option>
-            <option value="Engineering">Engineering</option>
-            <option value="HR">HR</option>
-            <option value="Leadership">Leadership</option>
-            <option value="Finance">Finance</option>
-            <option value="Operations">Operations</option>
-            <option value="custom">Other (type below)</option></select>
-      <input class="field-input" id="admEditDeptCustom" placeholder="Type department name" style="display:none;margin-top:6px"/>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('admEditModal')">Cancel</button>
-      <button class="btn btn-primary" id="admEditBtn" onclick="adminSaveEdit()">Save</button>
-    </div>
-  </div>
-</div>
-<div class="modal-overlay" id="admResetModal">
-  <div class="modal modal-sm">
-    <div class="modal-title">Reset Password</div>
-    <div class="modal-sub" id="admResetSub">Set a new password</div>
-    <div class="field-group" style="margin-bottom:4px"><div class="field-label">New Password</div><input class="field-input" type="password" id="admResetPw" placeholder="Min 6 characters"/></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('admResetModal')">Cancel</button>
-      <button class="btn btn-primary" id="admResetBtn" onclick="adminResetPw()">Reset</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"><div class="toast-dot"></div><span id="toastMsg"></span></div>
-
 <script>
 'use strict';
 
@@ -1293,7 +1044,7 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const safeJSON = (s, fb) => {
   if (s === null || s === undefined) return fb;
-  if (typeof s === 'object') return s;  // already parsed (Supabase JSONB)
+  if (typeof s === 'object') return s;
   try { return JSON.parse(s); } catch (_) { return fb; }
 };
 const safeId = (s) => String(s).replace(/[^a-zA-Z0-9]/g,'_');
@@ -1404,6 +1155,8 @@ function setScreen(name) {
   $('v-app').style.display = isLogin ? 'none' : 'grid';
   document.body.style.overflow = '';
   if (!isLogin && SESSION) updateTopbar();
+  const fab=$('chatFab'); if(fab) fab.style.display=isLogin?'none':'flex';
+  const tb=document.getElementById('taskAssignBox'); if(tb) tb.style.display=isLogin?'none':'block';
 }
 
 function updateTopbar() {
@@ -1421,7 +1174,6 @@ function showPage(pageId) {
   if (pg) pg.classList.add('active');
   const si = document.querySelector('.sidebar-item[data-page="'+pageId+'"]');
   if (si) si.classList.add('active');
-  // Load page data
   const loaders = { content:loadContent, projects:loadProjects, inventory:loadInventory, hr:loadHR, admin:loadAdmin, settings:loadSettings };
   if (loaders[pageId]) loaders[pageId]();
 }
@@ -1438,7 +1190,6 @@ function goHome() {
 
 function forceLogout(msg) {
   SESSION = null; try { localStorage.removeItem('mo_session'); } catch (_) {}
-  // Hide the running banner immediately
   const banner=document.getElementById('loginBanner');
   if(banner){banner.classList.remove('show');}
   const track=document.getElementById('bannerTrack');
@@ -1480,7 +1231,6 @@ async function doLogin() {
       user_id:d.user.id, email:d.user.email, access_token:d.access_token, refresh_token:d.refresh_token,
       expires_at:d.expires_at||(Math.floor(Date.now()/1000)+(d.expires_in||3600)),
       role:p.role, full_name:p.full_name,
-      // Supabase returns JSONB as object directly — use as-is, never parse
       module_permissions: (typeof p.module_permissions==='object' && p.module_permissions!==null)
         ? p.module_permissions
         : (p.module_permissions ? JSON.parse(p.module_permissions) : {})
@@ -1490,6 +1240,7 @@ async function doLogin() {
     logActivity('login','Signed in');
     setTimeout(initChatBadge, 2000);
     setTimeout(function(){if(typeof loadLoginBanner==='function')loadLoginBanner();},3000);
+    initAutoLogout();
     sbFetch('user_profiles?id=eq.'+SESSION.user_id,{method:'PATCH',body:JSON.stringify({last_login:new Date().toISOString()})}).catch(()=>{});
     buildSidebar();
     setScreen('app');
@@ -1500,7 +1251,7 @@ async function doLogin() {
 }
 
 /* ═══════════════════════════════════════════════════
-   SIDEBAR — built dynamically from permissions
+   SIDEBAR
 ═══════════════════════════════════════════════════ */
 const MODULES = [
   { id:'content',  label:'Content Approval', icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>' },
@@ -1521,7 +1272,7 @@ function buildSidebar() {
   MODULES.forEach(m => {
     const hasPerm = isAdmin || perms[m.id] || m.alwaysShow;
     if (!hasPerm && !m.coming) return;
-    if (!hasPerm && m.coming) return; // coming soon only shown if permitted
+    if (!hasPerm && m.coming) return;
     if (m.coming) {
       html += `<div class="sidebar-coming" title="${esc(m.label)} (Coming soon)"><span class="si-icon">${m.icon}</span><span class="si-label">${esc(m.label)}<span class="coming-tag">Soon</span></span></div>`;
     } else {
@@ -1575,9 +1326,7 @@ document.addEventListener('click', e => {
 });
 setInterval(loadNotifications, 60000);
 
-/* ═══════════════════════════════════════════════════
-   WORD / EXPORT HELPERS
-═══════════════════════════════════════════════════ */
+
 function saveBlob(content, type, filename) {
   const blob = new Blob([content], {type});
   const a = document.createElement('a');
@@ -2706,19 +2455,28 @@ async function saveProjectTask() {
   finally{btn.disabled=false;btn.textContent='Add Task';}
 }
 
+function onKPICategoryChange(val) {
+  var wrap=$('pkOtherWrap');
+  if(wrap) wrap.style.display=(val==='__other__')?'block':'none';
+}
+
 async function saveProjectKPI() {
   if(!activeProject) return;
-  const title=$('pkKPITitle').value.trim();
-  if(!title){toast('Please enter a KPI title.','error');return;}
+  const cat=$('pkKPICategory')?.value;
+  if(!cat){toast('Please select a KPI.','error');return;}
+  const title=(cat==='__other__'?($('pkKPITitle')?.value.trim()||''):cat);
+  if(!title){toast('Please enter a KPI name.','error');return;}
   const btn=$('pkSaveBtn'); btn.disabled=true; btn.textContent='Saving...';
   try {
     await dbInsert('project_kpis',{
-      project_id:activeProject.id, title, kpi_type:$('pkKPIType').value,
-      target_value:parseFloat($('pkTarget').value)||0, current_value:parseFloat($('pkCurrent').value)||0,
-      unit:$('pkUnit').value, owner_name:$('pkOwner').value, due_date:$('pkDue')?.value||null
+      project_id:activeProject.id, title, kpi_type:'individual',
+      target_value:0, current_value:0, unit:'', owner_name:$('pkOwner')?.value||''
     });
     toast('KPI added.');
-    $('pkKPITitle').value=''; $('pkTarget').value=''; $('pkCurrent').value=''; $('pkUnit').value='';
+    if($('pkKPICategory')) $('pkKPICategory').value='';
+    if($('pkKPITitle')) $('pkKPITitle').value='';
+    if($('pkOwner')) $('pkOwner').value='';
+    var w=$('pkOtherWrap'); if(w) w.style.display='none';
     await loadProjectKPIs(activeProject.id);
   } catch(e){toast('Could not add KPI: '+e.message,'error');}
   finally{btn.disabled=false;btn.textContent='Add KPI';}
@@ -4917,6 +4675,7 @@ function toggleSidebar() {
   if(!sb) return;
   sb.classList.toggle('expanded');
 }
+
 </script>
 </body>
 </html>
