@@ -394,8 +394,8 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
 .chat-bubble-wrap.theirs{align-self:flex-start;align-items:flex-start;}
 .chat-bubble-sender{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:2px;padding:0 4px;}
 .chat-bubble{padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.5;position:relative;word-break:break-word;}
-.chat-bubble-wrap.mine .chat-bubble{background:var(--accent);color:#fff;border-bottom-right-radius:4px;}
-.chat-bubble-wrap.theirs .chat-bubble{background:var(--surface2);color:var(--text);border-bottom-left-radius:4px;}
+.chat-bubble-wrap.mine .chat-bubble{background:#F5EFE6;color:#1a1a1a;border-bottom-right-radius:4px;border:1px solid #E8DDD0;}
+.chat-bubble-wrap.theirs .chat-bubble{background:var(--surface);color:var(--text);border-bottom-left-radius:4px;border:1px solid var(--border);}
 .chat-bubble-meta{display:flex;align-items:center;gap:5px;margin-top:2px;padding:0 4px;}
 .chat-bubble-time{font-size:9px;color:var(--muted);}
 .chat-read{font-size:9px;color:var(--blue);font-weight:600;}
@@ -490,3 +490,10 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle;}
 .banner-close{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:#fff;cursor:pointer;font-size:13px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:1;}
 .banner-close:hover{background:rgba(255,255,255,0.3);}
 @keyframes bannerScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+/* ── @mention ── */
+.chat-mention{background:#EFF6FF;color:#2563EB;font-weight:600;border-radius:4px;padding:0 3px;}
+.chat-mention.me{background:#FEF3C7;color:#92400E;}
+.mention-picker{position:absolute;bottom:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-lg);max-height:180px;overflow-y:auto;z-index:100;display:none;}
+.mention-item{padding:8px 12px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;}
+.mention-item:hover{background:var(--surface2);}
+.mention-item-avatar{width:24px;height:24px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;}
