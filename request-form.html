@@ -120,6 +120,18 @@ textarea{resize:vertical;min-height:88px}
   </div>
 </div>
 
+
+<!-- ══ TRACK REQUEST ══ -->
+<div class="card" id="trackCard" style="margin-top:20px;max-width:620px;width:100%">
+  <div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:4px">Track Your Request</div>
+  <div style="font-size:12px;color:#888;margin-bottom:14px">Enter your token to check the current status.</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <input id="trackTokenInput" placeholder="e.g. CR-20250315-AB3X" style="flex:1;min-width:180px;padding:10px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;text-transform:uppercase"/>
+    <button onclick="trackRequest()" style="padding:10px 20px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap">Check Status</button>
+  </div>
+  <div id="trackResult" style="margin-top:14px"></div>
+</div>
+
 <script>
 const SUPA_URL='https://imtoahbuliuywiljxvpg.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo';
@@ -217,6 +229,85 @@ function resetForm(){
   document.getElementById('submitBtn').disabled=false;
   document.getElementById('submitBtn').textContent='Submit Request';
 }
+
+/* ── Track request by token ── */
+async function trackRequest() {
+  const token = (document.getElementById('trackTokenInput')?.value||'').trim().toUpperCase();
+  const out = document.getElementById('trackResult');
+  if(!token) { out.innerHTML='<div style="color:#DC2626;font-size:12px">Please enter your token.</div>'; return; }
+  out.innerHTML='<div style="font-size:12px;color:#888">Looking up...</div>';
+  try {
+    const res = await fetch(SUPA_URL+'/rest/v1/collateral_requests?token=eq.'+encodeURIComponent(token)+'&select=token,name,status,collaterals_needed,deadline,assigned_to_name,rejection_reason,created_at,project_id', {
+      headers: { apikey: SUPA_KEY, 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+    if(!data||!data.length) {
+      out.innerHTML='<div style="color:#DC2626;font-size:13px;padding:12px;background:#FEF2F2;border-radius:8px">No request found for token <strong>'+token+'</strong>. Please check and try again.</div>';
+      return;
+    }
+    const r = data[0];
+    const SL = {pending:'Pending Review',accepted:'Accepted',assigned:'Assigned to Team',inprogress:'In Progress',done:'Completed',rejected:'Rejected'};
+    const SC = {pending:'#D97706',accepted:'#2563EB',assigned:'#2563EB',inprogress:'#2563EB',done:'#16A34A',rejected:'#DC2626'};
+    const col = SC[r.status]||'#888';
+    const statusLabel = SL[r.status]||r.status;
+    const deadline = r.deadline ? new Date(r.deadline).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+    const submitted = r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+
+    // Build timeline
+    const steps = [
+      {key:'pending',   label:'Submitted',      done: true},
+      {key:'accepted',  label:'Under Review',    done: ['accepted','assigned','inprogress','done'].includes(r.status)},
+      {key:'assigned',  label:'Assigned to Team',done: ['assigned','inprogress','done'].includes(r.status)},
+      {key:'inprogress',label:'Work in Progress',done: ['inprogress','done'].includes(r.status)},
+      {key:'done',      label:'Completed',       done: r.status==='done'},
+    ];
+    const timelineHTML = r.status==='rejected' ? '' :
+      '<div style="display:flex;align-items:center;gap:0;margin:16px 0;overflow-x:auto;padding-bottom:4px">'
+      + steps.map((s,i)=>{
+          const active = s.key===r.status;
+          const c = s.done ? '#16A34A' : '#D1D5DB';
+          const tc = s.done ? '#16A34A' : '#9CA3AF';
+          return (i>0?'<div style="flex:1;height:2px;background:'+c+';min-width:16px"></div>':'')
+            +'<div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:60px">'
+            +'<div style="width:22px;height:22px;border-radius:50%;background:'+(s.done?c:'#fff')+';border:2px solid '+c+';display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700">'
+            +(s.done?'&#10003;':'')+'</div>'
+            +'<div style="font-size:10px;color:'+tc+';font-weight:'+(active?'700':'400')+';text-align:center;line-height:1.3">'+s.label+'</div>'
+            +'</div>';
+        }).join('')
+      +'</div>';
+
+    out.innerHTML =
+      '<div style="background:#F9FAFB;border:1.5px solid #E5E7EB;border-radius:12px;padding:16px 18px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px">'
+      +'<span style="font-family:monospace;font-weight:800;font-size:16px;color:#E8450A;letter-spacing:1px">'+r.token+'</span>'
+      +'<span style="background:'+col+'22;color:'+col+';border:1px solid '+col+'44;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px">'+statusLabel+'</span>'
+      +'</div>'
+      + timelineHTML
+      +'<div style="font-size:13px;margin-bottom:6px"><strong>Request:</strong> '+escHtml(r.collaterals_needed)+'</div>'
+      +'<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#666;margin-bottom:'+(r.assigned_to_name||r.rejection_reason?'10':'0')+'px">'
+      +'<span>Submitted: '+submitted+'</span>'
+      +'<span>Deadline: '+deadline+'</span>'
+      +'</div>'
+      +(r.assigned_to_name?'<div style="font-size:13px;color:#2563EB;margin-top:6px">Assigned to: <strong>'+escHtml(r.assigned_to_name)+'</strong></div>':'')
+      +(r.status==='rejected'&&r.rejection_reason?'<div style="font-size:12px;color:#DC2626;margin-top:8px;padding:10px;background:#FEF2F2;border-radius:8px;border-left:3px solid #DC2626">Reason: '+escHtml(r.rejection_reason)+'</div>':'')
+      +(r.status==='done'?'<div style="font-size:13px;color:#16A34A;margin-top:8px;font-weight:600">Your collaterals are ready. Please check with the marketing team for delivery.</div>':'')
+      +'</div>';
+  } catch(e) {
+    out.innerHTML='<div style="color:#DC2626;font-size:12px">Could not look up: '+e.message+'</div>';
+  }
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Allow pressing Enter in the token input
+document.addEventListener('DOMContentLoaded', function() {
+  const inp = document.getElementById('trackTokenInput');
+  if(inp) inp.addEventListener('keydown', function(e){ if(e.key==='Enter') trackRequest(); });
+  // Auto-uppercase as user types
+  if(inp) inp.addEventListener('input', function(){ this.value=this.value.toUpperCase(); });
+});
 </script>
 </body>
 </html>
