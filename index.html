@@ -1324,7 +1324,7 @@ function goHome() {
   if (SESSION.role === 'admin') showPage('admin');
   else {
     const perms = SESSION.module_permissions || {};
-    const first = ['content','projects','crm','analytics','reports','inventory','hr'].find(m => perms[m]);
+    const first = ['content','projects','crm','analytics','reports','inventory','hr','requests'].find(m => perms[m]);
     if (first) showPage(first); else showPage('no-access');
   }
 }
@@ -2172,11 +2172,40 @@ async function loadProjects() {
 }
 
 function renderProjectStats() {
-  const s=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
-  s('ps0',projects.length);
-  s('ps1',projects.filter(p=>p.status==='inprogress').length);
-  s('ps2',projects.filter(p=>{const d=p.due_date;return d&&daysUntil(d)<=3&&daysUntil(d)>=0&&p.status!=='done';}).length);
-  s('ps3',projects.filter(p=>p.status==='done').length);
+  // Fetch fresh status from DB so counts are always accurate
+  sbFetch('projects?select=id,status,due_date').then(function(fresh){
+    if(fresh) projects.forEach(function(p){
+      const f=fresh.find(function(x){return x.id===p.id;});
+      if(f) p.status=f.status;
+    });
+    _renderProjectStatCards(fresh||projects);
+  }).catch(function(){_renderProjectStatCards(projects);});
+}
+
+function _renderProjectStatCards(list) {
+  const total  = list.length;
+  const inprog = list.filter(function(p){return p.status==='inprogress';}).length;
+  const dueSoon= list.filter(function(p){var d=p.due_date;return d&&daysUntil(d)<=3&&daysUntil(d)>=0&&p.status!=='done';}).length;
+  const done   = list.filter(function(p){return p.status==='done';}).length;
+  function setCard(id,val,filter,label){
+    var el=$(id); if(!el) return;
+    el.textContent=val;
+    var card=el.closest('.stat-card'); if(!card) return;
+    card.style.cursor='pointer';
+    card.title='Click to show: '+label;
+    card.onclick=function(){
+      document.querySelectorAll('.stat-card').forEach(function(c){c.classList.remove('stat-active');});
+      card.classList.add('stat-active');
+      applyProjectFilter(filter);
+    };
+  }
+  setCard('ps0',total,   'all',              'All Projects');
+  setCard('ps1',inprog,  'status:inprogress','In Progress');
+  setCard('ps2',dueSoon, 'status:duesoon',   'Due Soon');
+  setCard('ps3',done,    'status:done',       'Completed');
+  var cardMap={'all':'ps0','status:inprogress':'ps1','status:duesoon':'ps2','status:done':'ps3'};
+  var activeId=cardMap[projectFilterMode];
+  if(activeId){var el=$(activeId);if(el&&el.closest('.stat-card'))el.closest('.stat-card').classList.add('stat-active');}
 }
 
 function taskCountHTML(pid) {
@@ -2196,7 +2225,15 @@ function renderKanban() {
   const c=$('projectContent'); if(!c) return;
   let html='<div class="kanban-board">';
   PROJECT_STATUSES.forEach(status=>{
-    const cols=projects.filter(p=>(projectFilter==='all'||p.type===projectFilter)&&p.status===status);
+    const cols=projects.filter(p=>{
+      if(projectFilter!=='all'&&p.type!==projectFilter) return false;
+      if(projectFilterMode&&projectFilterMode.startsWith('status:')){
+        const sk=projectFilterMode.slice(7);
+        if(sk==='duesoon'){const d=p.due_date;return p.status===status&&d&&daysUntil(d)<=3&&daysUntil(d)>=0&&p.status!=='done';}
+        return p.status===status&&p.status===sk;
+      }
+      return p.status===status;
+    });
     html+=`<div class="kanban-col"><div class="kanban-col-header"><div class="kanban-col-title">${STATUS_LABELS[status]}</div><span class="kanban-col-count">${cols.length}</span></div><div class="kanban-cards">`;
     cols.forEach(p=>{
       const d=p.due_date, days=daysUntil(d);
@@ -2239,6 +2276,12 @@ function renderProjectTable() {
       +'<button class="btn btn-secondary btn-sm" style="font-size:12px" onclick="toggleProjectDeleteMode()">Cancel</button>'
       +'</span>';
   }
+  // Show "Clear filter" pill when a stat filter is active
+  if(projectFilterMode&&projectFilterMode.startsWith('status:')){
+    const statusLabels2={'status:inprogress':'In Progress','status:done':'Completed','status:duesoon':'Due Soon'};
+    actionBar+='<button class="btn btn-secondary btn-sm" onclick="applyProjectFilter(&quot;all&quot;)" style="font-size:11px;display:flex;align-items:center;gap:4px">'
+      +'Showing: <strong>'+(statusLabels2[projectFilterMode]||projectFilterMode)+'</strong> &nbsp;&#10005;</button>';
+  }
   actionBar+='<div style="display:flex;align-items:center;gap:6px;margin-left:auto">'
   +'<label style="font-size:11px;color:var(--muted);font-weight:600">Sort:</label>'
   +'<select id="projSortSelect" onchange="applyProjectSort(this.value)" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface)">'
@@ -2250,6 +2293,7 @@ function renderProjectTable() {
   +'<option value="status">Status</option>'
   +'</select>'
   +'<button class="btn btn-secondary btn-sm" onclick="downloadProjectsExcel()" style="font-size:12px">Download Excel</button>'
+  +'<button class="btn btn-secondary btn-sm" onclick="downloadSampleProjectExcel()" style="font-size:12px">Sample Excel</button>'
   +'</div></div>';
 
   var projList=sortedProjects(projects);
@@ -2287,6 +2331,14 @@ function renderProjectTable() {
       const ownerName=projectFilterMode.slice(6).toLowerCase();
       return (p.owner_name||'').toLowerCase()===ownerName
         ||tasks.some(function(t){return(t.assignee_name||'').toLowerCase()===ownerName;});
+    }
+    if(projectFilterMode.startsWith('status:')){
+      const statusKey=projectFilterMode.slice(7);
+      if(statusKey==='duesoon'){
+        const d=p.due_date;
+        return d&&daysUntil(d)<=3&&daysUntil(d)>=0&&p.status!=='done';
+      }
+      return p.status===statusKey;
     }
     return true;
   });
@@ -2770,6 +2822,23 @@ async function saveNewProject() {
 
 
 
+function downloadSampleProjectExcel() {
+  if(typeof XLSX==='undefined'){toast('XLSX library not loaded','error');return;}
+  var rows=[
+    ['Theme / Project','Item','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Detailed Comments and Notes','Source'],
+    ['Q1 Brand Campaign','Design social media kit','inprogress','high','Aditya Vastrad','Brand Awareness & Visibility','','','All formats needed by 15 Mar','Confluence'],
+    ['Q1 Brand Campaign','Write blog post','todo','medium','Md Bilal','Content Production & Quality','','','SEO-optimised 1200 words','Confluence'],
+    ['Partner Summit 2025','Design event banners','todo','high','Designer Name','Event Reach & Engagement','','','3 sizes: 3x6ft 2x4ft 1x2ft','Briefing doc'],
+    ['Partner Summit 2025','Create invite emailer','todo','high','Content Name','','Integrated Marketing & Campaign Effectiveness','','HTML emailer 600px wide','Briefing doc'],
+  ];
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[22,30,12,10,18,30,20,20,45,20].map(function(w){return{wch:w};});
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,'Weekly Tracker',ws);
+  XLSX.writeFile(wb,'QNu_Project_Tracker_Sample.xlsx');
+  toast('Sample Excel downloaded.');
+}
+
 function downloadProjectsExcel(){
   if(typeof XLSX==='undefined'){toast('XLSX library not loaded','error');return;}
   const rows=[['Theme / Project','Item','Status','Priority','Primary Owner','KPI','Detailed Comments and Notes','Source']];
@@ -2827,6 +2896,11 @@ function sortedProjects(list) {
 
 function applyProjectFilter(val) {
   projectFilterMode = val || 'all';
+  // Highlight active stat card
+  document.querySelectorAll('.stat-card').forEach(c=>c.classList.remove('active'));
+  const cardMap={'all':'ps0','status:inprogress':'ps1','status:duesoon':'ps2','status:done':'ps3'};
+  const activeId=cardMap[projectFilterMode];
+  if(activeId){const el=$(activeId);if(el)el.closest('.stat-card').classList.add('active');}
   if(projectView==='kanban') renderKanban(); else renderProjectTable();
 }
 
@@ -3772,7 +3846,8 @@ function renderAdminUsers() {
     {id:'reports',label:'Monthly Reports'},
     {id:'inventory',label:'Inventory (View)'},
     {id:'inventory_write',label:'Inventory (Write)'},
-    {id:'hr',label:'HR Module'}
+    {id:'hr',label:'HR Module'},
+    {id:'requests',label:'Requests'}
   ];
   const rColors={writer:'var(--accent)',seo:'var(--yellow)',cmo:'var(--purple)',designer:'var(--blue)',admin:'#1A1A1A',hr:'var(--teal)'};
   let h='';
@@ -5149,6 +5224,8 @@ function renderCRCard(r,isPriv){
   const isCMAdmin=SESSION?.role==='admin'||SESSION?.role==='cmo';
 
   let actions='';
+  const canReject = (isCMAdmin || r.assigned_to===SESSION?.user_id) && r.status!=='rejected' && r.status!=='done';
+
   if(isCMAdmin&&r.status==='pending'){
     actions='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">'
       +'<button class="btn btn-green btn-sm" onclick="acceptCR('+r.id+')">Accept</button>'
@@ -5157,11 +5234,25 @@ function renderCRCard(r,isPriv){
   } else if(isCMAdmin&&r.status==='accepted'){
     actions='<div style="margin-top:10px">'
       +'<div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Assign to Team Member</div>'
+      +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
       +'<select class="field-select" style="font-size:12px;min-width:200px" id="crAssign_'+r.id+'" onchange="assignCR('+r.id+',this.value)">'
-      +'<option value="">Select person...</option></select></div>';
+      +'<option value="">Select person...</option></select>'
+      +'<button class="btn btn-secondary btn-sm" style="color:var(--accent);flex-shrink:0" onclick="openRejectCR('+r.id+')">Reject</button>'
+      +'</div></div>';
+  } else if(isCMAdmin&&(r.status==='assigned'||r.status==='inprogress')){
+    // Admin/CMO can still reject after assigning
+    actions='<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">'
+      +'<button class="btn btn-secondary btn-sm" style="color:var(--accent)" onclick="openRejectCR('+r.id+')">Reject</button>'
+      +'</div>';
   }
   if(r.assigned_to===SESSION?.user_id&&r.status==='assigned'){
-    actions+='<div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="openConvertToProject('+r.id+')">Convert to Project &#8594;</button></div>';
+    actions+='<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
+      +'<button class="btn btn-primary btn-sm" onclick="openConvertToProject('+r.id+')">Convert to Project &#8594;</button>'
+      +(isCMAdmin?'':'<button class="btn btn-secondary btn-sm" style="color:var(--accent)" onclick="openRejectCR('+r.id+')">Reject</button>')
+      +'</div>';
+  } else if(r.assigned_to===SESSION?.user_id&&r.status==='inprogress'){
+    // Assigned user can still reject even after converting
+    if(!isCMAdmin) actions+='<div style="margin-top:8px"><button class="btn btn-secondary btn-sm" style="color:var(--accent)" onclick="openRejectCR('+r.id+')">Reject</button></div>';
   }
   if(r.project_id&&(r.status==='inprogress'||r.status==='done')){
     actions+='<div style="margin-top:8px;font-size:12px;color:var(--green)">&#10003; Project created <button class="btn btn-secondary btn-xs" onclick="showPage(&quot;projects&quot;)">View in Tracker</button></div>';
