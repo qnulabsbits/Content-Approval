@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>QNu Labs — Collateral Request</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#F4F4F5;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px 64px}
+.card{background:#fff;border-radius:16px;box-shadow:0 2px 24px rgba(0,0,0,0.08);padding:36px 40px;width:100%;max-width:620px}
+@media(max-width:600px){.card{padding:24px 18px}}
+.logo-row{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.logo-text{font-size:18px;font-weight:800;color:#1a1a1a}
+.logo-sub{font-size:12px;color:#888;font-weight:400;margin-top:1px}
+h1{font-size:22px;font-weight:800;color:#1a1a1a;margin-bottom:4px}
+.subtitle{font-size:13px;color:#888;margin-bottom:28px}
+.field{margin-bottom:16px}
+label{display:block;font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+label span.req{color:#E8450A;margin-left:2px}
+input,textarea,select{width:100%;padding:10px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;color:#1a1a1a;background:#fff;transition:border .15s}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#E8450A;box-shadow:0 0 0 3px rgba(232,69,10,0.08)}
+textarea{resize:vertical;min-height:88px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:480px){.grid-2{grid-template-columns:1fr}}
+.btn{display:block;width:100%;padding:13px;background:#E8450A;color:#fff;border:none;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s;font-family:'Inter',sans-serif;margin-top:8px}
+.btn:hover{background:#C73A09}
+.btn:disabled{background:#ccc;cursor:not-allowed}
+.attach-label{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px dashed #D1D5DB;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:#555;transition:all .15s;width:100%;justify-content:center}
+.attach-label:hover{border-color:#E8450A;color:#E8450A}
+.attach-name{font-size:11px;color:#888;text-align:center;margin-top:4px}
+.hint{font-size:11px;color:#aaa;margin-top:3px}
+.success-box{text-align:center;padding:16px 0}
+.token-display{background:#FFF3EE;border:2px dashed #E8450A;border-radius:12px;padding:20px;margin:20px 0}
+.token-val{font-size:32px;font-weight:900;letter-spacing:4px;color:#E8450A;font-family:monospace}
+.err{color:#DC2626;font-size:12px;margin-top:4px;display:none}
+.err.show{display:block}
+.divider{border:none;border-top:1.5px solid #F0F0F0;margin:20px 0}
+</style>
+</head>
+<body>
+
+<div class="card" id="formCard">
+  <div class="logo-row">
+    <div>
+      <div class="logo-text">Q&rarr;NU <span style="color:#E8450A">|</span> One View</div>
+      <div class="logo-sub">Marketing Collateral Request</div>
+    </div>
+  </div>
+  <h1>Request Collaterals</h1>
+  <p class="subtitle">Fill in the details below and our marketing team will get back to you.</p>
+  <hr class="divider"/>
+
+  <div class="grid-2">
+    <div class="field">
+      <label>Your Name <span class="req">*</span></label>
+      <input id="f_name" placeholder="Full name" autocomplete="name"/>
+      <div class="err" id="e_name">Required</div>
+    </div>
+    <div class="field">
+      <label>Department <span class="req">*</span></label>
+      <input id="f_dept" placeholder="e.g. Sales, HR, Operations"/>
+      <div class="err" id="e_dept">Required</div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="field">
+      <label>Email <span class="req">*</span></label>
+      <input id="f_email" type="email" placeholder="you@qnulabs.com" autocomplete="email"/>
+      <div class="err" id="e_email">Valid email required</div>
+    </div>
+    <div class="field">
+      <label>Phone</label>
+      <input id="f_phone" type="tel" placeholder="+91 XXXXX XXXXX"/>
+    </div>
+  </div>
+  <div class="field">
+    <label>Collaterals Needed <span class="req">*</span></label>
+    <textarea id="f_collaterals" placeholder="e.g. Brochures ×100, Roll-up banners ×2, Social media creatives ×5, Name badges ×50..."></textarea>
+    <div class="err" id="e_collaterals">Required</div>
+  </div>
+  <div class="grid-2">
+    <div class="field">
+      <label>Needed By (Deadline) <span class="req">*</span></label>
+      <input id="f_deadline" type="date"/>
+      <div class="err" id="e_deadline">Required</div>
+    </div>
+    <div class="field">
+      <label>Event / Purpose</label>
+      <input id="f_event" placeholder="e.g. QNu Partner Summit 2025"/>
+    </div>
+  </div>
+  <div class="field">
+    <label>Additional Notes / Instructions</label>
+    <textarea id="f_notes" style="min-height:70px" placeholder="Brand guidelines to follow, specific dimensions, return date if applicable..."></textarea>
+  </div>
+  <div class="field">
+    <label>Attach Layout or Reference File</label>
+    <label class="attach-label" for="f_file">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+      Choose file
+      <input type="file" id="f_file" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.zip" style="display:none" onchange="onFileSelect(this)"/>
+    </label>
+    <div class="attach-name" id="f_file_name">No file selected &nbsp;·&nbsp; PDF, Word, PPT, images or ZIP, max 10 MB</div>
+  </div>
+  <div class="err" id="e_global"></div>
+  <button class="btn" id="submitBtn" onclick="submitForm()">Submit Request</button>
+  <p style="font-size:11px;color:#aaa;text-align:center;margin-top:12px">Your token will be shown after submission. You will receive updates at the email provided.</p>
+</div>
+
+<div class="card" id="successCard" style="display:none">
+  <div class="success-box">
+    <div style="font-size:48px;margin-bottom:12px">✅</div>
+    <h1 style="margin-bottom:6px">Request Submitted!</h1>
+    <p style="font-size:14px;color:#666;margin-bottom:4px">Your request has been sent to the QNu Labs Marketing team for review.</p>
+    <p style="font-size:13px;color:#888">You will receive an update at <strong id="confirmedEmail"></strong> once the request is accepted and assigned.</p>
+    <div class="token-display">
+      <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Your Request Token</div>
+      <div class="token-val" id="confirmedToken"></div>
+      <div style="font-size:12px;color:#888;margin-top:6px">Save this token to track your request status</div>
+    </div>
+    <button class="btn" style="max-width:280px;margin:0 auto" onclick="resetForm()">Submit Another Request</button>
+  </div>
+</div>
+
+<script>
+const SUPA_URL='https://imtoahbuliuywiljxvpg.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo';
+const BUCKET='request-attachments';
+let selectedFile=null;
+
+function onFileSelect(input){
+  const f=input.files[0];
+  if(!f){selectedFile=null;document.getElementById('f_file_name').textContent='No file selected';return;}
+  if(f.size>10*1024*1024){alert('File too large (max 10 MB)');input.value='';selectedFile=null;return;}
+  selectedFile=f;
+  document.getElementById('f_file_name').textContent=f.name+' ('+(f.size/1024).toFixed(0)+' KB)';
+}
+
+function showErr(id,show){
+  const el=document.getElementById(id);
+  if(el) el.classList.toggle('show',show);
+}
+function g(id){return (document.getElementById(id)?.value||'').trim();}
+
+async function submitForm(){
+  const name=g('f_name'),dept=g('f_dept'),email=g('f_email');
+  const collaterals=g('f_collaterals'),deadline=g('f_deadline');
+  let ok=true;
+  showErr('e_name',!name);     if(!name) ok=false;
+  showErr('e_dept',!dept);     if(!dept) ok=false;
+  showErr('e_email',!email||!email.includes('@')); if(!email||!email.includes('@')) ok=false;
+  showErr('e_collaterals',!collaterals); if(!collaterals) ok=false;
+  showErr('e_deadline',!deadline);       if(!deadline) ok=false;
+  if(!ok) return;
+
+  const btn=document.getElementById('submitBtn');
+  btn.disabled=true; btn.textContent='Submitting...';
+  const errEl=document.getElementById('e_global');
+  errEl.classList.remove('show');
+
+  try{
+    // Upload file if any
+    let attachUrl=null;
+    if(selectedFile){
+      const ext=selectedFile.name.split('.').pop().toLowerCase();
+      const path='attachments/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
+      const up=await fetch(SUPA_URL+'/storage/v1/object/'+BUCKET+'/'+path,{
+        method:'POST',
+        headers:{apikey:SUPA_KEY,'Content-Type':selectedFile.type||'application/octet-stream','x-upsert':'true'},
+        body:selectedFile
+      });
+      if(up.ok) attachUrl=SUPA_URL+'/storage/v1/object/public/'+BUCKET+'/'+path;
+    }
+
+    // Generate token
+    const now=new Date();
+    const dp=now.getFullYear()+(now.getMonth()+1).toString().padStart(2,'0')+now.getDate().toString().padStart(2,'0');
+    const token='CR-'+dp+'-'+Math.random().toString(36).toUpperCase().slice(2,6);
+
+    // Insert record
+    const res=await fetch(SUPA_URL+'/rest/v1/collateral_requests',{
+      method:'POST',
+      headers:{apikey:SUPA_KEY,'Content-Type':'application/json',Prefer:'return=representation'},
+      body:JSON.stringify({
+        token,name,department:dept,email,
+        phone:g('f_phone')||null,
+        collaterals_needed:collaterals,
+        deadline,
+        event_name:g('f_event')||null,
+        notes:g('f_notes')||null,
+        attachment_url:attachUrl,
+        submitted_by:null,
+        status:'pending'
+      })
+    });
+    if(!res.ok){const e=await res.json();throw new Error(e.message||'Submission failed');}
+
+    // Show success
+    document.getElementById('confirmedToken').textContent=token;
+    document.getElementById('confirmedEmail').textContent=email;
+    document.getElementById('formCard').style.display='none';
+    document.getElementById('successCard').style.display='';
+
+  }catch(e){
+    errEl.textContent='Could not submit: '+e.message;
+    errEl.classList.add('show');
+    btn.disabled=false; btn.textContent='Submit Request';
+  }
+}
+
+function resetForm(){
+  ['f_name','f_dept','f_email','f_phone','f_collaterals','f_deadline','f_event','f_notes'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  selectedFile=null;
+  document.getElementById('f_file_name').textContent='No file selected';
+  document.getElementById('formCard').style.display='';
+  document.getElementById('successCard').style.display='none';
+  document.getElementById('submitBtn').disabled=false;
+  document.getElementById('submitBtn').textContent='Submit Request';
+}
+</script>
+</body>
+</html>
