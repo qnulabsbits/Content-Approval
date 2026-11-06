@@ -298,7 +298,42 @@
     </div>
 
     <!-- ═══ SETTINGS PAGE ═══ -->
-    <div class="page" id="pg-settings">
+    <div id="pg-requests" class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Collateral Requests</div>
+      <div class="page-sub">Review, assign and track incoming collateral requests.</div>
+    </div>
+    <div class="page-actions" id="reqPageActions"></div>
+  </div>
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px">
+    <button class="req-tab active" data-tab="all"      onclick="switchReqTab('all')">All Requests</button>
+    <button class="req-tab"        data-tab="assigned" onclick="switchReqTab('assigned')">Assigned to Me</button>
+    <button class="req-tab"        data-tab="mine"     onclick="switchReqTab('mine')" id="reqTabMine">My Submissions</button>
+  </div>
+  <div id="reqAllSection">
+    <div id="reqFilterBar" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+      <select class="field-select" style="font-size:12px;width:auto" onchange="filterCRByStatus(this.value)">
+        <option value="">All statuses</option>
+        <option value="pending">Pending</option>
+        <option value="accepted">Accepted</option>
+        <option value="assigned">Assigned</option>
+        <option value="inprogress">In Progress</option>
+        <option value="done">Done</option>
+        <option value="rejected">Rejected</option>
+      </select>
+    </div>
+    <div id="reqAllList"><div class="loading-row"><span class="spinner"></span></div></div>
+  </div>
+  <div id="reqAssignedSection" style="display:none">
+    <div id="reqAssignedList"><div class="loading-row"><span class="spinner"></span></div></div>
+  </div>
+  <div id="reqMineSection" style="display:none">
+    <div id="reqMineList"><div class="loading-row"><span class="spinner"></span></div></div>
+  </div>
+</div>
+
+<div class="page" id="pg-settings">
       <div class="page-header">
         <div>
           <div class="page-title">My Settings</div>
@@ -1038,6 +1073,91 @@
   </div>
 </div>
 
+<!-- ══ REJECT REQUEST MODAL ══ -->
+<div class="modal-overlay" id="rejectCRModal">
+  <div class="modal modal-sm">
+    <div class="modal-title">Reject Request</div>
+    <input type="hidden" id="rejectCRId"/>
+    <div class="field-group" style="margin-bottom:12px">
+      <div class="field-label">Reason for Rejection <span class="req">*</span></div>
+      <textarea class="field-textarea" id="rejectCRReason" placeholder="Explain why this request is being rejected..." style="min-height:90px"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('rejectCRModal')">Cancel</button>
+      <button class="btn btn-primary" id="rejectCRBtn" onclick="submitCRRejection()">Confirm Rejection</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONVERT TO PROJECT MODAL ══ -->
+<div class="modal-overlay" id="convertToProjectModal">
+  <div class="modal modal-lg">
+    <div class="modal-title">Convert to Project</div>
+    <div class="modal-sub" id="ctpRequestInfo"></div>
+    <input type="hidden" id="ctpCRId"/>
+    <div class="field-grid" style="margin-bottom:16px">
+      <div class="field-group full"><div class="field-label">Project Title <span class="req">*</span></div><input class="field-input" id="ctpTitle" placeholder="Project name"/></div>
+      <div class="field-group"><div class="field-label">Owner / Assigned To</div><input class="field-input" id="ctpOwner" placeholder="Owner name" list="ctpOwnerList"/><datalist id="ctpOwnerList"></datalist></div>
+      <div class="field-group"><div class="field-label">Due Date <span class="req">*</span></div><input class="field-date" id="ctpDueDate" type="date"/></div>
+      <div class="field-group"><div class="field-label">Priority</div><select class="field-select" id="ctpPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>
+      <div class="field-group full">
+        <div class="field-label">KPI</div>
+        <select class="field-select" id="ctpKPI" onchange="onCtpKPIChange(this.value)" style="font-size:13px">
+          <option value="">Select KPI...</option>
+          <optgroup label="1. Brand, Marcom &amp; Event">
+            <option>Brand Awareness &amp; Visibility</option><option>Integrated Marketing &amp; Campaign Effectiveness</option>
+            <option>Event Reach &amp; Engagement</option><option>Corporate &amp; Media Visibility</option><option>Brand Reputation &amp; Consistency</option>
+          </optgroup>
+          <optgroup label="2. Digital &amp; Marketing Excellence">
+            <option>Digital Presence &amp; Engagement</option><option>Demand Generation &amp; Lead Conversion</option>
+            <option>Marketing Pipeline Contribution</option><option>GTM &amp; Product Launch Effectiveness</option><option>Marketing ROI &amp; Operational Efficiency</option>
+          </optgroup>
+          <optgroup label="3. Design &amp; Creative">
+            <option>Creative Delivery &amp; Productivity</option><option>Creative Quality &amp; Effectiveness</option>
+            <option>Brand Consistency</option><option>Digital Experience Performance</option><option>Creative Engagement &amp; Impact</option>
+          </optgroup>
+          <optgroup label="4. Content &amp; Thought Leadership">
+            <option>Content Production &amp; Quality</option><option>Organic Search Performance</option>
+            <option>Thought Leadership &amp; Industry Positioning</option><option>Content-Driven Lead Generation</option><option>Customer Advocacy &amp; Success Stories</option>
+          </optgroup>
+          <option value="__other__">5. Others (specify below)...</option>
+        </select>
+        <div id="ctpKPIOtherWrap" style="display:none;margin-top:6px"><input class="field-input" id="ctpKPIOther" placeholder="Enter custom KPI..."/></div>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Tasks</div>
+        <button class="btn btn-secondary btn-xs" onclick="addCtpTask()">+ Add Task</button>
+      </div>
+      <div id="ctpTasksList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('convertToProjectModal')">Cancel</button>
+      <button class="btn btn-primary" id="ctpSaveBtn" onclick="saveConvertToProject()">Create Project &amp; Notify</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ REJECTION EMAIL MODAL ══ -->
+<div class="modal-overlay" id="rejEmailModal">
+  <div class="modal modal-md">
+    <div class="modal-title">Send Rejection Email</div>
+    <div class="modal-sub">Both Admin and CMO have rejected this request. Compose and send the rejection email below.</div>
+    <input type="hidden" id="rejEmailCRId"/>
+    <div class="field-grid">
+      <div class="field-group"><div class="field-label">To</div><input class="field-input" id="rejEmailTo" readonly style="background:var(--surface2)"/></div>
+      <div class="field-group"><div class="field-label">Subject</div><input class="field-input" id="rejEmailSubject"/></div>
+      <div class="field-group full"><div class="field-label">Message</div><textarea class="field-textarea" id="rejEmailBody" style="min-height:160px;font-family:monospace;font-size:12px"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('rejEmailModal')">Cancel</button>
+      <button class="btn btn-primary" id="rejEmailBtn" onclick="sendRejectionEmail()">Send Email</button>
+    </div>
+  </div>
+</div>
+
+
 <script>
 'use strict';
 
@@ -1195,7 +1315,7 @@ function showPage(pageId) {
   if (pg) pg.classList.add('active');
   const si = document.querySelector('.sidebar-item[data-page="'+pageId+'"]');
   if (si) si.classList.add('active');
-  const loaders = { content:loadContent, projects:loadProjects, inventory:loadInventory, hr:loadHR, admin:loadAdmin, settings:loadSettings };
+  const loaders = { content:loadContent, projects:loadProjects, inventory:loadInventory, hr:loadHR, admin:loadAdmin, settings:loadSettings, requests:loadRequestsPage };
   if (loaders[pageId]) loaders[pageId]();
 }
 
@@ -1282,6 +1402,7 @@ const MODULES = [
   { id:'reports',  label:'Monthly Reports',   icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>', coming:true },
   { id:'inventory',label:'Inventory',         icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>' },
   { id:'hr',       label:'HR Module',         icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>' },
+  { id:'requests', label:'Requests', icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>' },
   { id:'settings', label:'My Settings',        icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>', alwaysShow:true },
 ];
 
@@ -2520,15 +2641,19 @@ async function toggleTask(input) {
 
 async function checkProjectCompletion(projectId){
   try{
-    const tasks=await sbFetch('project_tasks?project_id=eq.'+projectId+'&select=id,status')||[];
-    // Only check non-subtask tasks (no parent_task_id or parent_task_id is null)
+    const tasks=await sbFetch('project_tasks?project_id=eq.'+projectId+'&select=id,status,parent_task_id')||[];
     const mainTasks=tasks.filter(t=>!t.parent_task_id);
     if(!mainTasks.length) return;
     const allDone=mainTasks.every(t=>t.status==='done');
+    const anyActive=mainTasks.some(t=>t.status==='inprogress');
     const proj=projects.find(p=>String(p.id)===String(projectId));
-    if(allDone && proj && proj.status!=='done'){
-      await dbUpdate('projects',projectId,{status:'done'});
-      toast('All tasks done — project marked as Completed!');
+    if(!proj) return;
+    const newStatus=allDone?'done':(anyActive?'inprogress':null);
+    if(newStatus && proj.status!==newStatus){
+      await dbUpdate('projects',projectId,{status:newStatus});
+      proj.status=newStatus; // update local array immediately
+      if(newStatus==='done') toast('All tasks done — project marked Completed! ✅');
+      renderProjectStats(); // refresh stat boxes
     }
   }catch(_){}
 }
@@ -2982,6 +3107,7 @@ function closeImportChanges(){$('importChangesModal')?.classList.remove('show');
    INVENTORY MODULE
 ═══════════════════════════════════════════════════ */
 let inventoryItems=[], invFilter='all';
+let inventoryCart={};
 const INV_CATEGORIES=['banners','brochures','merchandise','digital','other'];
 
 async function loadInventory() {
@@ -3003,38 +3129,76 @@ function renderInventoryStats() {
   s('is3',inventoryItems.filter(i=>(i.quantity||0)===0).length);
 }
 
+function cartAdj(itemId,delta){
+  if(!inventoryCart) inventoryCart={};
+  const item=inventoryItems.find(x=>x.id===itemId); if(!item) return;
+  const max=item.quantity||0;
+  const cur=inventoryCart[itemId]||0;
+  const next=Math.max(0,Math.min(max,cur+delta));
+  if(next===0) delete inventoryCart[itemId]; else inventoryCart[itemId]=next;
+  renderInventoryTable();
+}
+function clearCart(){inventoryCart={};renderInventoryTable();}
+function openCartCheckout(){
+  const lines=Object.entries(inventoryCart||{}).filter(([,v])=>v>0).map(([id,qty])=>{
+    const it=inventoryItems.find(x=>String(x.id)===String(id));
+    return it?it.name+' x '+qty+' ('+it.unit+')':'';
+  }).filter(Boolean);
+  if(!lines.length){toast('Cart is empty','error');return;}
+  $('reqItemId').value='__cart__';
+  $('reqItemName').textContent='Cart: '+lines.join(', ');
+  $('reqAvailable').textContent=lines.length+' item type(s) selected';
+  const qf=$('reqQty')?.closest('.field-group'); if(qf) qf.style.display='none';
+  if($('reqPurpose')) $('reqPurpose').value='';
+  if($('reqEventName')) $('reqEventName').value='';
+  if($('reqEventDate')) $('reqEventDate').value='';
+  if($('reqLocation')) $('reqLocation').value='';
+  if($('reqExcelStatus')) $('reqExcelStatus').textContent='';
+  showModal('requestItemModal');
+}
 function renderInventoryTable() {
   const c=$('inventoryTable'); if(!c) return;
   const rows=invFilter==='all'?inventoryItems:inventoryItems.filter(i=>i.category===invFilter);
   if(!rows.length){c.innerHTML='<div class="empty-state"><div class="empty-title">No items yet</div><div class="empty-sub">Add inventory items to get started.</div></div>';return;}
-  let h=`<table><thead><tr>${['#','Item','Category','Qty','Min Stock','Location','Actions'].map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`;
+  const canEdit=SESSION?.role==='admin'||canWriteInventory();
+  const cartTotal=Object.values(inventoryCart||{}).reduce((a,v)=>a+v,0);
+  let h='';
+  if(cartTotal>0){
+    const lines=Object.entries(inventoryCart).filter(([,v])=>v>0).map(([id,qty])=>{
+      const it=inventoryItems.find(x=>String(x.id)===String(id));
+      return it?esc(it.name)+' x'+qty:'';
+    }).filter(Boolean).join(' | ');
+    h+='<div style="background:var(--surface);border:1.5px solid var(--green);border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'
+      +'<div><div style="font-weight:700;font-size:13px;color:var(--green)">Cart ('+cartTotal+' item'+(cartTotal>1?'s':'')+')</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+lines+'</div></div>'
+      +'<div style="display:flex;gap:8px"><button class="btn btn-secondary btn-sm" onclick="clearCart()">Clear</button>'
+      +'<button class="btn btn-primary btn-sm" onclick="openCartCheckout()">Checkout</button></div></div>';
+  }
+  h+='<table><thead><tr>'+['#','Item','Category','Available','Location','Request Qty',''].map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>';
   rows.forEach((item,i)=>{
-    const qty=item.quantity||0, min=item.quantity_min||0;
+    const qty=item.quantity||0,min=item.quantity_min||0;
     const qtyCls=qty===0?'out':qty<=min?'low':'ok';
-    const qtyLabel=qty===0?'Out of stock':qty<=min?'Low stock':'In stock';
-    const canEdit=SESSION?.role==='admin'||canWriteInventory();
-    h+=`<tr>
-      <td class="td-num">${i+1}</td>
-      <td>
-        <div style="font-weight:600">${esc(item.name)}</div>
-        ${item.description?`<div class="td-muted" style="font-size:11px">${esc(item.description.slice(0,60))}${item.description.length>60?'...':''}</div>`:''}
-      </td>
-      <td class="td-muted">${esc(item.category||'-')}</td>
-      <td><span class="qty-badge ${qtyCls}">${qty} ${esc(item.unit||'pcs')} · ${qtyLabel}</span></td>
-      <td class="td-muted">${min}</td>
-      <td class="td-muted">${esc(item.location||'-')}</td>
-      <td>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-secondary btn-xs" onclick="openRequestItem(${item.id})">Request</button>
-          ${canEdit?`<button class="btn btn-secondary btn-xs" onclick="openEditItem(${item.id})">Edit</button>`:''}
-          ${canEdit?`<button class="btn btn-secondary btn-xs" style="color:var(--accent);border-color:var(--accent-border)" onclick="deleteItem(${item.id})">Delete</button>`:''}
-        </div>
-      </td>
-    </tr>`;
+    const qtyLabel=qty===0?'Out':qty<=min?'Low':'In stock';
+    const cartQty=(inventoryCart||{})[item.id]||0;
+    const unavail=qty===0;
+    h+='<tr style="'+(unavail?'opacity:0.6':'')+'">'
+      +'<td class="td-num">'+(i+1)+'</td>'
+      +'<td><div style="font-weight:600">'+esc(item.name)+'</div>'+(item.notes?'<div class="td-muted" style="font-size:11px">'+esc(item.notes.slice(0,60))+'</div>':'')+'</td>'
+      +'<td class="td-muted" style="font-size:12px">'+esc(item.category||'-')+'</td>'
+      +'<td><span class="qty-badge '+qtyCls+'">'+qty+' '+esc(item.unit||'pcs')+'<br><span style="font-size:10px">'+qtyLabel+'</span></span></td>'
+      +'<td class="td-muted">'+esc(item.location||'-')+'</td>'
+      +'<td><div style="display:flex;align-items:center;gap:6px">'
+      +'<button class="btn btn-secondary btn-xs" style="font-size:16px;padding:1px 8px;line-height:1" onclick="cartAdj('+item.id+',-1)" '+(unavail||cartQty===0?'disabled':'')+'>&#8722;</button>'
+      +'<span style="min-width:24px;text-align:center;font-weight:700;font-size:13px;color:'+(cartQty>0?'var(--green)':'var(--muted)')+'">'+cartQty+'</span>'
+      +'<button class="btn btn-secondary btn-xs" style="font-size:16px;padding:1px 8px;line-height:1" onclick="cartAdj('+item.id+',+1)" '+(unavail?'disabled':'')+'>+</button>'
+      +'</div></td>'
+      +'<td>'+(canEdit?'<div style="display:flex;gap:4px"><button class="btn btn-secondary btn-xs" onclick="openEditItem('+item.id+')">Edit</button><button class="btn btn-secondary btn-xs" style="color:var(--accent)" onclick="deleteItem('+item.id+')">Del</button></div>':'')+'</td>'
+      +'</tr>';
   });
   h+='</tbody></table>';
   c.innerHTML=h;
 }
+
 
 function canWriteInventory() {
   const perms=SESSION?.module_permissions||{};
@@ -4903,6 +5067,321 @@ function toggleSidebar() {
   const sb = document.getElementById('appSidebar');
   if(!sb) return;
   sb.classList.toggle('expanded');
+}
+
+
+
+/* ══════════════════════════════════════════════════════
+   COLLATERAL REQUESTS MODULE
+══════════════════════════════════════════════════════ */
+const RESEND_KEY='re_A9y5ieMa_FQSLzVQjCyowMQpRKSJ6aCrM';
+let crActiveTab='all', crStatusFilter='', _crAll=[];
+
+function switchReqTab(tab){
+  crActiveTab=tab;
+  ['all','assigned','mine'].forEach(t=>{
+    const btn=document.querySelector('.req-tab[data-tab="'+t+'"]');
+    const sec=$('req'+(t==='all'?'All':t==='assigned'?'Assigned':'Mine')+'Section');
+    if(btn) btn.classList.toggle('active',t===tab);
+    if(sec) sec.style.display=t===tab?'':'none';
+  });
+  if(tab==='all')      loadAllCR();
+  if(tab==='assigned') loadAssignedCR();
+  if(tab==='mine')     loadMineCR();
+}
+
+function loadRequestsPage(){
+  const isPriv=SESSION?.role==='admin'||SESSION?.role==='cmo';
+  // Admin/CMO: all 3 tabs. Others: Assigned + Mine only
+  const allTab=document.querySelector('.req-tab[data-tab="all"]');
+  if(allTab) allTab.style.display=isPriv?'':'none';
+  const pa=$('reqPageActions');
+  if(pa) pa.innerHTML='<a href="request-form.html" target="_blank" class="btn btn-primary btn-sm">Share Request Form ↗</a>';
+  if(isPriv) switchReqTab('all'); else switchReqTab('assigned');
+}
+
+function filterCRByStatus(val){
+  crStatusFilter=val;
+  renderCRList(_crAll,$('reqAllList'),true);
+}
+
+async function loadAllCR(){
+  const c=$('reqAllList');if(!c)return;
+  c.innerHTML='<div class="loading-row"><span class="spinner"></span></div>';
+  try{
+    _crAll=await sbFetch('collateral_requests?order=created_at.desc&select=*')||[];
+    renderCRList(_crAll,c,true);
+  }catch(e){c.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div><div class="empty-sub">'+esc(e.message)+'</div></div>';}
+}
+
+async function loadAssignedCR(){
+  const c=$('reqAssignedList');if(!c)return;
+  c.innerHTML='<div class="loading-row"><span class="spinner"></span></div>';
+  try{
+    const reqs=await sbFetch('collateral_requests?assigned_to=eq.'+SESSION.user_id+'&order=created_at.desc&select=*')||[];
+    renderCRList(reqs,c,false);
+  }catch(e){c.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>';}
+}
+
+async function loadMineCR(){
+  const c=$('reqMineList');if(!c)return;
+  c.innerHTML='<div class="loading-row"><span class="spinner"></span></div>';
+  try{
+    const reqs=await sbFetch('collateral_requests?submitted_by=eq.'+SESSION.user_id+'&order=created_at.desc&select=*')||[];
+    renderCRList(reqs,c,false);
+  }catch(e){c.innerHTML='<div class="empty-state"><div class="empty-title">Could not load</div></div>';}
+}
+
+function renderCRList(reqs,c,isPriv){
+  let list=reqs;
+  if(crStatusFilter) list=reqs.filter(r=>r.status===crStatusFilter);
+  if(!list.length){c.innerHTML='<div class="empty-state"><div class="empty-title">No requests'+(crStatusFilter?' with this status':' yet')+'</div></div>';return;}
+  c.innerHTML=list.map(r=>renderCRCard(r,isPriv)).join('');
+  setTimeout(()=>populateCRAssignDropdowns(),80);
+}
+
+function renderCRCard(r,isPriv){
+  const SL={pending:'Pending',accepted:'Accepted',assigned:'Assigned',inprogress:'In Progress',done:'Done',rejected:'Rejected'};
+  const SC={pending:'var(--yellow)',accepted:'var(--blue)',assigned:'var(--blue)',inprogress:'var(--blue)',done:'var(--green)',rejected:'var(--accent)'};
+  const col=SC[r.status]||'var(--muted)';
+  const days=r.deadline?daysUntil(r.deadline):null;
+  const overdue=days!==null&&days<0&&r.status!=='done';
+  const isCMAdmin=SESSION?.role==='admin'||SESSION?.role==='cmo';
+
+  let actions='';
+  if(isCMAdmin&&r.status==='pending'){
+    actions='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">'
+      +'<button class="btn btn-green btn-sm" onclick="acceptCR('+r.id+')">Accept</button>'
+      +'<button class="btn btn-secondary btn-sm" style="color:var(--accent)" onclick="openRejectCR('+r.id+')">Reject</button>'
+      +'</div>';
+  } else if(isCMAdmin&&r.status==='accepted'){
+    actions='<div style="margin-top:10px">'
+      +'<div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Assign to Team Member</div>'
+      +'<select class="field-select" style="font-size:12px;min-width:200px" id="crAssign_'+r.id+'" onchange="assignCR('+r.id+',this.value)">'
+      +'<option value="">Select person...</option></select></div>';
+  }
+  if(r.assigned_to===SESSION?.user_id&&r.status==='assigned'){
+    actions+='<div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="openConvertToProject('+r.id+')">Convert to Project &#8594;</button></div>';
+  }
+  if(r.project_id&&(r.status==='inprogress'||r.status==='done')){
+    actions+='<div style="margin-top:8px;font-size:12px;color:var(--green)">&#10003; Project created <button class="btn btn-secondary btn-xs" onclick="showPage(&quot;projects&quot;)">View in Tracker</button></div>';
+  }
+  if(isCMAdmin&&r.status==='rejected'&&r.rejection_reason){
+    actions+='<div style="margin-top:8px"><button class="btn btn-secondary btn-xs" style="color:var(--accent)" onclick="openRejEmailFromCard('+r.id+')">Send Rejection Email</button></div>';
+  }
+
+  return '<div class="cr-card">'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">'
+    +'<div style="flex:1;min-width:0">'
+    +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">'
+    +'<span class="cr-token">'+esc(r.token)+'</span>'
+    +'<span class="cr-status-badge" style="background:'+col+'22;color:'+col+';border-color:'+col+'55">'+(SL[r.status]||r.status)+'</span>'
+    +(overdue?'<span class="cr-status-badge" style="background:#DC262222;color:#DC2626;border-color:#DC262255">Overdue</span>':'')
+    +'</div>'
+    +'<div style="font-weight:600;font-size:14px;margin-bottom:2px">'+esc(r.name)+'&nbsp;<span style="font-weight:400;color:var(--muted);font-size:12px">'+esc(r.department)+'</span></div>'
+    +'<div style="font-size:12px;color:var(--muted);margin-bottom:6px">'+esc(r.email)+(r.phone?'&nbsp;&middot;&nbsp;'+esc(r.phone):'')+'</div>'
+    +'<div style="font-size:13px;margin-bottom:4px"><strong>Needs:</strong> '+esc(r.collaterals_needed)+'</div>'
+    +(r.event_name?'<div style="font-size:12px;color:var(--muted)">Event: '+esc(r.event_name)+'</div>':'')
+    +'<div style="font-size:12px;margin-top:4px;color:'+(overdue?'#DC2626':'var(--muted)')+';font-weight:'+(overdue?'700':'400')+'">Deadline: '+formatDate(r.deadline)+(days!==null&&r.status!=='done'?' — '+Math.abs(days)+'d '+(days<0?'overdue':'left'):'')+'</div>'
+    +(r.assigned_to_name?'<div style="font-size:12px;color:var(--blue);margin-top:4px">Assigned to: <strong>'+esc(r.assigned_to_name)+'</strong></div>':'')
+    +(r.rejection_reason?'<div style="font-size:11px;color:var(--accent);margin-top:4px;border-left:3px solid var(--accent);padding-left:8px">Reason: '+esc(r.rejection_reason)+'</div>':'')
+    +(r.notes?'<div style="font-size:11px;color:var(--muted);margin-top:4px">'+esc(r.notes)+'</div>':'')
+    +(r.attachment_url?'<a href="'+esc(r.attachment_url)+'" target="_blank" style="font-size:12px;color:var(--accent);margin-top:4px;display:inline-block">Attachment</a>':'')
+    +'</div></div>'+actions
+    +'<div style="font-size:10px;color:var(--border2);margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">Submitted '+formatDateTime(r.created_at)+'</div>'
+    +'</div>';
+}
+
+async function acceptCR(id){
+  try{
+    await sbFetch('collateral_requests?id=eq.'+id,{method:'PATCH',body:JSON.stringify({status:'accepted',accepted_at:new Date().toISOString()})});
+    toast('Request accepted. Now assign to a team member.');
+    loadAllCR();
+  }catch(e){toast('Error: '+e.message,'error');}
+}
+
+function openRejectCR(id){
+  $('rejectCRId').value=id;
+  $('rejectCRReason').value='';
+  showModal('rejectCRModal');
+}
+
+async function submitCRRejection(){
+  const id=$('rejectCRId').value;
+  const reason=($('rejectCRReason')?.value||'').trim();
+  if(!reason){toast('Please enter a rejection reason.','error');return;}
+  const btn=$('rejectCRBtn');btn.disabled=true;btn.textContent='Saving...';
+  try{
+    const cr=_crAll.find(x=>String(x.id)===String(id))||{};
+    const prevRejected=JSON.parse(cr.rejected_by||'[]');
+    const newRejected=[...new Set([...prevRejected,SESSION.user_id])];
+    await sbFetch('collateral_requests?id=eq.'+id,{method:'PATCH',body:JSON.stringify({
+      status:'rejected',rejection_reason:reason,rejected_by:JSON.stringify(newRejected)
+    })});
+    // Notify other admin/CMO to also review
+    const privs=await sbFetch('user_profiles?role=in.(admin,cmo)&select=id')||[];
+    const others=privs.filter(u=>u.id!==SESSION.user_id);
+    const allRejected=privs.every(u=>newRejected.includes(u.id));
+    for(const o of others){
+      await sendNotification(o.id,allRejected?'Rejection Email Needed':'Rejection Review Needed',
+        SESSION.full_name+(allRejected?' rejected and needs email sent to requester':' rejected request '+(cr.token||id)+'. Your review is needed.'),
+        'info','requests',parseInt(id));
+    }
+    closeModal('rejectCRModal');
+    if(allRejected){
+      // Both rejected — open email composer
+      $('rejEmailCRId').value=id;
+      $('rejEmailTo').value=cr.email||'';
+      $('rejEmailSubject').value='Your Request '+(cr.token||id)+' — Update';
+      $('rejEmailBody').value='Dear '+(cr.name||'Requester')+',\n\nThank you for submitting your request (Token: '+(cr.token||id)+').\n\nAfter review, we are unable to fulfil the following request at this time:\n'+(cr.collaterals_needed||'')+'.\n\nReason: '+reason+'\n\nPlease feel free to reach out if you have questions or would like to revise and resubmit.\n\nBest regards,\nQNu Labs Marketing Team';
+      toast('Both have rejected — please send the rejection email.');
+      showModal('rejEmailModal');
+    } else {
+      toast('Rejection recorded. The other Admin/CMO has been notified to review.');
+    }
+    loadAllCR();
+  }catch(e){toast('Error: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Confirm Rejection';}
+}
+
+function openRejEmailFromCard(id){
+  const cr=_crAll.find(x=>String(x.id)===String(id))||{};
+  $('rejEmailCRId').value=id;
+  $('rejEmailTo').value=cr.email||'';
+  $('rejEmailSubject').value='Your Request '+(cr.token||id)+' — Update';
+  $('rejEmailBody').value='Dear '+(cr.name||'Requester')+',\n\nThank you for your request (Token: '+(cr.token||id)+').\n\nAfter careful review, we are unable to fulfil this request.\n\nReason: '+(cr.rejection_reason||'')+'\n\nPlease feel free to reach out if you have questions.\n\nBest regards,\nQNu Labs Marketing Team';
+  showModal('rejEmailModal');
+}
+
+async function populateCRAssignDropdowns(){
+  const selects=document.querySelectorAll('[id^="crAssign_"]');
+  if(!selects.length) return;
+  const users=window._allUsers||await loadUsersForAssignee()||[];
+  selects.forEach(sel=>{
+    if(sel.options.length>1) return;
+    sel.innerHTML='<option value="">Select person...</option>'+users.map(u=>'<option value="'+esc(u.id)+'__'+esc(u.full_name)+'">'+esc(u.full_name)+(u.department?' ('+esc(u.department)+')':'')+'</option>').join('');
+  });
+}
+
+async function assignCR(id,val){
+  if(!val) return;
+  const[userId,userName]=val.split('__');
+  try{
+    await sbFetch('collateral_requests?id=eq.'+id,{method:'PATCH',body:JSON.stringify({assigned_to:userId,assigned_to_name:userName,status:'assigned'})});
+    await sendNotification(userId,'Collateral Request Assigned to You','New request assigned. Go to Requests → Assigned to Me.','info','requests',id);
+    toast('Assigned to '+userName+'.');
+    loadAllCR();
+  }catch(e){toast('Error: '+e.message,'error');}
+}
+
+/* ── Convert to Project ── */
+let ctpTaskCount=0;
+function onCtpKPIChange(v){const w=$('ctpKPIOtherWrap');if(w)w.style.display=(v==='__other__')?'':'none';}
+
+async function openConvertToProject(crId){
+  let cr=_crAll.find(r=>String(r.id)===String(crId));
+  if(!cr){
+    const res=await sbFetch('collateral_requests?id=eq.'+crId+'&select=*').catch(()=>null);
+    cr=res&&res[0];
+  }
+  if(!cr){toast('Could not load request.','error');return;}
+  $('ctpCRId').value=crId;
+  $('ctpRequestInfo').textContent=cr.token+' · '+cr.name+' ('+cr.department+')';
+  $('ctpTitle').value=(cr.event_name||cr.collaterals_needed||'').slice(0,80);
+  $('ctpOwner').value=SESSION?.full_name||'';
+  $('ctpDueDate').value=cr.deadline||'';
+  $('ctpPriority').value='high';
+  if($('ctpKPI')) $('ctpKPI').value='';
+  const kw=$('ctpKPIOtherWrap');if(kw)kw.style.display='none';
+  ctpTaskCount=0;
+  $('ctpTasksList').innerHTML='';
+  addCtpTask();
+  // Populate owner datalist
+  const users=window._allUsers||await loadUsersForAssignee()||[];
+  const dl=$('ctpOwnerList');
+  if(dl) dl.innerHTML=users.map(u=>'<option value="'+esc(u.full_name)+'">').join('');
+  showModal('convertToProjectModal');
+}
+
+function addCtpTask(){
+  ctpTaskCount++;
+  const div=document.createElement('div');
+  div.id='ctpTask_'+ctpTaskCount;
+  div.style.cssText='display:grid;grid-template-columns:1fr 110px 130px 28px;gap:6px;margin-bottom:6px;align-items:center';
+  div.innerHTML='<input class="field-input" placeholder="Task description..." style="font-size:12px"/>'
+    +'<select class="field-select" style="font-size:12px"><option value="todo">To Do</option><option value="inprogress">In Progress</option></select>'
+    +'<input type="date" class="field-date" style="font-size:12px" title="Task due date"/>'
+    +'<button class="btn btn-secondary btn-xs" style="color:var(--accent);padding:4px 6px" onclick="this.parentElement.remove()">&#10005;</button>';
+  $('ctpTasksList').appendChild(div);
+}
+
+async function saveConvertToProject(){
+  const crId=$('ctpCRId').value;
+  const title=($('ctpTitle')?.value||'').trim();
+  const owner=($('ctpOwner')?.value||'').trim();
+  const due=$('ctpDueDate')?.value||null;
+  const prio=$('ctpPriority')?.value||'medium';
+  const kpiVal=$('ctpKPI')?.value||'';
+  const kpiTitle=kpiVal==='__other__'?($('ctpKPIOther')?.value.trim()||''):kpiVal;
+  if(!title){toast('Please enter a project title.','error');return;}
+  if(!due){toast('Please set a due date.','error');return;}
+  const btn=$('ctpSaveBtn');btn.disabled=true;btn.textContent='Creating...';
+  try{
+    const cr=_crAll.find(r=>String(r.id)===String(crId))||{};
+    const projRes=await dbInsert('projects',{
+      title,type:'campaign',status:'inprogress',priority:prio,
+      owner_name:owner||SESSION?.full_name,owner_id:SESSION?.user_id,
+      due_date:due,description:'From collateral request: '+(cr.token||crId),
+      created_by:SESSION?.user_id,team_members:JSON.stringify([])
+    });
+    const projId=Array.isArray(projRes)?projRes[0].id:projRes.id;
+    if(kpiTitle){
+      await dbInsert('project_kpis',{project_id:projId,title:kpiTitle,kpi_type:'individual',target_value:0,current_value:0,unit:'',owner_name:owner||SESSION?.full_name}).catch(()=>{});
+    }
+    const taskRows=$('ctpTasksList').querySelectorAll('[id^="ctpTask_"]');
+    for(const row of taskRows){
+      const inputs=row.querySelectorAll('input,select');
+      const tTitle=inputs[0]?.value?.trim();
+      const tStatus=inputs[1]?.value||'todo';
+      const tDue=inputs[2]?.value||null;
+      if(!tTitle) continue;
+      await dbInsert('project_tasks',{project_id:projId,title:tTitle,status:tStatus,priority:prio,due_date:tDue||null,assignee_name:owner||SESSION?.full_name,created_by:SESSION?.user_id}).catch(()=>{});
+    }
+    await sbFetch('collateral_requests?id=eq.'+crId,{method:'PATCH',body:JSON.stringify({status:'inprogress',project_id:projId})});
+    // Notify admin/CMO
+    const privs=await sbFetch('user_profiles?role=in.(admin,cmo)&select=id').catch(()=>[])||[];
+    for(const p of privs){
+      await sendNotification(p.id,'Project Created from Request',(owner||SESSION?.full_name)+' created "'+title+'" from '+(cr.token||crId)+' (due '+formatDate(due)+').','info','projects',projId);
+    }
+    toast('Project "'+title+'" created! ✅');
+    logActivity('created','Project from request: '+title);
+    closeModal('convertToProjectModal');
+    await loadProjects();
+    loadAllCR();
+  }catch(e){toast('Error: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Create Project & Notify';}
+}
+
+async function sendRejectionEmail(){
+  const id=$('rejEmailCRId').value;
+  const to=($('rejEmailTo')?.value||'').trim();
+  const subject=($('rejEmailSubject')?.value||'').trim();
+  const body=($('rejEmailBody')?.value||'').trim();
+  if(!to||!subject||!body){toast('Please fill all fields.','error');return;}
+  const btn=$('rejEmailBtn');btn.disabled=true;btn.textContent='Sending...';
+  try{
+    const res=await fetch('https://api.resend.com/emails',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+RESEND_KEY},
+      body:JSON.stringify({from:'One View <noreply@qnulabs.com>',to:[to],subject,text:body})
+    });
+    const d=await res.json();
+    if(!res.ok) throw new Error(d.message||JSON.stringify(d));
+    toast('Email sent to '+to+'.');
+    closeModal('rejEmailModal');
+    loadAllCR();
+  }catch(e){toast('Could not send email: '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Send Email';}
 }
 
 </script>
