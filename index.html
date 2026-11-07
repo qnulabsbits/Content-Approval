@@ -7,6 +7,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'"></script>
 <link rel="stylesheet" href="style.css"/>
+<style>
+.cr-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:12px;transition:box-shadow 0.15s;}
+.cr-card:hover{box-shadow:0 2px 12px rgba(0,0,0,0.07);}
+.cr-token{font-family:monospace;font-weight:800;font-size:14px;color:var(--accent);letter-spacing:1px;}
+.cr-status-badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;border:1px solid;}
+.stat-card{cursor:pointer;transition:box-shadow 0.15s;}
+.stat-card:hover{box-shadow:0 2px 12px rgba(0,0,0,0.10);}
+.stat-active{box-shadow:0 0 0 2.5px var(--accent)!important;border-color:var(--accent)!important;}
+</style>
 </head>
 <body>
 
@@ -5222,77 +5231,129 @@ function renderCRList(reqs,c,isPriv){
 }
 
 function renderCRCard(r,isPriv){
-  const SL={pending:'Pending',accepted:'Accepted',assigned:'Assigned',inprogress:'In Progress',done:'Done',rejected:'Rejected'};
-  const SC={pending:'var(--yellow)',accepted:'var(--blue)',assigned:'var(--blue)',inprogress:'var(--blue)',done:'var(--green)',rejected:'var(--accent)'};
+  const SL={pending:'Pending Review',accepted:'Accepted',assigned:'Assigned',inprogress:'In Progress',
+            inreview:'In Review',delivered:'Delivered',onhold:'On Hold',rejected:'Rejected',
+            done:'Delivered',p1_pending:'Awaiting P1 Approval'};
+  const SC={pending:'var(--yellow)',accepted:'var(--blue)',assigned:'var(--blue)',inprogress:'var(--blue)',
+            inreview:'var(--purple)',delivered:'var(--green)',onhold:'var(--yellow)',
+            rejected:'var(--accent)',done:'var(--green)',p1_pending:'var(--accent)'};
   const col=SC[r.status]||'var(--muted)';
   const days=r.deadline?daysUntil(r.deadline):null;
-  const overdue=days!==null&&days<0&&r.status!=='done';
+  const overdue=days!==null&&days<0&&r.status!=='delivered'&&r.status!=='done';
   const isCMAdmin=SESSION?.role==='admin'||SESSION?.role==='cmo';
-
+  const isAssigned=r.assigned_to===SESSION?.user_id;
+  let kpiHTML='';
+  try{const kpis=JSON.parse(r.kpis_selected||'[]');if(kpis.length)kpiHTML='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">'+kpis.map(k=>'<span style="background:#EFF6FF;color:var(--blue);border:1px solid #BFDBFE;padding:2px 7px;border-radius:12px;font-size:10px;font-weight:600">'+esc(k)+'</span>').join('')+'</div>';}catch(e){}
   let actions='';
-  const canReject = (isCMAdmin || r.assigned_to===SESSION?.user_id) && r.status!=='rejected' && r.status!=='done';
-
-  if(isCMAdmin&&r.status==='pending'){
+  if(isCMAdmin&&r.status==='p1_pending'){
+    actions='<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:10px 12px;margin-top:10px">'
+      +'<div style="font-size:11px;font-weight:700;color:#92400E;margin-bottom:6px">P1 APPROVAL REQUIRED</div>'
+      +'<div style="font-size:12px;color:#78350F;margin-bottom:8px">Justification: '+esc(r.p1_justification||'(none provided)')+'</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +'<button class="btn btn-green btn-sm" onclick="approveP1CR('+r.id+')">Approve P1</button>'
+      +'<button class="btn btn-secondary btn-sm" style="color:var(--yellow)" onclick="downgradeCRP1('+r.id+')">Downgrade to P2</button>'
+      +'<button class="btn btn-secondary btn-sm" style="color:var(--accent)" onclick="openRejectCR('+r.id+')">Reject</button>'
+      +'</div></div>';
+  } else if(isCMAdmin&&r.status==='pending'){
     actions='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">'
       +'<button class="btn btn-green btn-sm" onclick="acceptCR('+r.id+')">Accept</button>'
       +'<button class="btn btn-secondary btn-sm" style="color:var(--accent)" onclick="openRejectCR('+r.id+')">Reject</button>'
       +'</div>';
   } else if(isCMAdmin&&r.status==='accepted'){
-    actions='<div style="margin-top:10px">'
-      +'<div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Assign to Team Member</div>'
-      +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
-      +'<select class="field-select" style="font-size:12px;min-width:200px" id="crAssign_'+r.id+'" onchange="assignCR('+r.id+',this.value)">'
-      +'<option value="">Select person...</option></select>'
-      +'<button class="btn btn-secondary btn-sm" style="color:var(--accent);flex-shrink:0" onclick="openRejectCR('+r.id+')">Reject</button>'
+    actions='<div style="margin-top:10px"><div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;text-transform:uppercase">Assign to Team Member</div>'
+      +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+      +'<select class="field-select" style="font-size:12px;min-width:200px" id="crAssign_'+r.id+'" onchange="assignCR('+r.id+',this.value)"><option value="">Select person...</option></select>'
+      +'<button class="btn btn-secondary btn-xs" style="color:var(--accent)" onclick="openRejectCR('+r.id+')">Reject</button>'
       +'</div></div>';
-  } else if(isCMAdmin&&(r.status==='assigned'||r.status==='inprogress')){
-    // Admin/CMO can still reject after assigning
-    actions='<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">'
+  } else if(isCMAdmin&&(r.status==='assigned'||r.status==='inprogress'||r.status==='inreview')){
+    actions='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">'
+      +'<button class="btn btn-secondary btn-sm" onclick="updateCRStatusDirect('+r.id+',\'inreview\')">Move to Review</button>'
+      +'<button class="btn btn-green btn-sm" onclick="updateCRStatusDirect('+r.id+',\'delivered\')">Mark Delivered</button>'
+      +'<button class="btn btn-secondary btn-xs" style="color:var(--accent)" onclick="openRejectCR('+r.id+')">Reject</button>'
+      +'</div>';
+  }
+  if(isAssigned&&r.status==='assigned'){
+    actions+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">'
+      +'<button class="btn btn-primary btn-sm" onclick="openConvertToProject('+r.id+')">Convert to Project &#8594;</button>'
       +'<button class="btn btn-secondary btn-sm" style="color:var(--accent)" onclick="openRejectCR('+r.id+')">Reject</button>'
       +'</div>';
   }
-  if(r.assigned_to===SESSION?.user_id&&r.status==='assigned'){
-    actions+='<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
-      +'<button class="btn btn-primary btn-sm" onclick="openConvertToProject('+r.id+')">Convert to Project &#8594;</button>'
-      +(isCMAdmin?'':'<button class="btn btn-secondary btn-sm" style="color:var(--accent)" onclick="openRejectCR('+r.id+')">Reject</button>')
-      +'</div>';
-  } else if(r.assigned_to===SESSION?.user_id&&r.status==='inprogress'){
-    // Assigned user can still reject even after converting
-    if(!isCMAdmin) actions+='<div style="margin-top:8px"><button class="btn btn-secondary btn-sm" style="color:var(--accent)" onclick="openRejectCR('+r.id+')">Reject</button></div>';
+  if(isAssigned&&(r.status==='inprogress'||r.status==='inreview')&&!isCMAdmin){
+    actions+='<div style="margin-top:8px">'
+      +(r.project_id?'<button class="btn btn-secondary btn-xs" onclick="showPage(&quot;projects&quot;)" style="margin-right:6px">View Project</button>':'')
+      +'<button class="btn btn-secondary btn-xs" style="color:var(--accent)" onclick="openRejectCR('+r.id+')">Reject</button></div>';
   }
-  if(r.project_id&&(r.status==='inprogress'||r.status==='done')){
-    actions+='<div style="margin-top:8px;font-size:12px;color:var(--green)">&#10003; Project created <button class="btn btn-secondary btn-xs" onclick="showPage(&quot;projects&quot;)">View in Tracker</button></div>';
+  if((r.status==='delivered'||r.status==='done')&&r.deliverable_link){
+    actions+='<div style="margin-top:8px"><a href="'+esc(r.deliverable_link)+'" target="_blank" class="btn btn-secondary btn-sm">View Deliverable</a></div>';
   }
   if(isCMAdmin&&r.status==='rejected'&&r.rejection_reason){
     actions+='<div style="margin-top:8px"><button class="btn btn-secondary btn-xs" style="color:var(--accent)" onclick="openRejEmailFromCard('+r.id+')">Send Rejection Email</button></div>';
   }
-
+  let triageHTML='';
+  if(isCMAdmin||isAssigned){
+    triageHTML='<div style="margin-top:12px;padding:12px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">'
+      +'<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Triage</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+      +(isCMAdmin?
+        '<div><div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:3px">STATUS</div>'
+        +'<select class="field-select" style="font-size:12px" onchange="updateCRStatusDirect('+r.id+',this.value)">'
+        +['pending','p1_pending','accepted','assigned','inprogress','inreview','delivered','onhold','rejected']
+          .map(s=>'<option value="'+s+'"'+(r.status===s?' selected':'')+'>'+(SL[s]||s)+'</option>').join('')+'</select></div>'
+        +'<div><div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:3px">HUB</div>'
+        +'<select class="field-select" style="font-size:12px" onchange="updateCRHub('+r.id+',this.value)">'
+        +'<option value="">Assign hub...</option>'
+        +['Digital & Brand','Marketing Excellence','Design & Creative','Content & Thought Leadership']
+          .map(h=>'<option'+(r.assigned_hub===h?' selected':'')+'>'+h+'</option>').join('')+'</select></div>'
+        +'<div><div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:3px">EFFORT (days)</div>'
+        +'<input class="field-input" type="number" style="font-size:12px" value="'+(r.effort_estimate||'')+'" placeholder="e.g. 3" onblur="updateCRField('+r.id+',\'effort_estimate\',this.value)" min="0.5" step="0.5"/></div>'
+        +'<div><div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:3px">COMMITTED DATE</div>'
+        +'<input class="field-date" type="date" style="font-size:12px" value="'+(r.committed_date||'')+'" onblur="updateCRField('+r.id+',\'committed_date\',this.value)"/></div>'
+        :'')
+      +'<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:3px">DELIVERABLE LINK</div>'
+      +'<input class="field-input" style="font-size:12px" value="'+(r.deliverable_link||'')+'" placeholder="Paste link to delivered work..." onblur="updateCRField('+r.id+',\'deliverable_link\',this.value)"/></div>'
+      +'<div><div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:3px">DELIVERED DATE</div>'
+      +'<input class="field-date" type="date" style="font-size:12px" value="'+(r.delivered_date||'')+'" onblur="updateCRField('+r.id+',\'delivered_date\',this.value)"/></div>'
+      +'</div></div>';
+  }
   return '<div class="cr-card">'
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">'
     +'<div style="flex:1;min-width:0">'
     +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">'
     +'<span class="cr-token">'+esc(r.token)+'</span>'
     +'<span class="cr-status-badge" style="background:'+col+'22;color:'+col+';border-color:'+col+'55">'+(SL[r.status]||r.status)+'</span>'
+    +(r.priority?'<span class="cr-status-badge" style="background:'+(r.priority==='P1'?'#DC262222':r.priority==='P2'?'#D9770622':'#16A34A22')+';color:'+(r.priority==='P1'?'#DC2626':r.priority==='P2'?'#D97706':'#16A34A')+';border-color:transparent">'+esc(r.priority)+'</span>':'')
+    +(r.is_rush?'<span class="cr-status-badge" style="background:#DC262222;color:#DC2626;border-color:#DC262255">Rush</span>':'')
     +(overdue?'<span class="cr-status-badge" style="background:#DC262222;color:#DC2626;border-color:#DC262255">Overdue</span>':'')
     +'</div>'
-    +'<div style="font-weight:600;font-size:14px;margin-bottom:2px">'+esc(r.name)+'&nbsp;<span style="font-weight:400;color:var(--muted);font-size:12px">'+esc(r.department)+'</span></div>'
-    +'<div style="font-size:12px;color:var(--muted);margin-bottom:6px">'+esc(r.email)+(r.phone?'&nbsp;&middot;&nbsp;'+esc(r.phone):'')+'</div>'
-    +'<div style="font-size:13px;margin-bottom:4px"><strong>Needs:</strong> '+esc(r.collaterals_needed)+'</div>'
-    +(r.event_name?'<div style="font-size:12px;color:var(--muted)">Event: '+esc(r.event_name)+'</div>':'')
-    +'<div style="font-size:12px;margin-top:4px;color:'+(overdue?'#DC2626':'var(--muted)')+';font-weight:'+(overdue?'700':'400')+'">Deadline: '+formatDate(r.deadline)+(days!==null&&r.status!=='done'?' — '+Math.abs(days)+'d '+(days<0?'overdue':'left'):'')+'</div>'
-    +(r.assigned_to_name?'<div style="font-size:12px;color:var(--blue);margin-top:4px">Assigned to: <strong>'+esc(r.assigned_to_name)+'</strong></div>':'')
-    +(r.rejection_reason?'<div style="font-size:11px;color:var(--accent);margin-top:4px;border-left:3px solid var(--accent);padding-left:8px">Reason: '+esc(r.rejection_reason)+'</div>':'')
-    +(r.notes?'<div style="font-size:11px;color:var(--muted);margin-top:4px">'+esc(r.notes)+'</div>':'')
-    +(r.attachment_url?'<a href="'+esc(r.attachment_url)+'" target="_blank" style="font-size:12px;color:var(--accent);margin-top:4px;display:inline-block">Attachment</a>':'')
-    +'</div></div>'+actions
+    +'<div style="font-weight:700;font-size:14px;margin-bottom:2px">'+esc(r.title||r.collaterals_needed||'(no title)')+'</div>'
+    +'<div style="font-size:12px;color:var(--muted);margin-bottom:6px">'+esc(r.name)+'&nbsp;&middot;&nbsp;'+esc(r.email)+'&nbsp;&middot;&nbsp;'+esc(r.department||'')+(r.region?'&nbsp;&middot;&nbsp;'+esc(r.region):'')+'</div>'
+    +(r.deliverable_type?'<div style="font-size:12px;margin-bottom:4px"><strong>Type:</strong> '+esc(r.deliverable_type)+'</div>':'')
+    +(r.why_needed?'<div style="font-size:12px;margin-bottom:3px"><strong>Why:</strong> '+esc(r.why_needed)+'</div>':'')
+    +(r.what_expected?'<div style="font-size:12px;margin-bottom:3px"><strong>What:</strong> '+esc(r.what_expected)+'</div>':'')
+    +'<div style="font-size:12px;margin-top:4px;color:'+(overdue?'#DC2626':'var(--muted)')+';font-weight:'+(overdue?'700':'400')+'">Deadline: '+formatDate(r.deadline)+(days!==null&&r.status!=='delivered'&&r.status!=='done'?' — '+Math.abs(days)+'d '+(days<0?'overdue':'left'):'')+'</div>'
+    +(r.assigned_to_name?'<div style="font-size:12px;color:var(--blue);margin-top:4px">Assigned: <strong>'+esc(r.assigned_to_name)+'</strong>'+(r.assigned_hub?' ('+esc(r.assigned_hub)+')':'')+'</div>':'')
+    +(r.committed_date?'<div style="font-size:12px;color:var(--muted);margin-top:2px">Committed: '+formatDate(r.committed_date)+'</div>':'')
+    +kpiHTML
+    +(r.expected_outcome?'<div style="font-size:12px;color:var(--muted);margin-top:4px">Expected: '+esc(r.expected_outcome)+'</div>':'')
+    +(r.rejection_reason?'<div style="font-size:11px;color:var(--accent);margin-top:6px;border-left:3px solid var(--accent);padding-left:8px">'+esc(r.rejection_reason)+'</div>':'')
+    +(r.attachment_url?'<a href="'+esc(r.attachment_url)+'" target="_blank" style="font-size:12px;color:var(--accent);margin-top:6px;display:inline-block">Attachment</a>':'')
+    +(r.drive_link?'&nbsp;<a href="'+esc(r.drive_link)+'" target="_blank" style="font-size:12px;color:var(--blue)">Drive</a>':'')
+    +'</div></div>'+actions+triageHTML
     +'<div style="font-size:10px;color:var(--border2);margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">Submitted '+formatDateTime(r.created_at)+'</div>'
     +'</div>';
 }
 
+
 async function acceptCR(id){
   try{
-    await sbFetch('collateral_requests?id=eq.'+id,{method:'PATCH',body:JSON.stringify({status:'accepted',accepted_at:new Date().toISOString()})});
-    toast('Request accepted. Now assign to a team member.');
+    const cr=_crAll.find(r=>String(r.id)===String(id));
+    if(cr&&cr.priority==='P1'&&cr.status==='pending'){
+      await sbFetch('collateral_requests?id=eq.'+id,{method:'PATCH',body:JSON.stringify({status:'p1_pending'})});
+      toast('P1 request flagged for approval. CMO/Admin must approve before assigning.');
+    } else {
+      await sbFetch('collateral_requests?id=eq.'+id,{method:'PATCH',body:JSON.stringify({status:'accepted',accepted_at:new Date().toISOString()})});
+      toast('Request accepted. Now assign to a team member.');
+    }
     loadAllCR();
   }catch(e){toast('Error: '+e.message,'error');}
 }
@@ -5425,11 +5486,21 @@ async function saveConvertToProject(){
   const btn=$('ctpSaveBtn');btn.disabled=true;btn.textContent='Creating...';
   try{
     const cr=_crAll.find(r=>String(r.id)===String(crId))||{};
+    const themeMap={'Corporate Deck':'Decks','Demand Gen Deck':'Decks','Sales Pitch Deck':'Decks','Battlecard':'Decks',
+      'Blog':'Content','Whitepaper':'Content','Case Study':'Content','Newsletter':'Content','Press Release':'Content','Competitive Intelligence':'Content',
+      'Collateral':'Design','Social Carousel':'Design','Video':'Design',
+      'Website & Landing Page':'Digital','Email':'Digital','Outreach Campaign':'Digital',
+      'Event Creative':'Events','Speaker Prep':'Events','Lead Update':'Events',
+      'GTM':'Launch','Product Launch Deliverables':'Launch',
+      'Analyst Briefing Material':'Analyst & PR','HR & Finance Communication':'Internal'};
+    const projType=themeMap[cr.deliverable_type]||cr.deliverable_type||'campaign';
+    const priMap={'P1':'high','P2':'medium','P3':'low'};
     const projRes=await dbInsert('projects',{
-      title,type:'campaign',status:'inprogress',priority:prio,
+      title,type:projType,status:'inprogress',priority:priMap[cr.priority]||prio,
       owner_name:owner||SESSION?.full_name,owner_id:SESSION?.user_id,
-      due_date:due,description:'From collateral request: '+(cr.token||crId),
-      created_by:SESSION?.user_id,team_members:JSON.stringify([])
+      due_date:due,description:'From request '+(cr.token||crId)+(cr.why_needed?' | '+cr.why_needed:''),
+      created_by:SESSION?.user_id,team_members:JSON.stringify([]),
+      tags:JSON.stringify(cr.linked_account?[cr.linked_account]:[])
     });
     const projId=Array.isArray(projRes)?projRes[0].id:projRes.id;
     if(kpiTitle){
@@ -5481,6 +5552,23 @@ async function sendRejectionEmail(){
   finally{btn.disabled=false;btn.textContent='Send Email';}
 }
 
+
+async function approveP1CR(id){
+  try{await sbFetch('collateral_requests?id=eq.'+id,{method:'PATCH',body:JSON.stringify({status:'accepted',accepted_at:new Date().toISOString()})});toast('P1 approved. Now assign to a team member.');loadAllCR();}catch(e){toast('Error: '+e.message,'error');}
+}
+async function downgradeCRP1(id){
+  try{await sbFetch('collateral_requests?id=eq.'+id,{method:'PATCH',body:JSON.stringify({priority:'P2',status:'pending'})});toast('Priority downgraded to P2.');loadAllCR();}catch(e){toast('Error: '+e.message,'error');}
+}
+async function updateCRStatusDirect(id,status){
+  try{const p={status};if(status==='delivered')p.delivered_date=new Date().toISOString().slice(0,10);await sbFetch('collateral_requests?id=eq.'+id,{method:'PATCH',body:JSON.stringify(p)});toast('Status: '+status);loadAllCR();}catch(e){toast('Error: '+e.message,'error');}
+}
+async function updateCRHub(id,hub){
+  if(!hub)return;try{await sbFetch('collateral_requests?id=eq.'+id,{method:'PATCH',body:JSON.stringify({assigned_hub:hub})});toast('Hub: '+hub);loadAllCR();}catch(e){toast('Error: '+e.message,'error');}
+}
+async function updateCRField(id,field,value){
+  if(value===''||value===null||value===undefined)return;
+  try{const p={};p[field]=field==='effort_estimate'?parseFloat(value):value;await sbFetch('collateral_requests?id=eq.'+id,{method:'PATCH',body:JSON.stringify(p)});}catch(e){console.error('CR field',e);}
+}
 </script>
 </body>
 </html>
