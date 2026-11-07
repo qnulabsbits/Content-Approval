@@ -2,174 +2,715 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>QNu Labs — Collateral Request</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>QNu Labs — Marketing Request Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#F4F4F5;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px 64px}
-.card{background:#fff;border-radius:16px;box-shadow:0 2px 24px rgba(0,0,0,0.08);padding:36px 40px;width:100%;max-width:620px}
-@media(max-width:600px){.card{padding:24px 18px}}
-.logo-row{display:flex;align-items:center;gap:12px;margin-bottom:28px}
-
-h1{font-size:22px;font-weight:800;color:#1a1a1a;margin-bottom:4px}
-.subtitle{font-size:13px;color:#888;margin-bottom:28px}
-.field{margin-bottom:16px}
-label{display:block;font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
-label span.req{color:#E8450A;margin-left:2px}
-input,textarea,select{width:100%;padding:10px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;color:#1a1a1a;background:#fff;transition:border .15s}
-input:focus,textarea:focus,select:focus{outline:none;border-color:#E8450A;box-shadow:0 0 0 3px rgba(232,69,10,0.08)}
-textarea{resize:vertical;min-height:88px}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:480px){.grid-2{grid-template-columns:1fr}}
-.btn{display:block;width:100%;padding:13px;background:#E8450A;color:#fff;border:none;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s;font-family:'Inter',sans-serif;margin-top:8px}
-.btn:hover{background:#C73A09}
-.btn:disabled{background:#ccc;cursor:not-allowed}
-.attach-label{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px dashed #D1D5DB;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:#555;transition:all .15s;width:100%;justify-content:center}
-.attach-label:hover{border-color:#E8450A;color:#E8450A}
-.attach-name{font-size:11px;color:#888;text-align:center;margin-top:4px}
-.hint{font-size:11px;color:#aaa;margin-top:3px}
-.success-box{text-align:center;padding:16px 0}
-.token-display{background:#FFF3EE;border:2px dashed #E8450A;border-radius:12px;padding:20px;margin:20px 0}
-.token-val{font-size:32px;font-weight:900;letter-spacing:4px;color:#E8450A;font-family:monospace}
-.err{color:#DC2626;font-size:12px;margin-top:4px;display:none}
-.err.show{display:block}
-.divider{border:none;border-top:1.5px solid #F0F0F0;margin:20px 0}
+:root{
+  --accent:#E8450A;--accent2:#C73A09;--blue:#2563EB;--green:#16A34A;--yellow:#D97706;
+  --red:#DC2626;--purple:#7C3AED;--border:#E5E7EB;--muted:#9CA3AF;--text:#111827;
+  --surface:#fff;--surface2:#F9FAFB;--shadow:0 2px 24px rgba(0,0,0,0.08);
+}
+body{font-family:'Inter',sans-serif;background:#F3F4F6;min-height:100vh;padding:0;color:var(--text)}
+/* ── Layout ── */
+.page-wrap{max-width:760px;margin:0 auto;padding:32px 16px 80px}
+.card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:28px 32px;margin-bottom:20px}
+@media(max-width:600px){.card{padding:20px 16px}.page-wrap{padding:16px 10px 60px}}
+/* ── Header ── */
+.form-header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
+.form-header img{height:48px;width:auto;object-fit:contain}
+.form-header-text h1{font-size:20px;font-weight:800;color:var(--text)}
+.form-header-text p{font-size:12px;color:var(--muted);margin-top:2px}
+/* ── Section header ── */
+.section-head{display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:10px;border-bottom:2px solid var(--border)}
+.section-num{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.section-title{font-size:15px;font-weight:700;color:var(--text)}
+.section-sub{font-size:11px;color:var(--muted);margin-left:auto}
+/* ── Fields ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:560px){.grid-2,.grid-3{grid-template-columns:1fr}}
+.field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:560px){.field-row{grid-template-columns:1fr}}
+label.fl{display:block;font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+label.fl .req{color:var(--accent);margin-left:2px}
+input[type=text],input[type=email],input[type=tel],input[type=url],input[type=number],
+input[type=date],textarea,select{
+  width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;
+  font-size:13px;font-family:'Inter',sans-serif;color:var(--text);background:var(--surface);
+  transition:border .15s,box-shadow .15s;
+}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(232,69,10,.1)}
+input[readonly]{background:var(--surface2);color:var(--muted);cursor:default}
+textarea{resize:vertical;min-height:72px;line-height:1.5}
+.char-counter{font-size:10px;color:var(--muted);text-align:right;margin-top:2px}
+.char-counter.warn{color:var(--red)}
+/* ── Priority cards ── */
+.prio-group{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:0}
+@media(max-width:480px){.prio-group{grid-template-columns:1fr}}
+.prio-card{border:2px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:all .15s;user-select:none}
+.prio-card:hover{border-color:#ccc;background:var(--surface2)}
+.prio-card input{display:none}
+.prio-card.selected-p1{border-color:var(--red);background:#FEF2F2}
+.prio-card.selected-p2{border-color:var(--yellow);background:#FFFBEB}
+.prio-card.selected-p3{border-color:var(--green);background:#F0FDF4}
+.prio-label{font-size:14px;font-weight:800;margin-bottom:3px}
+.prio-def{font-size:11px;color:var(--muted);line-height:1.4}
+/* ── KPI multi-select ── */
+.kpi-grid{display:flex;flex-wrap:wrap;gap:7px}
+.kpi-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;transition:all .15s;user-select:none;background:var(--surface2)}
+.kpi-chip:hover{border-color:var(--accent);color:var(--accent)}
+.kpi-chip.selected{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.kpi-chip input{display:none}
+/* ── Where used chips ── */
+.chip-group{display:flex;flex-wrap:wrap;gap:7px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;transition:all .15s;user-select:none;background:var(--surface2)}
+.chip:hover{border-color:var(--blue)}
+.chip.selected{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.chip input{display:none}
+/* ── Radio toggle ── */
+.radio-row{display:flex;gap:8px;flex-wrap:wrap}
+.radio-btn{padding:7px 16px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;user-select:none;background:var(--surface2)}
+.radio-btn:hover{border-color:#ccc}
+.radio-btn.on{background:var(--text);border-color:var(--text);color:#fff}
+.radio-btn input{display:none}
+/* ── Star rating ── */
+.stars{display:flex;gap:4px;flex-direction:row-reverse;justify-content:flex-end}
+.stars input{display:none}
+.stars label{font-size:24px;cursor:pointer;color:#D1D5DB;transition:color .1s}
+.stars input:checked~label,.stars label:hover,.stars label:hover~label{color:#F59E0B}
+/* ── Buttons ── */
+.btn-submit{display:block;width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s;margin-top:4px}
+.btn-submit:hover{background:var(--accent2)}
+.btn-submit:disabled{background:#ccc;cursor:not-allowed}
+.btn-sec{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface2);font-family:'Inter',sans-serif;transition:all .15s}
+.btn-sec:hover{border-color:#aaa}
+/* ── Conditional blocks ── */
+.conditional{display:none}
+.conditional.show{display:block}
+/* ── Warnings ── */
+.warn-box{background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400E;margin-top:8px;display:none}
+.warn-box.show{display:flex;gap:8px;align-items:flex-start}
+.err-inline{font-size:11px;color:var(--red);margin-top:3px;display:none}
+.err-inline.show{display:block}
+/* ── Info pill ── */
+.info-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:20px;font-size:11px;color:var(--blue);font-weight:600}
+/* ── Admin triage panel ── */
+.triage-card{background:#1A1A2E;color:#E2E8F0;border-radius:14px;padding:24px 28px;margin-bottom:20px}
+.triage-card label.fl{color:#94A3B8}
+.triage-card input,.triage-card select,.triage-card textarea{background:#0F172A;border-color:#334155;color:#E2E8F0}
+.triage-card input:focus,.triage-card select:focus,.triage-card textarea:focus{border-color:#E8450A;box-shadow:none}
+.triage-card .section-head{border-bottom-color:#334155}
+.triage-card .section-title{color:#E2E8F0}
+/* ── Track section ── */
+.track-card{background:#fff;border-radius:14px;box-shadow:var(--shadow);padding:24px 28px;margin-bottom:20px;max-width:760px;width:100%}
+.token-big{font-family:monospace;font-size:28px;font-weight:900;letter-spacing:4px;color:var(--accent)}
+/* ── Success ── */
+.success-wrap{text-align:center;padding:20px 0}
+/* ── Divider ── */
+hr.div{border:none;border-top:1.5px solid var(--border);margin:16px 0}
+/* ── Attach ── */
+.attach-area{border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:border .15s}
+.attach-area:hover{border-color:var(--accent)}
+.attach-area input{display:none}
+/* ── Budget ── */
+.amount-row{display:grid;grid-template-columns:80px 1fr 1fr;gap:8px}
+@media(max-width:480px){.amount-row{grid-template-columns:1fr}}
+/* ── Effort ── */
+.effort-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+/* ── Rush badge ── */
+.rush-badge{display:none;background:#DC262222;border:1px solid #DC262244;color:#DC2626;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;margin-top:8px}
+.rush-badge.show{display:inline-block}
 </style>
 </head>
 <body>
+<div class="page-wrap" id="mainWrap">
 
-<div class="card" id="formCard">
-  <div class="logo-row" style="justify-content:center;margin-bottom:28px">
-    <img src="https://raw.githubusercontent.com/qnulabsbits/Content-Approval/main/logo.png" alt="QNu Labs" style="height:52px;width:auto;object-fit:contain"/>
+  <!-- ══ Header ══ -->
+  <div class="form-header">
+    <img src="https://raw.githubusercontent.com/qnulabsbits/Content-Approval/main/logo.png" alt="QNu Labs" onerror="this.style.display='none'"/>
+    <div class="form-header-text">
+      <h1>Marketing Request Portal</h1>
+      <p>Submit a request to the QNu Labs marketing team</p>
+    </div>
   </div>
-  <h1>Request Collaterals</h1>
-  <p class="subtitle">Fill in the details below and our marketing team will get back to you.</p>
-  <hr class="divider"/>
 
-  <div class="grid-2">
-    <div class="field">
-      <label>Your Name <span class="req">*</span></label>
-      <input id="f_name" placeholder="Full name" autocomplete="name"/>
-      <div class="err" id="e_name">Required</div>
-    </div>
-    <div class="field">
-      <label>Department <span class="req">*</span></label>
-      <input id="f_dept" placeholder="e.g. Sales, HR, Operations"/>
-      <div class="err" id="e_dept">Required</div>
-    </div>
-  </div>
-  <div class="grid-2">
-    <div class="field">
-      <label>Email <span class="req">*</span></label>
-      <input id="f_email" type="email" placeholder="you@qnulabs.com" autocomplete="email"/>
-      <div class="err" id="e_email">Valid email required</div>
-    </div>
-    <div class="field">
-      <label>Phone</label>
-      <input id="f_phone" type="tel" placeholder="+91 XXXXX XXXXX"/>
-    </div>
-  </div>
-  <div class="field">
-    <label>Collaterals Needed <span class="req">*</span></label>
-    <textarea id="f_collaterals" placeholder="e.g. Brochures ×100, Roll-up banners ×2, Social media creatives ×5, Name badges ×50..."></textarea>
-    <div class="err" id="e_collaterals">Required</div>
-  </div>
-  <div class="grid-2">
-    <div class="field">
-      <label>Needed By (Deadline) <span class="req">*</span></label>
-      <input id="f_deadline" type="date"/>
-      <div class="err" id="e_deadline">Required</div>
-    </div>
-    <div class="field">
-      <label>Event / Purpose</label>
-      <input id="f_event" placeholder="e.g. QNu Partner Summit 2025"/>
-    </div>
-  </div>
-  <div class="field">
-    <label>Additional Notes / Instructions</label>
-    <textarea id="f_notes" style="min-height:70px" placeholder="Brand guidelines to follow, specific dimensions, return date if applicable..."></textarea>
-  </div>
-  <div class="field">
-    <label>Attach Layout or Reference File</label>
-    <label class="attach-label" for="f_file">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-      Choose file
-      <input type="file" id="f_file" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.zip" style="display:none" onchange="onFileSelect(this)"/>
-    </label>
-    <div class="attach-name" id="f_file_name">No file selected &nbsp;·&nbsp; PDF, Word, PPT, images or ZIP, max 10 MB</div>
-  </div>
-  <div class="err" id="e_global"></div>
-  <button class="btn" id="submitBtn" onclick="submitForm()">Submit Request</button>
-  <p style="font-size:11px;color:#aaa;text-align:center;margin-top:12px">Your token will be shown after submission. You will receive updates at the email provided.</p>
-</div>
+  <!-- ══ FORM ══ -->
+  <form id="reqForm" onsubmit="return false">
 
-<div class="card" id="successCard" style="display:none">
-  <div class="success-box">
-    <div style="font-size:48px;margin-bottom:12px">✅</div>
-    <h1 style="margin-bottom:6px">Request Submitted!</h1>
-    <p style="font-size:14px;color:#666;margin-bottom:4px">Your request has been sent to the QNu Labs Marketing team for review.</p>
-    <p style="font-size:13px;color:#888">You will receive an update at <strong id="confirmedEmail"></strong> once the request is accepted and assigned.</p>
-    <div class="token-display">
-      <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Your Request Token</div>
-      <div class="token-val" id="confirmedToken"></div>
-      <div style="font-size:12px;color:#888;margin-top:6px">Save this token to track your request status</div>
+  <!-- §1 Requester -->
+  <div class="card">
+    <div class="section-head">
+      <div class="section-num">1</div>
+      <div class="section-title">Requester Details</div>
+      <div class="section-sub" id="autoFillNote"></div>
     </div>
-    <button class="btn" style="max-width:280px;margin:0 auto" onclick="resetForm()">Submit Another Request</button>
+    <div class="field-row">
+      <div class="field"><label class="fl">Your Name <span class="req">*</span></label><input id="f_name" placeholder="Full name" autocomplete="name"/><div class="err-inline" id="e_name">Required</div></div>
+      <div class="field"><label class="fl">Email <span class="req">*</span></label><input id="f_email" type="email" placeholder="you@qnulabs.com"/><div class="err-inline" id="e_email">Valid email required</div></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="fl">Function / BU <span class="req">*</span></label>
+        <select id="f_function">
+          <option value="">Select function...</option>
+          <option>BU — Defence</option><option>BU — Enterprise</option>
+          <option>Strategy</option><option>Sales</option><option>Engineering</option>
+          <option>Product</option><option>HR</option><option>Finance</option>
+          <option>Innovation</option><option>Academy</option>
+          <option>Internal Corporate Marketing</option>
+          <option>Marketing Internal</option>
+        </select>
+        <div class="err-inline" id="e_function">Required</div>
+      </div>
+      <div class="field">
+        <label class="fl">Region <span class="req">*</span></label>
+        <select id="f_region">
+          <option value="">Select region...</option>
+          <option>APAC</option><option>Europe</option><option>Middle East</option>
+          <option>Africa</option><option>North America</option><option>Latin America</option>
+        </select>
+        <div class="err-inline" id="e_region">Required</div>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="fl">Phone</label><input id="f_phone" type="tel" placeholder="+91 XXXXX XXXXX"/></div>
+      <div class="field"><label class="fl">Request ID</label><input id="f_reqid" readonly placeholder="Auto-generated on submit"/></div>
+    </div>
   </div>
-</div>
 
-
-<!-- ══ TRACK REQUEST ══ -->
-<div class="card" id="trackCard" style="margin-top:20px;max-width:620px;width:100%">
-  <div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:4px">Track Your Request</div>
-  <div style="font-size:12px;color:#888;margin-bottom:14px">Enter your token to check the current status.</div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <input id="trackTokenInput" placeholder="e.g. CR-20250315-AB3X" style="flex:1;min-width:180px;padding:10px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;text-transform:uppercase"/>
-    <button onclick="trackRequest()" style="padding:10px 20px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap">Check Status</button>
+  <!-- §2 Define the Project -->
+  <div class="card">
+    <div class="section-head">
+      <div class="section-num">2</div>
+      <div class="section-title">Define the Project</div>
+    </div>
+    <div class="field">
+      <label class="fl">Request Title <span class="req">*</span> <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(80 chars max)</span></label>
+      <input id="f_title" maxlength="80" placeholder="One-line summary of what you need" oninput="updateCharCount('f_title','cc_title',80)"/>
+      <div class="char-counter" id="cc_title">0 / 80</div>
+      <div class="err-inline" id="e_title">Required</div>
+    </div>
+    <div id="dupWarn" class="warn-box"><span>⚠</span><span id="dupWarnText"></span></div>
+    <div class="field">
+      <label class="fl">Deliverable Type <span class="req">*</span></label>
+      <select id="f_deliv_type" onchange="onDelivTypeChange(this.value)">
+        <option value="">Select type...</option>
+        <optgroup label="Decks">
+          <option>Corporate Deck</option><option>Demand Gen Deck</option>
+          <option>Sales Pitch Deck</option><option>Battlecard</option>
+        </optgroup>
+        <optgroup label="Content">
+          <option>Competitive Intelligence</option><option>Blog</option>
+          <option>Whitepaper</option><option>Case Study</option>
+          <option>Press Release</option><option>Newsletter</option>
+        </optgroup>
+        <optgroup label="Design">
+          <option>Collateral</option><option>Social Carousel</option><option>Video</option>
+        </optgroup>
+        <optgroup label="Digital">
+          <option>Website & Landing Page</option><option>Email</option>
+          <option>Outreach Campaign</option>
+        </optgroup>
+        <optgroup label="Events">
+          <option>Event Creative</option><option>Speaker Prep</option><option>Lead Update</option>
+        </optgroup>
+        <optgroup label="Launch">
+          <option>GTM</option><option>Product Launch Deliverables</option>
+        </optgroup>
+        <optgroup label="Analyst & PR">
+          <option>Analyst Briefing Material</option>
+        </optgroup>
+        <optgroup label="Internal">
+          <option>HR & Finance Communication</option>
+        </optgroup>
+        <option value="Other">Other (specify below)</option>
+      </select>
+      <div class="err-inline" id="e_deliv_type">Required</div>
+    </div>
+    <div class="conditional" id="delivOtherWrap">
+      <div class="field"><label class="fl">Specify Type</label><input id="f_deliv_other" placeholder="Describe the deliverable type"/></div>
+    </div>
+    <div class="field">
+      <label class="fl">Why it is needed <span class="req">*</span></label>
+      <textarea id="f_why" placeholder="Objective — why does this work need to happen?" style="min-height:80px"></textarea>
+      <div class="err-inline" id="e_why">Required</div>
+    </div>
+    <div class="field">
+      <label class="fl">What is expected <span class="req">*</span></label>
+      <textarea id="f_what" placeholder="Scope and output format — what exactly should be delivered?"></textarea>
+      <div class="err-inline" id="e_what">Required</div>
+    </div>
+    <div class="field">
+      <label class="fl">Target Audience</label>
+      <textarea id="f_audience" placeholder="Segment, persona, industry — who is this for?" style="min-height:60px"></textarea>
+    </div>
+    <div class="field">
+      <label class="fl">Where it will be used</label>
+      <div class="chip-group" id="whereUsed">
+        <label class="chip" onclick="toggleChip(this)"><input type="checkbox" value="Website"/>Website</label>
+        <label class="chip" onclick="toggleChip(this)"><input type="checkbox" value="LinkedIn"/>LinkedIn</label>
+        <label class="chip" onclick="toggleChip(this)"><input type="checkbox" value="Email"/>Email</label>
+        <label class="chip" onclick="toggleChip(this)"><input type="checkbox" value="Print"/>Print</label>
+        <label class="chip" onclick="toggleChip(this)" id="chipEvent"><input type="checkbox" value="Event" onchange="checkEventBlock()"/>Event</label>
+        <label class="chip" onclick="toggleChip(this)"><input type="checkbox" value="Internal"/>Internal</label>
+      </div>
+    </div>
   </div>
-  <div id="trackResult" style="margin-top:14px"></div>
+
+  <!-- §3 Event Block (conditional) -->
+  <div class="card conditional" id="eventBlock">
+    <div class="section-head">
+      <div class="section-num">3</div>
+      <div class="section-title">Event Details</div>
+      <div class="section-sub"><span class="info-pill">Shows for event-related requests</span></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="fl">Event Name</label><input id="f_event_name" placeholder="Name of the event" oninput="checkDuplicate('event')"/></div>
+      <div class="field"><label class="fl">Event URL</label><input id="f_event_url" type="url" placeholder="https://..."/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="fl">City</label><input id="f_event_city" placeholder="City"/></div>
+      <div class="field"><label class="fl">Country</label><input id="f_event_country" placeholder="Country"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="fl">Event Start Date</label><input id="f_event_start" type="date"/></div>
+      <div class="field"><label class="fl">Event End Date</label><input id="f_event_end" type="date"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="fl">QNu's Role</label>
+        <select id="f_event_role"><option value="">Select...</option><option>Sponsor</option><option>Speaker</option><option>Booth</option><option>Attendee</option></select>
+      </div>
+      <div class="field"><label class="fl">Expected Audience Size</label><input id="f_event_audience" type="number" placeholder="e.g. 500" min="0"/></div>
+    </div>
+    <div class="field"><label class="fl">Lead Target</label><input id="f_event_leads" type="number" placeholder="e.g. 20" min="0"/></div>
+  </div>
+
+  <!-- §4 Timeline -->
+  <div class="card">
+    <div class="section-head">
+      <div class="section-num" id="secNum4">4</div>
+      <div class="section-title">Timeline</div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="fl">Start Date</label><input id="f_start" type="date" oninput="validateDates()"/></div>
+      <div class="field"><label class="fl">End Date (Deadline) <span class="req">*</span></label><input id="f_end" type="date" oninput="validateDates()"/><div class="err-inline" id="e_end">Required — and must not be before start date</div></div>
+    </div>
+    <div id="rushBadge" class="rush-badge">⚡ Rush request — below minimum lead time for this deliverable type. Marketing team will be notified.</div>
+    <div class="field">
+      <label class="fl">Deadline Type</label>
+      <div class="radio-row">
+        <label class="radio-btn" onclick="toggleRadio('deadline_type','Hard',this)"><input type="radio" name="deadline_type" value="Hard"/>Hard</label>
+        <label class="radio-btn" onclick="toggleRadio('deadline_type','Flexible',this)"><input type="radio" name="deadline_type" value="Flexible"/>Flexible</label>
+      </div>
+    </div>
+    <div class="conditional" id="hardReasonWrap">
+      <div class="field"><label class="fl">Reason for Hard Deadline</label><input id="f_hard_reason" placeholder="e.g. Event date, Customer meeting on..."/></div>
+    </div>
+  </div>
+
+  <!-- §5 Priority -->
+  <div class="card">
+    <div class="section-head">
+      <div class="section-num">5</div>
+      <div class="section-title">Priority</div>
+    </div>
+    <div class="prio-group" id="prioGroup">
+      <label class="prio-card" onclick="selectPrio('P1',this)">
+        <input type="radio" name="priority" value="P1"/>
+        <div class="prio-label" style="color:var(--red)">P1</div>
+        <div class="prio-def">Business-critical — revenue or reputational impact, needs immediate attention</div>
+      </label>
+      <label class="prio-card" onclick="selectPrio('P2',this)">
+        <input type="radio" name="priority" value="P2"/>
+        <div class="prio-label" style="color:var(--yellow)">P2</div>
+        <div class="prio-def">Important — planned work with a clear deadline</div>
+      </label>
+      <label class="prio-card" onclick="selectPrio('P3',this)">
+        <input type="radio" name="priority" value="P3"/>
+        <div class="prio-label" style="color:var(--green)">P3</div>
+        <div class="prio-def">Good to have — flexible timeline, no hard deadline</div>
+      </label>
+    </div>
+    <div class="err-inline" id="e_priority" style="margin-top:8px">Please select a priority</div>
+    <div id="p1WarnBox" class="warn-box" style="margin-top:10px">
+      <span>⚠</span>
+      <span id="p1WarnText">P1 requires CMO/Admin approval. Your request will be held until approved. Max 4 P1s allowed in the queue at a time.</span>
+    </div>
+    <div class="conditional" id="p1JustifyWrap" style="margin-top:12px">
+      <div class="field"><label class="fl">P1 Justification <span class="req">*</span></label><textarea id="f_p1_justify" placeholder="Why does this need immediate attention? What is the business impact of delay?"></textarea><div class="err-inline" id="e_p1_justify">Required for P1</div></div>
+    </div>
+  </div>
+
+  <!-- §6 Inputs -->
+  <div class="card">
+    <div class="section-head">
+      <div class="section-num">6</div>
+      <div class="section-title">Inputs &amp; References</div>
+    </div>
+    <div class="field">
+      <label class="fl">Attachment</label>
+      <label class="attach-area" for="f_file">
+        <div style="font-size:28px;margin-bottom:6px">📎</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">Click to attach a file</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">PDF, Word, PPT, images or ZIP · Max 10 MB</div>
+        <input type="file" id="f_file" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.zip" onchange="onFileSelect(this)"/>
+      </label>
+      <div id="f_file_name" style="font-size:12px;color:var(--muted);margin-top:6px;text-align:center"></div>
+    </div>
+    <div class="field"><label class="fl">Drive / SharePoint Link(s)</label><input id="f_drive" type="url" placeholder="https://drive.google.com/... or SharePoint URL"/></div>
+    <div class="field">
+      <label class="fl">Confidential Content?</label>
+      <div class="radio-row">
+        <label class="radio-btn" onclick="toggleRadio('confidential','Yes',this)"><input type="radio" name="confidential" value="Yes"/>Yes</label>
+        <label class="radio-btn" onclick="toggleRadio('confidential','No',this)"><input type="radio" name="confidential" value="No"/>No</label>
+      </div>
+      <div id="confNote" style="display:none;margin-top:6px;font-size:11px;color:var(--red);font-weight:600">⚠ Covers customer names, NDA material or pricing. Marketing team will handle with restricted access.</div>
+    </div>
+    <div class="field"><label class="fl">Other Comments</label><textarea id="f_comments" placeholder="Anything else the marketing team should know..." style="min-height:60px"></textarea></div>
+  </div>
+
+  <!-- §7 Business Impact -->
+  <div class="card">
+    <div class="section-head">
+      <div class="section-num">7</div>
+      <div class="section-title">Business Impact</div>
+      <div class="section-sub" style="color:var(--red);font-weight:700">Mandatory</div>
+    </div>
+    <div class="field">
+      <label class="fl">KPI (select all that apply) <span class="req">*</span></label>
+      <div class="kpi-grid" id="kpiGrid">
+        <!-- populated by JS -->
+      </div>
+      <div class="err-inline" id="e_kpi">Select at least one KPI</div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="fl">Expected Outcome</label><input id="f_outcome" placeholder="e.g. 10 meetings, ₹5L pipeline"/></div>
+      <div class="field"><label class="fl">Linked Account / Opportunity</label><input id="f_linked_account" placeholder="Customer name or CRM ID (optional)"/></div>
+    </div>
+  </div>
+
+  <!-- §8 Budget -->
+  <div class="card">
+    <div class="section-head">
+      <div class="section-num">8</div>
+      <div class="section-title">Budget</div>
+      <div class="section-sub">Optional</div>
+    </div>
+    <div class="field">
+      <label class="fl">Budget Needed?</label>
+      <div class="radio-row">
+        <label class="radio-btn" onclick="toggleRadio('budget_needed','Yes',this);showBudgetFields(true)"><input type="radio" name="budget_needed" value="Yes"/>Yes</label>
+        <label class="radio-btn" onclick="toggleRadio('budget_needed','No',this);showBudgetFields(false)"><input type="radio" name="budget_needed" value="No"/>No</label>
+      </div>
+    </div>
+    <div class="conditional" id="budgetFields">
+      <div class="field">
+        <label class="fl">Amount</label>
+        <div class="amount-row">
+          <select id="f_budget_currency"><option>INR</option><option>USD</option><option>EUR</option></select>
+          <input id="f_budget_amount" type="number" placeholder="Amount" min="0"/>
+          <input id="f_cost_centre" placeholder="Cost Centre"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit -->
+  <div class="card" style="padding:20px 24px">
+    <div id="submitErrBox" class="warn-box" style="margin-bottom:12px"><span>⚠</span><span id="submitErrText"></span></div>
+    <button class="btn-submit" id="submitBtn" onclick="submitForm()">Submit Request</button>
+    <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:10px">You will receive a token number after submission. Use it to track your request status below.</p>
+  </div>
+
+  </form><!-- end form -->
+
+  <!-- ══ SUCCESS ══ -->
+  <div id="successCard" style="display:none">
+    <div class="card">
+      <div class="success-wrap">
+        <div style="font-size:48px;margin-bottom:14px">✅</div>
+        <div style="font-size:20px;font-weight:800;margin-bottom:6px">Request Submitted!</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Your request has been sent to the QNu Labs marketing team for triage.</div>
+        <div style="background:var(--surface2);border:2px dashed var(--accent);border-radius:12px;padding:20px;margin-bottom:20px;display:inline-block;min-width:280px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Your Request Token</div>
+          <div class="token-big" id="confirmedToken"></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">Save this — use it below to track your request</div>
+        </div>
+        <div><button class="btn-sec" onclick="resetForm()" style="margin:0 auto">Submit Another Request</button></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end page-wrap -->
+
+<!-- ══ TRACK SECTION ══ (always visible) -->
+<div style="max-width:760px;margin:0 auto;padding:0 16px 60px" id="trackWrap">
+  <div class="track-card">
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">Track Your Request</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Enter your token to see the full status and all details.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="trackInput" placeholder="CR-YYYYMMDD-XXXX" style="flex:1;min-width:180px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:Inter,sans-serif;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')trackRequest()"/>
+      <button onclick="trackRequest()" style="padding:10px 20px;background:var(--text);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">Check Status</button>
+    </div>
+    <div id="trackResult" style="margin-top:16px"></div>
+  </div>
 </div>
 
 <script>
 const SUPA_URL='https://imtoahbuliuywiljxvpg.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdG9haGJ1bGl1eXdpbGp4dnBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjU5NjIsImV4cCI6MjEwNTgwMTk2Mn0.xQAsTj5JWRScHpAflWc42X7LzU6LiZZVD6nu47u9Bxo';
 const BUCKET='request-attachments';
+
+/* ── Lead time minimums (days) by deliverable group ── */
+const LEAD_TIMES={
+  'Corporate Deck':5,'Demand Gen Deck':5,'Sales Pitch Deck':5,'Battlecard':3,
+  'Competitive Intelligence':5,'Blog':3,'Whitepaper':7,'Case Study':7,'Press Release':3,'Newsletter':5,
+  'Collateral':5,'Social Carousel':3,'Video':10,
+  'Website & Landing Page':14,'Email':3,'Outreach Campaign':5,
+  'Event Creative':14,'Speaker Prep':7,'Lead Update':2,
+  'GTM':10,'Product Launch Deliverables':10,
+  'Analyst Briefing Material':7,'HR & Finance Communication':3,
+  'Other':3
+};
+
+/* ── KPI list ── */
+const KPI_LIST=[
+  'Brand Amplification','Product Launch','Event Creatives and Deliverables',
+  'Corporate PowerPoint Template','Corporate Deck','Email','Newsletter',
+  'Blog/Whitepaper Publishing','Website Refresh','Demand Gen','Outreach Campaign',
+  'GTM','Strategy','Sales Enablement - Product Brochures','Videos',
+  'Internal Productivity','HR/Finance Request','Partner Sign-up/Onboarding'
+];
+
 let selectedFile=null;
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded',function(){
+  buildKPIGrid();
+  // Set today as min for all date fields
+  const today=new Date().toISOString().slice(0,10);
+  ['f_start','f_end','f_event_start','f_event_end'].forEach(function(id){
+    const el=document.getElementById(id);
+    if(el) el.min=today;
+  });
+});
+
+function buildKPIGrid(){
+  const g=document.getElementById('kpiGrid');
+  if(!g) return;
+  g.innerHTML=KPI_LIST.map(function(k){
+    return '<label class="kpi-chip" onclick="toggleChip(this)"><input type="checkbox" value="'+k+'"/>'+k+'</label>';
+  }).join('');
+}
+
+/* ── UI helpers ── */
+function toggleChip(el){
+  el.classList.toggle('selected');
+  // Check event block
+  const ev=document.getElementById('eventBlock');
+  if(el.querySelector('input[value="Event"]')||document.getElementById('f_deliv_type')?.value==='Event Creative'){
+    checkEventBlock();
+  }
+}
+
+function checkEventBlock(){
+  const ev=document.getElementById('eventBlock');
+  if(!ev) return;
+  const eventChipSelected=document.querySelector('#whereUsed input[value="Event"]')?.checked;
+  const delivType=document.getElementById('f_deliv_type')?.value||'';
+  const isEvent=eventChipSelected||['Event Creative','Speaker Prep','Lead Update'].includes(delivType);
+  ev.classList.toggle('show',isEvent);
+}
+
+function onDelivTypeChange(val){
+  const ow=document.getElementById('delivOtherWrap');
+  if(ow) ow.classList.toggle('show',val==='Other');
+  checkEventBlock();
+  checkRush();
+}
+
+function updateCharCount(inputId,counterId,max){
+  const inp=document.getElementById(inputId);
+  const cnt=document.getElementById(counterId);
+  if(!inp||!cnt) return;
+  const len=inp.value.length;
+  cnt.textContent=len+' / '+max;
+  cnt.classList.toggle('warn',len>max*0.9);
+  // Duplicate check on title blur
+  if(inputId==='f_title'&&len>5) checkDuplicate('title');
+}
+
+function validateDates(){
+  const s=document.getElementById('f_start')?.value;
+  const e=document.getElementById('f_end')?.value;
+  const err=document.getElementById('e_end');
+  if(s&&e&&e<s){if(err)err.classList.add('show');return false;}
+  if(err) err.classList.remove('show');
+  checkRush();
+  return true;
+}
+
+function checkRush(){
+  const e=document.getElementById('f_end')?.value;
+  const type=document.getElementById('f_deliv_type')?.value||'';
+  const badge=document.getElementById('rushBadge');
+  if(!badge) return;
+  if(!e||!type){badge.classList.remove('show');return;}
+  const minDays=LEAD_TIMES[type]||3;
+  const daysLeft=Math.ceil((new Date(e)-new Date())/86400000);
+  badge.classList.toggle('show',daysLeft<minDays&&daysLeft>=0);
+}
+
+function toggleRadio(name,val,el){
+  document.querySelectorAll('[name="'+name+'"]').forEach(function(r){
+    r.closest('.radio-btn')?.classList.toggle('on',r.value===val);
+  });
+  if(name==='deadline_type'){
+    const hw=document.getElementById('hardReasonWrap');
+    if(hw) hw.classList.toggle('show',val==='Hard');
+  }
+  if(name==='confidential'){
+    const cn=document.getElementById('confNote');
+    if(cn) cn.style.display=val==='Yes'?'block':'none';
+  }
+}
+
+function showBudgetFields(show){
+  const bf=document.getElementById('budgetFields');
+  if(bf) bf.classList.toggle('show',show);
+}
+
+function selectPrio(prio,el){
+  document.querySelectorAll('.prio-card').forEach(function(c){
+    c.classList.remove('selected-p1','selected-p2','selected-p3');
+  });
+  el.classList.add('selected-'+prio.toLowerCase());
+  el.querySelector('input').checked=true;
+  const jw=document.getElementById('p1JustifyWrap');
+  if(jw) jw.classList.toggle('show',prio==='P1');
+  const pw=document.getElementById('p1WarnBox');
+  if(prio==='P1'){
+    // Check P1 count in DB
+    checkP1Count();
+    if(pw) pw.classList.add('show');
+  } else {
+    if(pw) pw.classList.remove('show');
+  }
+  const e=document.getElementById('e_priority');
+  if(e) e.classList.remove('show');
+}
+
+async function checkP1Count(){
+  try{
+    const res=await fetch(SUPA_URL+'/rest/v1/collateral_requests?priority=eq.P1&status=not.in.(delivered,rejected,done)&select=id',{
+      headers:{apikey:SUPA_KEY,'Content-Type':'application/json'}
+    });
+    const data=await res.json();
+    const count=Array.isArray(data)?data.length:0;
+    const pw=document.getElementById('p1WarnBox');
+    const pt=document.getElementById('p1WarnText');
+    if(pt){
+      if(count>=4){
+        pt.textContent='⚠ There are already '+count+' P1 requests in the queue (max 4). CMO/Admin will review whether this can be P1 or should be downgraded.';
+        if(pw) pw.style.borderColor='#DC2626';
+      } else {
+        pt.textContent='P1 requires CMO/Admin approval before work begins. '+count+' of 4 P1 slots currently used.';
+      }
+    }
+  }catch(e){}
+}
+
+async function checkDuplicate(type){
+  const val=type==='title'
+    ?document.getElementById('f_title')?.value?.trim()
+    :document.getElementById('f_event_name')?.value?.trim();
+  if(!val||val.length<5) return;
+  const dw=document.getElementById('dupWarn');
+  if(!dw) return;
+  try{
+    const field=type==='title'?'title':'event_name';
+    const encoded=encodeURIComponent(val);
+    const res=await fetch(SUPA_URL+'/rest/v1/collateral_requests?'+field+'=ilike.'+encoded+'*&status=not.in.(rejected)&select=token,title,event_name,status&limit=3',{
+      headers:{apikey:SUPA_KEY,'Content-Type':'application/json'}
+    });
+    const data=await res.json();
+    if(Array.isArray(data)&&data.length>0){
+      document.getElementById('dupWarnText').textContent=
+        'Similar request already exists: "'+((data[0].title||data[0].event_name)||val)+'" ('+data[0].token+', '+data[0].status+'). Please check before submitting.';
+      dw.classList.add('show');
+    } else {
+      dw.classList.remove('show');
+    }
+  }catch(e){}
+}
 
 function onFileSelect(input){
   const f=input.files[0];
-  if(!f){selectedFile=null;document.getElementById('f_file_name').textContent='No file selected';return;}
-  if(f.size>10*1024*1024){alert('File too large (max 10 MB)');input.value='';selectedFile=null;return;}
+  const nm=document.getElementById('f_file_name');
+  if(!f){selectedFile=null;if(nm)nm.textContent='';return;}
+  if(f.size>10*1024*1024){alert('File too large (max 10 MB)');input.value='';selectedFile=null;if(nm)nm.textContent='';return;}
   selectedFile=f;
-  document.getElementById('f_file_name').textContent=f.name+' ('+(f.size/1024).toFixed(0)+' KB)';
+  if(nm) nm.textContent='📎 '+f.name+' ('+(f.size/1024).toFixed(0)+' KB)';
 }
 
-function showErr(id,show){
-  const el=document.getElementById(id);
-  if(el) el.classList.toggle('show',show);
-}
-function g(id){return (document.getElementById(id)?.value||'').trim();}
+function g(id){return(document.getElementById(id)?.value||'').trim();}
 
-async function submitForm(){
-  const name=g('f_name'),dept=g('f_dept'),email=g('f_email');
-  const collaterals=g('f_collaterals'),deadline=g('f_deadline');
+/* ── Validation ── */
+function validate(){
   let ok=true;
-  showErr('e_name',!name);     if(!name) ok=false;
-  showErr('e_dept',!dept);     if(!dept) ok=false;
-  showErr('e_email',!email||!email.includes('@')); if(!email||!email.includes('@')) ok=false;
-  showErr('e_collaterals',!collaterals); if(!collaterals) ok=false;
-  showErr('e_deadline',!deadline);       if(!deadline) ok=false;
-  if(!ok) return;
+  const req=[
+    ['f_name','e_name'],['f_email','e_email'],
+    ['f_function','e_function'],['f_region','e_region'],
+    ['f_title','e_title'],['f_deliv_type','e_deliv_type'],
+    ['f_why','e_why'],['f_what','e_what'],['f_end','e_end']
+  ];
+  req.forEach(function([fid,eid]){
+    const val=g(fid);
+    const err=document.getElementById(eid);
+    if(!val){if(err)err.classList.add('show');ok=false;}
+    else{if(err)err.classList.remove('show');}
+  });
+  // Email format
+  if(g('f_email')&&!g('f_email').includes('@')){
+    const ee=document.getElementById('e_email');
+    if(ee){ee.textContent='Valid email required';ee.classList.add('show');}
+    ok=false;
+  }
+  // Priority
+  const prio=document.querySelector('input[name="priority"]:checked')?.value||'';
+  if(!prio){const e=document.getElementById('e_priority');if(e)e.classList.add('show');ok=false;}
+  if(prio==='P1'&&!g('f_p1_justify')){
+    const e=document.getElementById('e_p1_justify');if(e)e.classList.add('show');ok=false;
+  }
+  // KPI
+  const kpis=[...document.querySelectorAll('#kpiGrid input:checked')].map(function(c){return c.value;});
+  if(!kpis.length){const e=document.getElementById('e_kpi');if(e)e.classList.add('show');ok=false;}
+  else{const e=document.getElementById('e_kpi');if(e)e.classList.remove('show');}
+  // Date order
+  if(!validateDates()) ok=false;
+  return ok;
+}
 
+/* ── Submit ── */
+async function submitForm(){
+  const sb=document.getElementById('submitErrBox');
+  if(sb) sb.classList.remove('show');
+  if(!validate()){
+    if(sb){document.getElementById('submitErrText').textContent='Please fill all required fields.';sb.classList.add('show');}
+    // Scroll to first error
+    const firstErr=document.querySelector('.err-inline.show,.warn-box.show');
+    if(firstErr) firstErr.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   const btn=document.getElementById('submitBtn');
-  btn.disabled=true; btn.textContent='Submitting...';
-  const errEl=document.getElementById('e_global');
-  errEl.classList.remove('show');
-
+  btn.disabled=true;btn.textContent='Submitting...';
   try{
-    // Upload file if any
+    // Upload attachment
     let attachUrl=null;
     if(selectedFile){
       const ext=selectedFile.name.split('.').pop().toLowerCase();
@@ -181,133 +722,197 @@ async function submitForm(){
       });
       if(up.ok) attachUrl=SUPA_URL+'/storage/v1/object/public/'+BUCKET+'/'+path;
     }
-
-    // Generate token
+    // Build token
     const now=new Date();
     const dp=now.getFullYear()+(now.getMonth()+1).toString().padStart(2,'0')+now.getDate().toString().padStart(2,'0');
     const token='CR-'+dp+'-'+Math.random().toString(36).toUpperCase().slice(2,6);
-
-    // Insert record
+    // Collect values
+    const prio=document.querySelector('input[name="priority"]:checked')?.value||'';
+    const kpis=[...document.querySelectorAll('#kpiGrid input:checked')].map(function(c){return c.value;});
+    const whereUsed=[...document.querySelectorAll('#whereUsed input:checked')].map(function(c){return c.value;});
+    const deadlineType=document.querySelector('input[name="deadline_type"]:checked')?.value||'';
+    const budgetNeeded=document.querySelector('input[name="budget_needed"]:checked')?.value||'No';
+    const confidential=document.querySelector('input[name="confidential"]:checked')?.value||'No';
+    const payload={
+      token,
+      name:g('f_name'),email:g('f_email'),phone:g('f_phone')||null,
+      department:g('f_function'),  // reuse department column for function/BU
+      region:g('f_region'),
+      title:g('f_title'),
+      deliverable_type:g('f_deliv_type')==='Other'?g('f_deliv_other'):g('f_deliv_type'),
+      why_needed:g('f_why'),
+      what_expected:g('f_what'),
+      target_audience:g('f_audience')||null,
+      where_used:JSON.stringify(whereUsed),
+      // Event
+      event_name:g('f_event_name')||null,
+      event_url:g('f_event_url')||null,
+      event_city:g('f_event_city')||null,
+      event_country:g('f_event_country')||null,
+      event_start_date:document.getElementById('f_event_start')?.value||null,
+      event_end_date:document.getElementById('f_event_end')?.value||null,
+      event_role:g('f_event_role')||null,
+      event_audience_size:parseInt(g('f_event_audience'))||null,
+      event_lead_target:parseInt(g('f_event_leads'))||null,
+      // Timeline
+      start_date:document.getElementById('f_start')?.value||null,
+      deadline:document.getElementById('f_end')?.value||null,  // keep deadline col
+      deadline_type:deadlineType||null,
+      hard_deadline_reason:g('f_hard_reason')||null,
+      // Priority
+      priority:prio,
+      p1_justification:prio==='P1'?g('f_p1_justify'):null,
+      // Inputs
+      attachment_url:attachUrl,
+      drive_link:g('f_drive')||null,
+      confidential:confidential==='Yes',
+      collaterals_needed:g('f_comments')||g('f_what'), // map to existing col
+      notes:g('f_comments')||null,
+      // Impact
+      kpis_selected:JSON.stringify(kpis),
+      expected_outcome:g('f_outcome')||null,
+      linked_account:g('f_linked_account')||null,
+      // Budget
+      budget_needed:budgetNeeded==='Yes',
+      budget_currency:budgetNeeded==='Yes'?(document.getElementById('f_budget_currency')?.value||'INR'):null,
+      budget_amount:budgetNeeded==='Yes'?(parseFloat(g('f_budget_amount'))||null):null,
+      cost_centre:budgetNeeded==='Yes'?g('f_cost_centre'):null,
+      // Meta
+      status:'pending',submitted_by:null,
+      is_rush:document.getElementById('rushBadge')?.classList.contains('show')||false
+    };
     const res=await fetch(SUPA_URL+'/rest/v1/collateral_requests',{
       method:'POST',
       headers:{apikey:SUPA_KEY,'Content-Type':'application/json',Prefer:'return=representation'},
-      body:JSON.stringify({
-        token,name,department:dept,email,
-        phone:g('f_phone')||null,
-        collaterals_needed:collaterals,
-        deadline,
-        event_name:g('f_event')||null,
-        notes:g('f_notes')||null,
-        attachment_url:attachUrl,
-        submitted_by:null,
-        status:'pending'
-      })
+      body:JSON.stringify(payload)
     });
     if(!res.ok){const e=await res.json();throw new Error(e.message||'Submission failed');}
-
     // Show success
     document.getElementById('confirmedToken').textContent=token;
-    document.getElementById('confirmedEmail').textContent=email;
-    document.getElementById('formCard').style.display='none';
+    document.getElementById('reqForm').style.display='none';
     document.getElementById('successCard').style.display='';
-
+    // Auto-fill track input
+    const ti=document.getElementById('trackInput');
+    if(ti){ti.value=token;trackRequest();}
   }catch(e){
-    errEl.textContent='Could not submit: '+e.message;
-    errEl.classList.add('show');
-    btn.disabled=false; btn.textContent='Submit Request';
+    const sb=document.getElementById('submitErrBox');
+    if(sb){document.getElementById('submitErrText').textContent='Could not submit: '+e.message;sb.classList.add('show');}
+    btn.disabled=false;btn.textContent='Submit Request';
   }
 }
 
 function resetForm(){
-  ['f_name','f_dept','f_email','f_phone','f_collaterals','f_deadline','f_event','f_notes'].forEach(id=>{
-    const el=document.getElementById(id); if(el) el.value='';
-  });
-  selectedFile=null;
-  document.getElementById('f_file_name').textContent='No file selected';
-  document.getElementById('formCard').style.display='';
+  document.getElementById('reqForm').style.display='';
   document.getElementById('successCard').style.display='none';
+  document.getElementById('reqForm').reset();
+  buildKPIGrid();
+  document.querySelectorAll('.chip,.kpi-chip,.prio-card,.radio-btn').forEach(function(el){
+    el.classList.remove('selected','selected-p1','selected-p2','selected-p3','on');
+  });
+  document.querySelectorAll('.conditional').forEach(function(el){el.classList.remove('show');});
+  document.querySelectorAll('.err-inline,.warn-box').forEach(function(el){el.classList.remove('show');});
+  document.getElementById('f_file_name').textContent='';
+  selectedFile=null;
+  document.getElementById('cc_title').textContent='0 / 80';
   document.getElementById('submitBtn').disabled=false;
   document.getElementById('submitBtn').textContent='Submit Request';
 }
 
-/* ── Track request by token ── */
-async function trackRequest() {
-  const token = (document.getElementById('trackTokenInput')?.value||'').trim().toUpperCase();
-  const out = document.getElementById('trackResult');
-  if(!token) { out.innerHTML='<div style="color:#DC2626;font-size:12px">Please enter your token.</div>'; return; }
-  out.innerHTML='<div style="font-size:12px;color:#888">Looking up...</div>';
-  try {
-    const res = await fetch(SUPA_URL+'/rest/v1/collateral_requests?token=eq.'+encodeURIComponent(token)+'&select=token,name,status,collaterals_needed,deadline,assigned_to_name,rejection_reason,created_at,project_id', {
-      headers: { apikey: SUPA_KEY, 'Content-Type': 'application/json' }
+/* ── Track request ── */
+async function trackRequest(){
+  const token=(document.getElementById('trackInput')?.value||'').trim().toUpperCase();
+  const out=document.getElementById('trackResult');
+  if(!token){out.innerHTML='<div style="color:var(--red);font-size:12px">Please enter your token.</div>';return;}
+  out.innerHTML='<div style="font-size:12px;color:var(--muted)">Looking up...</div>';
+  try{
+    const res=await fetch(SUPA_URL+'/rest/v1/collateral_requests?token=eq.'+encodeURIComponent(token)+'&select=*',{
+      headers:{apikey:SUPA_KEY,'Content-Type':'application/json'}
     });
-    const data = await res.json();
-    if(!data||!data.length) {
-      out.innerHTML='<div style="color:#DC2626;font-size:13px;padding:12px;background:#FEF2F2;border-radius:8px">No request found for token <strong>'+token+'</strong>. Please check and try again.</div>';
+    const data=await res.json();
+    if(!data||!data.length){
+      out.innerHTML='<div style="color:var(--red);font-size:13px;padding:12px;background:#FEF2F2;border-radius:8px">No request found for token <strong>'+token+'</strong>.</div>';
       return;
     }
-    const r = data[0];
-    const SL = {pending:'Pending Review',accepted:'Accepted',assigned:'Assigned to Team',inprogress:'In Progress',done:'Completed',rejected:'Rejected'};
-    const SC = {pending:'#D97706',accepted:'#2563EB',assigned:'#2563EB',inprogress:'#2563EB',done:'#16A34A',rejected:'#DC2626'};
-    const col = SC[r.status]||'#888';
-    const statusLabel = SL[r.status]||r.status;
-    const deadline = r.deadline ? new Date(r.deadline).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-    const submitted = r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-
-    // Build timeline
-    const steps = [
-      {key:'pending',   label:'Submitted',      done: true},
-      {key:'accepted',  label:'Under Review',    done: ['accepted','assigned','inprogress','done'].includes(r.status)},
-      {key:'assigned',  label:'Assigned to Team',done: ['assigned','inprogress','done'].includes(r.status)},
-      {key:'inprogress',label:'Work in Progress',done: ['inprogress','done'].includes(r.status)},
-      {key:'done',      label:'Completed',       done: r.status==='done'},
-    ];
-    const timelineHTML = r.status==='rejected' ? '' :
-      '<div style="display:flex;align-items:center;gap:0;margin:16px 0;overflow-x:auto;padding-bottom:4px">'
-      + steps.map((s,i)=>{
-          const active = s.key===r.status;
-          const c = s.done ? '#16A34A' : '#D1D5DB';
-          const tc = s.done ? '#16A34A' : '#9CA3AF';
-          return (i>0?'<div style="flex:1;height:2px;background:'+c+';min-width:16px"></div>':'')
-            +'<div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:60px">'
-            +'<div style="width:22px;height:22px;border-radius:50%;background:'+(s.done?c:'#fff')+';border:2px solid '+c+';display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700">'
-            +(s.done?'&#10003;':'')+'</div>'
-            +'<div style="font-size:10px;color:'+tc+';font-weight:'+(active?'700':'400')+';text-align:center;line-height:1.3">'+s.label+'</div>'
-            +'</div>';
-        }).join('')
-      +'</div>';
-
-    out.innerHTML =
-      '<div style="background:#F9FAFB;border:1.5px solid #E5E7EB;border-radius:12px;padding:16px 18px">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px">'
-      +'<span style="font-family:monospace;font-weight:800;font-size:16px;color:#E8450A;letter-spacing:1px">'+r.token+'</span>'
-      +'<span style="background:'+col+'22;color:'+col+';border:1px solid '+col+'44;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px">'+statusLabel+'</span>'
-      +'</div>'
-      + timelineHTML
-      +'<div style="font-size:13px;margin-bottom:6px"><strong>Request:</strong> '+escHtml(r.collaterals_needed)+'</div>'
-      +'<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#666;margin-bottom:'+(r.assigned_to_name||r.rejection_reason?'10':'0')+'px">'
-      +'<span>Submitted: '+submitted+'</span>'
-      +'<span>Deadline: '+deadline+'</span>'
-      +'</div>'
-      +(r.assigned_to_name?'<div style="font-size:13px;color:#2563EB;margin-top:6px">Assigned to: <strong>'+escHtml(r.assigned_to_name)+'</strong></div>':'')
-      +(r.status==='rejected'&&r.rejection_reason?'<div style="font-size:12px;color:#DC2626;margin-top:8px;padding:10px;background:#FEF2F2;border-radius:8px;border-left:3px solid #DC2626">Reason: '+escHtml(r.rejection_reason)+'</div>':'')
-      +(r.status==='done'?'<div style="font-size:13px;color:#16A34A;margin-top:8px;font-weight:600">Your collaterals are ready. Please check with the marketing team for delivery.</div>':'')
-      +'</div>';
-  } catch(e) {
-    out.innerHTML='<div style="color:#DC2626;font-size:12px">Could not look up: '+e.message+'</div>';
+    renderTrackResult(data[0],out);
+  }catch(e){
+    out.innerHTML='<div style="color:var(--red);font-size:12px">Could not look up: '+e.message+'</div>';
   }
 }
 
-function escHtml(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function renderTrackResult(r,out){
+  const SL={pending:'Pending Review',accepted:'Accepted',assigned:'Assigned',inprogress:'In Progress',
+            inreview:'In Review',delivered:'Delivered',onhold:'On Hold',rejected:'Rejected',done:'Delivered'};
+  const SC={pending:'#D97706',accepted:'#2563EB',assigned:'#2563EB',inprogress:'#2563EB',
+            inreview:'#7C3AED',delivered:'#16A34A',onhold:'#D97706',rejected:'#DC2626',done:'#16A34A'};
+  const col=SC[r.status]||'#888';
+  const statusLabel=SL[r.status]||r.status;
+  // Timeline steps
+  const steps=[
+    {key:'pending',label:'Submitted',done:true},
+    {key:'accepted',label:'Under Review',done:['accepted','assigned','inprogress','inreview','delivered','done'].includes(r.status)},
+    {key:'assigned',label:'Assigned',done:['assigned','inprogress','inreview','delivered','done'].includes(r.status)},
+    {key:'inprogress',label:'In Progress',done:['inprogress','inreview','delivered','done'].includes(r.status)},
+    {key:'inreview',label:'In Review',done:['inreview','delivered','done'].includes(r.status)},
+    {key:'delivered',label:'Delivered',done:['delivered','done'].includes(r.status)},
+  ];
+  const isRej=r.status==='rejected'||r.status==='onhold';
+  const timelineHTML=isRej?'':
+    '<div style="display:flex;align-items:center;gap:0;margin:14px 0;overflow-x:auto;padding-bottom:4px">'+
+    steps.map(function(s,i){
+      const c=s.done?'#16A34A':'#D1D5DB';
+      const tc=s.done?'#16A34A':'#9CA3AF';
+      return (i>0?'<div style="flex:1;height:2px;background:'+c+';min-width:12px"></div>':'')
+        +'<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:56px">'
+        +'<div style="width:20px;height:20px;border-radius:50%;background:'+(s.done?c:'#fff')+';border:2px solid '+c+';display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700">'+(s.done?'✓':'')+'</div>'
+        +'<div style="font-size:9px;color:'+tc+';text-align:center;line-height:1.3;font-weight:'+(s.done?'600':'400')+'">'+s.label+'</div>'
+        +'</div>';
+    }).join('')+'</div>';
+
+  // Parse KPIs
+  let kpiHTML='';
+  try{
+    const kpis=JSON.parse(r.kpis_selected||'[]');
+    if(kpis.length) kpiHTML='<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px">'+kpis.map(function(k){
+      return '<span style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;padding:2px 8px;border-radius:12px;font-size:11px">'+esc(k)+'</span>';
+    }).join('')+'</div>';
+  }catch(e){}
+
+  const fields=[
+    ['Deliverable Type',r.deliverable_type],
+    ['Function / BU',r.department],
+    ['Region',r.region],
+    ['Why needed',r.why_needed],
+    ['What expected',r.what_expected],
+    ['Target audience',r.target_audience],
+    ['Priority',r.priority],
+    ['Expected outcome',r.expected_outcome],
+    ['Assigned to',r.assigned_to_name],
+    ['Committed date',r.committed_date?formatD(r.committed_date):null],
+    ['Deliverable link',r.deliverable_link?'<a href="'+esc(r.deliverable_link)+'" target="_blank" style="color:#2563EB">View deliverable ↗</a>':null],
+    ['Delivered date',r.delivered_date?formatD(r.delivered_date):null],
+  ].filter(function(f){return f[1];});
+
+  out.innerHTML=
+    '<div style="background:#F9FAFB;border:1.5px solid #E5E7EB;border-radius:12px;padding:16px 20px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">'
+    +'<span style="font-family:monospace;font-weight:800;font-size:16px;color:var(--accent)">'+esc(r.token)+'</span>'
+    +'<span style="background:'+col+'22;color:'+col+';border:1px solid '+col+'44;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px">'+statusLabel+'</span>'
+    +'</div>'
+    +'<div style="font-size:14px;font-weight:700;margin-bottom:4px">'+esc(r.title||r.collaterals_needed||'')+'</div>'
+    +'<div style="font-size:12px;color:#666;margin-bottom:4px">By: '+esc(r.name)+' · '+esc(r.email)+'</div>'
+    +'<div style="font-size:12px;color:#666;margin-bottom:4px">Deadline: '+formatD(r.deadline)+'</div>'
+    +timelineHTML
+    +fields.map(function(f){return '<div style="font-size:12px;margin-top:5px"><strong>'+f[0]+':</strong> '+f[1]+'</div>';}).join('')
+    +kpiHTML
+    +(r.rejection_reason?'<div style="margin-top:10px;padding:10px;background:#FEF2F2;border-radius:8px;border-left:3px solid #DC2626;font-size:12px;color:#DC2626"><strong>Reason:</strong> '+esc(r.rejection_reason)+'</div>':'')
+    +(r.status==='onhold'&&r.rejection_reason?'<div style="margin-top:8px;padding:10px;background:#FFFBEB;border-radius:8px;font-size:12px;color:#92400E"><strong>On Hold:</strong> '+esc(r.rejection_reason)+'</div>':'')
+    +'<div style="font-size:10px;color:#9CA3AF;margin-top:12px;padding-top:10px;border-top:1px solid #E5E7EB">Submitted '+fmtDT(r.created_at)+'</div>'
+    +'</div>';
 }
 
-// Allow pressing Enter in the token input
-document.addEventListener('DOMContentLoaded', function() {
-  const inp = document.getElementById('trackTokenInput');
-  if(inp) inp.addEventListener('keydown', function(e){ if(e.key==='Enter') trackRequest(); });
-  // Auto-uppercase as user types
-  if(inp) inp.addEventListener('input', function(){ this.value=this.value.toUpperCase(); });
-});
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function formatD(s){if(!s)return'—';try{return new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return s;}}
+function fmtDT(s){if(!s)return'—';try{return new Date(s).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return s;}}
 </script>
 </body>
 </html>
