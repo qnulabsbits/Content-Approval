@@ -899,7 +899,7 @@ async function trackRequest(){
 
 function renderTrackResult(r,out){
   const SL={pending:'Pending Review',accepted:'Accepted',assigned:'Assigned',inprogress:'In Progress',
-            inreview:'In Review',delivered:'Delivered',onhold:'On Hold',rejected:'Rejected',done:'Delivered'};
+            inreview:'In Review',delivered:'Delivered',onhold:'On Hold',rejected:'Rejected',done:'Delivered',p1_pending:'Awaiting P1 Approval'};
   const SC={pending:'#D97706',accepted:'#2563EB',assigned:'#2563EB',inprogress:'#2563EB',
             inreview:'#7C3AED',delivered:'#16A34A',onhold:'#D97706',rejected:'#DC2626',done:'#16A34A'};
   const col=SC[r.status]||'#888';
