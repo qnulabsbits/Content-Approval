@@ -38,13 +38,13 @@ body{font-family:'Inter',sans-serif;background:#F3F4F6;min-height:100vh;padding:
 label.fl{display:block;font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
 label.fl .req{color:var(--accent);margin-left:2px}
 input[type=text],input[type=email],input[type=tel],input[type=url],input[type=number],
-input[type=date],textarea,select{
+input[type=date],input:not([type]),textarea,select{
   width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;
   font-size:13px;font-family:'Inter',sans-serif;color:var(--text);background:var(--surface);
   transition:border .15s,box-shadow .15s;
 }
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(232,69,10,.1)}
-input[readonly]{background:var(--surface2);color:var(--muted);cursor:default}
+input[readonly]{background:var(--surface2);cursor:default}
 textarea{resize:vertical;min-height:72px;line-height:1.5}
 .char-counter{font-size:10px;color:var(--muted);text-align:right;margin-top:2px}
 .char-counter.warn{color:var(--red)}
@@ -139,6 +139,7 @@ hr.div{border:none;border-top:1.5px solid var(--border);margin:16px 0}
   </div>
 
   <!-- ══ FORM ══ -->
+  <div id="updateBanner" style="display:none;border:1.5px solid;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;line-height:1.5"></div>
   <form id="reqForm" onsubmit="return false">
 
   <!-- §1 Requester -->
@@ -178,7 +179,11 @@ hr.div{border:none;border-top:1.5px solid var(--border);margin:16px 0}
     </div>
     <div class="field-row">
       <div class="field"><label class="fl">Phone</label><input id="f_phone" type="tel" placeholder="+91 XXXXX XXXXX"/></div>
-      <div class="field"><label class="fl">Request ID</label><input id="f_reqid" readonly placeholder="Auto-generated on submit"/></div>
+      <div class="field">
+        <label class="fl">Request Token <span style="font-size:10px;font-weight:400;color:var(--muted)">(to update an existing request)</span></label>
+        <input type="text" id="f_reqid" placeholder="CR-YYYYMMDD-XXXX — leave blank for new submission" onblur="prefillFromToken(this.value)" oninput="this.value=this.value.toUpperCase()"/>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Have a token? Enter it to add more information to an existing request.</div>
+      </div>
     </div>
   </div>
 
@@ -434,8 +439,8 @@ hr.div{border:none;border-top:1.5px solid var(--border);margin:16px 0}
     <div class="card">
       <div class="success-wrap">
         <div style="font-size:48px;margin-bottom:14px">✅</div>
-        <div style="font-size:20px;font-weight:800;margin-bottom:6px">Request Submitted!</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Your request has been sent to the QNu Labs marketing team for triage.</div>
+        <div style="font-size:20px;font-weight:800;margin-bottom:6px" id="successTitle">Request Submitted!</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px" id="successMsg">Your request has been sent to the QNu Labs marketing team for triage.</div>
         <div style="background:var(--surface2);border:2px dashed var(--accent);border-radius:12px;padding:20px;margin-bottom:20px;display:inline-block;min-width:280px">
           <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Your Request Token</div>
           <div class="token-big" id="confirmedToken"></div>
@@ -702,16 +707,33 @@ async function submitForm(){
   if(sb) sb.classList.remove('show');
   if(!validate()){
     if(sb){document.getElementById('submitErrText').textContent='Please fill all required fields.';sb.classList.add('show');}
-    // Scroll to first error
     const firstErr=document.querySelector('.err-inline.show,.warn-box.show');
     if(firstErr) firstErr.scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
   const btn=document.getElementById('submitBtn');
-  btn.disabled=true;btn.textContent='Submitting...';
+  btn.disabled=true; btn.textContent='Submitting...';
+
+  // Check if updating an existing request
+  const existingToken=(document.getElementById('f_reqid')?.value||'').trim().toUpperCase();
+  let existingRecord=null;
+  if(existingToken){
+    try{
+      const chk=await fetch(SUPA_URL+'/rest/v1/collateral_requests?token=eq.'+encodeURIComponent(existingToken)+'&select=*',{headers:{apikey:SUPA_KEY}});
+      const rows=await chk.json();
+      if(rows&&rows.length) existingRecord=rows[0];
+    }catch(e){}
+    if(!existingRecord){
+      const sb=document.getElementById('submitErrBox');
+      if(sb){document.getElementById('submitErrText').textContent='Token "'+existingToken+'" not found. Please check and try again, or leave blank to submit a new request.';sb.classList.add('show');}
+      btn.disabled=false; btn.textContent='Submit Request';
+      return;
+    }
+  }
+
   try{
     // Upload attachment
-    let attachUrl=null;
+    let attachUrl=existingRecord?.attachment_url||null;
     if(selectedFile){
       const ext=selectedFile.name.split('.').pop().toLowerCase();
       const path='attachments/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
@@ -722,84 +744,120 @@ async function submitForm(){
       });
       if(up.ok) attachUrl=SUPA_URL+'/storage/v1/object/public/'+BUCKET+'/'+path;
     }
-    // Build token
-    const now=new Date();
-    const dp=now.getFullYear()+(now.getMonth()+1).toString().padStart(2,'0')+now.getDate().toString().padStart(2,'0');
-    const token='CR-'+dp+'-'+Math.random().toString(36).toUpperCase().slice(2,6);
-    // Collect values
-    const prio=document.querySelector('input[name="priority"]:checked')?.value||'';
-    const kpis=[...document.querySelectorAll('#kpiGrid input:checked')].map(function(c){return c.value;});
-    const whereUsed=[...document.querySelectorAll('#whereUsed input:checked')].map(function(c){return c.value;});
+
+    const prio=document.querySelector('input[name="priority"]:checked')?.value||existingRecord?.priority||'';
+    const kpis=[...document.querySelectorAll('#kpiGrid input:checked')].map(c=>c.value);
+    const whereUsed=[...document.querySelectorAll('#whereUsed input:checked')].map(c=>c.value);
     const deadlineType=document.querySelector('input[name="deadline_type"]:checked')?.value||'';
     const budgetNeeded=document.querySelector('input[name="budget_needed"]:checked')?.value||'No';
     const confidential=document.querySelector('input[name="confidential"]:checked')?.value||'No';
+
     const payload={
-      token,
       name:g('f_name'),email:g('f_email'),phone:g('f_phone')||null,
-      department:g('f_function'),  // reuse department column for function/BU
-      region:g('f_region'),
+      department:g('f_function'),region:g('f_region'),
       title:g('f_title'),
       deliverable_type:g('f_deliv_type')==='Other'?g('f_deliv_other'):g('f_deliv_type'),
-      why_needed:g('f_why'),
-      what_expected:g('f_what'),
-      target_audience:g('f_audience')||null,
-      where_used:JSON.stringify(whereUsed),
-      // Event
-      event_name:g('f_event_name')||null,
-      event_url:g('f_event_url')||null,
-      event_city:g('f_event_city')||null,
-      event_country:g('f_event_country')||null,
+      why_needed:g('f_why'),what_expected:g('f_what'),
+      target_audience:g('f_audience')||null,where_used:JSON.stringify(whereUsed),
+      event_name:g('f_event_name')||null,event_url:g('f_event_url')||null,
+      event_city:g('f_event_city')||null,event_country:g('f_event_country')||null,
       event_start_date:document.getElementById('f_event_start')?.value||null,
       event_end_date:document.getElementById('f_event_end')?.value||null,
       event_role:g('f_event_role')||null,
       event_audience_size:parseInt(g('f_event_audience'))||null,
       event_lead_target:parseInt(g('f_event_leads'))||null,
-      // Timeline
       start_date:document.getElementById('f_start')?.value||null,
-      deadline:document.getElementById('f_end')?.value||null,  // keep deadline col
-      deadline_type:deadlineType||null,
-      hard_deadline_reason:g('f_hard_reason')||null,
-      // Priority
-      priority:prio,
-      p1_justification:prio==='P1'?g('f_p1_justify'):null,
-      // Inputs
-      attachment_url:attachUrl,
-      drive_link:g('f_drive')||null,
+      deadline:document.getElementById('f_end')?.value||null,
+      deadline_type:deadlineType||null,hard_deadline_reason:g('f_hard_reason')||null,
+      priority:prio,p1_justification:prio==='P1'?g('f_p1_justify'):null,
+      attachment_url:attachUrl,drive_link:g('f_drive')||null,
       confidential:confidential==='Yes',
-      collaterals_needed:g('f_comments')||g('f_what'), // map to existing col
-      notes:g('f_comments')||null,
-      // Impact
-      kpis_selected:JSON.stringify(kpis),
-      expected_outcome:g('f_outcome')||null,
+      collaterals_needed:g('f_what')||g('f_comments'),notes:g('f_comments')||null,
+      kpis_selected:JSON.stringify(kpis),expected_outcome:g('f_outcome')||null,
       linked_account:g('f_linked_account')||null,
-      // Budget
       budget_needed:budgetNeeded==='Yes',
       budget_currency:budgetNeeded==='Yes'?(document.getElementById('f_budget_currency')?.value||'INR'):null,
       budget_amount:budgetNeeded==='Yes'?(parseFloat(g('f_budget_amount'))||null):null,
       cost_centre:budgetNeeded==='Yes'?g('f_cost_centre'):null,
-      // Meta
-      status:'pending',submitted_by:null,
       is_rush:document.getElementById('rushBadge')?.classList.contains('show')||false
     };
-    const res=await fetch(SUPA_URL+'/rest/v1/collateral_requests',{
-      method:'POST',
-      headers:{apikey:SUPA_KEY,'Content-Type':'application/json',Prefer:'return=representation'},
-      body:JSON.stringify(payload)
-    });
-    if(!res.ok){const e=await res.json();throw new Error(e.message||'Submission failed');}
-    // Show success
-    document.getElementById('confirmedToken').textContent=token;
-    document.getElementById('reqForm').style.display='none';
-    document.getElementById('successCard').style.display='';
-    // Auto-fill track input
-    const ti=document.getElementById('trackInput');
-    if(ti){ti.value=token;trackRequest();}
+
+    if(existingRecord){
+      // UPDATE existing request — record the update log
+      const updateEntry={
+        updated_at:new Date().toISOString(),
+        updated_by:g('f_name'),
+        changes:buildChangeSummary(existingRecord,payload)
+      };
+      const prevLog=JSON.parse(existingRecord.update_log||'[]');
+      prevLog.push(updateEntry);
+      payload.update_log=JSON.stringify(prevLog);
+      payload.status=existingRecord.status; // keep existing status
+
+      const res=await fetch(SUPA_URL+'/rest/v1/collateral_requests?token=eq.'+encodeURIComponent(existingToken),{
+        method:'PATCH',
+        headers:{apikey:SUPA_KEY,'Content-Type':'application/json',Prefer:'return=representation'},
+        body:JSON.stringify(payload)
+      });
+      if(!res.ok){const e=await res.json();throw new Error(e.message||'Update failed');}
+
+      // Show update success
+      document.getElementById('confirmedToken').textContent=existingToken;
+      document.getElementById('reqForm').style.display='none';
+      document.getElementById('successCard').style.display='';
+      document.getElementById('successTitle').textContent='Request Updated!';
+      document.getElementById('successMsg').textContent='Your additional information has been recorded and the team has been notified.';
+      // Auto-track
+      const ti=document.getElementById('trackInput');
+      if(ti){ti.value=existingToken;trackRequest();}
+    } else {
+      // NEW request
+      const now=new Date();
+      const dp=now.getFullYear()+(now.getMonth()+1).toString().padStart(2,'0')+now.getDate().toString().padStart(2,'0');
+      const token='CR-'+dp+'-'+Math.random().toString(36).toUpperCase().slice(2,6);
+      payload.token=token;
+      payload.status='pending';
+      payload.submitted_by=null;
+      payload.update_log='[]';
+
+      const res=await fetch(SUPA_URL+'/rest/v1/collateral_requests',{
+        method:'POST',
+        headers:{apikey:SUPA_KEY,'Content-Type':'application/json',Prefer:'return=representation'},
+        body:JSON.stringify(payload)
+      });
+      if(!res.ok){const e=await res.json();throw new Error(e.message||'Submission failed');}
+
+      document.getElementById('confirmedToken').textContent=token;
+      document.getElementById('reqForm').style.display='none';
+      document.getElementById('successCard').style.display='';
+      document.getElementById('successTitle').textContent='Request Submitted!';
+      document.getElementById('successMsg').textContent='Your request has been sent to the QNu Labs marketing team for triage.';
+      const ti=document.getElementById('trackInput');
+      if(ti){ti.value=token;trackRequest();}
+    }
   }catch(e){
     const sb=document.getElementById('submitErrBox');
     if(sb){document.getElementById('submitErrText').textContent='Could not submit: '+e.message;sb.classList.add('show');}
-    btn.disabled=false;btn.textContent='Submit Request';
+    btn.disabled=false; btn.textContent='Submit Request';
   }
 }
+
+function buildChangeSummary(old,newData){
+  const fields=[
+    ['title','Title'],['why_needed','Why needed'],['what_expected','What expected'],
+    ['target_audience','Target audience'],['deadline','Deadline'],['priority','Priority'],
+    ['deliverable_type','Deliverable type'],['notes','Comments'],
+    ['expected_outcome','Expected outcome'],['drive_link','Drive link'],
+  ];
+  const changes=[];
+  fields.forEach(function([key,label]){
+    const ov=String(old[key]||'').trim();
+    const nv=String(newData[key]||'').trim();
+    if(ov!==nv&&nv) changes.push({field:label,from:ov||'(blank)',to:nv});
+  });
+  return changes;
+}
+
 
 function resetForm(){
   document.getElementById('reqForm').style.display='';
@@ -913,6 +971,72 @@ function renderTrackResult(r,out){
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function formatD(s){if(!s)return'—';try{return new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return s;}}
 function fmtDT(s){if(!s)return'—';try{return new Date(s).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return s;}}
+
+/* ── Pre-fill form from existing token ── */
+async function prefillFromToken(raw){
+  const token=(raw||'').trim().toUpperCase();
+  if(!token||token.length<10) return;
+  const banner=document.getElementById('updateBanner');
+  if(banner) banner.style.display='none';
+  try{
+    const res=await fetch(SUPA_URL+'/rest/v1/collateral_requests?token=eq.'+encodeURIComponent(token)+'&select=*',{headers:{apikey:SUPA_KEY}});
+    const rows=await res.json();
+    if(!rows||!rows.length){
+      if(banner){banner.style.display='block';banner.style.background='#FEF2F2';banner.style.borderColor='#FECACA';banner.style.color='#DC2626';banner.textContent='Token not found. Please check and try again.';}
+      return;
+    }
+    const r=rows[0];
+    // Show banner
+    if(banner){
+      banner.style.display='block';banner.style.background='#EFF6FF';banner.style.borderColor='#BFDBFE';banner.style.color='#1D4ED8';
+      const SL={pending:'Pending Review',accepted:'Accepted',assigned:'Assigned',inprogress:'In Progress',delivered:'Delivered',rejected:'Rejected'};
+      banner.innerHTML='<strong>Updating existing request '+esc(r.token)+'</strong> (Status: '+(SL[r.status]||r.status)+') — form pre-filled with current data. Make your changes and click Submit to update.';
+    }
+    // Pre-fill all fields
+    const sf=function(id,val){const el=document.getElementById(id);if(el&&val!=null&&val!=='')el.value=val;};
+    sf('f_name',r.name); sf('f_email',r.email); sf('f_phone',r.phone);
+    sf('f_function',r.department); sf('f_region',r.region);
+    sf('f_title',r.title); updateCharCount('f_title','cc_title',80);
+    sf('f_why',r.why_needed); sf('f_what',r.what_expected);
+    sf('f_audience',r.target_audience);
+    // Deliverable type
+    if(r.deliverable_type){
+      const dt=document.getElementById('f_deliv_type');
+      if(dt){dt.value=r.deliverable_type;onDelivTypeChange(r.deliverable_type);}
+    }
+    // Where used
+    try{const wu=JSON.parse(r.where_used||'[]');wu.forEach(v=>{const cb=document.querySelector('#whereUsed input[value="'+v+'"]');if(cb){cb.checked=true;cb.closest('.chip').classList.add('selected');}});checkEventBlock();}catch(_){}
+    // Event
+    sf('f_event_name',r.event_name); sf('f_event_url',r.event_url);
+    sf('f_event_city',r.event_city); sf('f_event_country',r.event_country);
+    sf('f_event_role',r.event_role);
+    if(r.event_start_date){const el=document.getElementById('f_event_start');if(el)el.value=r.event_start_date.slice(0,10);}
+    if(r.event_end_date){const el=document.getElementById('f_event_end');if(el)el.value=r.event_end_date.slice(0,10);}
+    // Timeline
+    if(r.start_date){const el=document.getElementById('f_start');if(el)el.value=r.start_date.slice(0,10);}
+    if(r.deadline){const el=document.getElementById('f_end');if(el)el.value=r.deadline.slice(0,10);}
+    if(r.deadline_type) toggleRadio('deadline_type',r.deadline_type,document.querySelector('.radio-btn'));
+    sf('f_hard_reason',r.hard_deadline_reason);
+    // Priority
+    if(r.priority){const pc=document.querySelector('.prio-card input[value="'+r.priority+'"]');if(pc) selectPrio(r.priority,pc.closest('.prio-card'));}
+    sf('f_p1_justify',r.p1_justification);
+    // Inputs
+    sf('f_drive',r.drive_link); sf('f_comments',r.notes);
+    if(r.confidential) toggleRadio('confidential','Yes',document.querySelector('.radio-btn'));
+    // KPIs
+    try{const ks=JSON.parse(r.kpis_selected||'[]');ks.forEach(k=>{const cb=document.querySelector('#kpiGrid input[value="'+k+'"]');if(cb){cb.checked=true;cb.closest('.kpi-chip').classList.add('selected');}});}catch(_){}
+    sf('f_outcome',r.expected_outcome); sf('f_linked_account',r.linked_account);
+    // Budget
+    if(r.budget_needed){toggleRadio('budget_needed','Yes',document.querySelector('.radio-btn'));showBudgetFields(true);}
+    sf('f_budget_amount',r.budget_amount); sf('f_cost_centre',r.cost_centre);
+    if(r.budget_currency){const el=document.getElementById('f_budget_currency');if(el)el.value=r.budget_currency;}
+    // Scroll to top of form
+    document.getElementById('reqForm')?.scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){
+    console.error('prefillFromToken',e);
+  }
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 </script>
 </body>
 </html>
