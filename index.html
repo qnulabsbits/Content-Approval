@@ -194,7 +194,7 @@
         <div class="section-title">Projects</div>
         <div style="display:flex;align-items:center;gap:8px">
             <label style="font-size:11px;color:var(--muted);font-weight:600">Filter:</label>
-            <select id="projFilterSelect" onchange="applyProjectFilter(this.value)" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;min-width:220px;color:var(--text)">
+            <select id="projFilterSelect" onchange="applyProjectFilterAndCascade(this.value)" style="font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;min-width:220px;color:var(--text)">
               <option value="all">All projects</option>
               <optgroup label="── Sub-division ──">
                 <option value="div:Excellence &amp; Digital Marketing">Excellence &amp; Digital Marketing</option>
@@ -1340,10 +1340,11 @@ function showPage(pageId) {
 
 function goHome() {
   if (!SESSION) { setScreen('login'); return; }
-  if (SESSION.role === 'admin') showPage('admin');
+  if (SESSION.role === 'admin') showPage('projects');
   else {
     const perms = SESSION.module_permissions || {};
-    const first = ['content','projects','crm','analytics','reports','inventory','hr','requests'].find(m => perms[m]);
+    const preferredOrder = ['projects','content','crm','analytics','reports','inventory','hr','requests'];
+    const first = preferredOrder.find(m => perms[m]);
     if (first) showPage(first); else showPage('no-access');
   }
 }
@@ -2154,8 +2155,7 @@ const PRIORITY_COLORS={high:'var(--accent)',medium:'var(--yellow)',low:'var(--gr
 let projectTaskCounts = {}; // projectId → {total, done}
 
 async function loadProjects() {
-  loadUsersForAssignee();
-  setTimeout(populateOwnerFilterDropdown,600);
+  loadUsersForAssignee().then(function(){setTimeout(populateOwnerFilterDropdown,200);});
   var ss=$('projSortSelect'); if(ss) ss.value=projectSortMode;
   // Sync view toggle buttons
   ['kanban','table'].forEach(v=>{
@@ -2327,28 +2327,18 @@ function renderProjectTable() {
     const allUsers=window._allUsers||[];
     if(projectFilterMode.startsWith('div:')){
       const divKey=projectFilterMode.slice(4).toLowerCase();
-      // Match option values to DB department strings (partial match)
-      const deptKey=divKey; // use raw divKey for partial matching below
-      const owners=[p.owner_name,...tasks.map(function(t){return t.assignee_name;})].filter(Boolean);
-      // Also include project owner name directly
       const allOwners=[p.owner_name,...tasks.map(function(t){return t.assignee_name||'';})].filter(Boolean);
-      // Check if ANY owner/assignee belongs to this sub-division
-      // Match by checking if dept contains the divKey words (flexible matching)
+      // Also match if no allUsers loaded yet — fall through to show all
+      if(!allUsers.length) return true;
       return allOwners.some(function(name){
         const u=allUsers.find(function(x){return (x.full_name||'').toLowerCase()===(name||'').toLowerCase();});
         if(!u) return false;
         const dept=(u.department||'').toLowerCase();
-        // Direct substring match — covers "Marketing - Excellence & Digital" etc
-        if(dept.indexOf(deptKey)!==-1) return true;
-        // Also match abbreviated keys
-        const abbrevMap={
-          'excellence & digital marketing': ['excellence','digital'],
-          'design & creative': ['design','creative'],
-          'content & thought': ['content','thought'],
-          'brand + marcom': ['brand','marcom']
-        };
-        const words=abbrevMap[divKey]||[];
-        return words.length>0&&words.some(function(w){return dept.indexOf(w)!==-1;});
+        return dept.indexOf(divKey)!==-1 ||
+          (divKey.indexOf('excellence')!==-1 && (dept.indexOf('excellence')!==-1||dept.indexOf('digital')!==-1)) ||
+          (divKey.indexOf('design')!==-1 && (dept.indexOf('design')!==-1||dept.indexOf('creative')!==-1)) ||
+          (divKey.indexOf('content')!==-1 && (dept.indexOf('content')!==-1||dept.indexOf('thought')!==-1)) ||
+          (divKey.indexOf('brand')!==-1 && (dept.indexOf('brand')!==-1||dept.indexOf('marcom')!==-1));
       });
     }
     if(projectFilterMode.startsWith('owner:')){
@@ -2849,7 +2839,7 @@ async function saveNewProject() {
 
 
 function downloadSampleProjectExcel() {
-  if(typeof XLSX==='undefined'){toast('Downloading library, please try again in 2 seconds...'); return;}
+  if(typeof XLSX==='undefined'){loadXLSXThenRun(downloadSampleProjectExcel);return;}
   var rows=[
     ['Theme / Project','Item','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Detailed Comments and Notes','Source'],
     ['Q1 Brand Campaign','Design social media kit','inprogress','high','Aditya Vastrad','Brand Awareness & Visibility','','','All formats needed by 15 Mar','Confluence'],
@@ -2866,7 +2856,7 @@ function downloadSampleProjectExcel() {
 }
 
 function downloadProjectsExcel(){
-  if(typeof XLSX==='undefined'){toast('Downloading library, please try again in 2 seconds...'); return;}
+  if(typeof XLSX==='undefined'){loadXLSXThenRun(downloadProjectsExcel);return;}
   const rows=[['Theme / Project','Item','Status','Priority','Primary Owner','KPI','Detailed Comments and Notes','Source']];
   for(const p of projects){
     const tags=(function(){try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
@@ -2922,7 +2912,6 @@ function sortedProjects(list) {
 
 function applyProjectFilter(val) {
   projectFilterMode = val || 'all';
-  // Highlight active stat card
   document.querySelectorAll('.stat-card').forEach(c=>c.classList.remove('active'));
   const cardMap={'all':'ps0','status:inprogress':'ps1','status:duesoon':'ps2','status:done':'ps3'};
   const activeId=cardMap[projectFilterMode];
@@ -2930,21 +2919,65 @@ function applyProjectFilter(val) {
   if(projectView==='kanban') renderKanban(); else renderProjectTable();
 }
 
+function applyProjectFilterAndCascade(val) {
+  applyProjectFilter(val);
+  // If a subdomain is selected, cascade: show only users in that subdomain in the owner dropdown
+  const opts = document.getElementById('projOwnerOptions');
+  if(!opts) return;
+  const users = window._allUsers || [];
+  if(!val || val === 'all' || (!val.startsWith('div:') && !val.startsWith('status:'))) {
+    // Reset to full user list grouped by dept
+    populateOwnerFilterDropdown();
+    return;
+  }
+  if(val.startsWith('div:')) {
+    const divKey = val.slice(4).toLowerCase();
+    // Filter users whose department matches the subdomain
+    const divUsers = users.filter(function(u){
+      const dept = (u.department||'').toLowerCase();
+      return dept.indexOf(divKey) !== -1 ||
+        // Also handle abbreviated keys
+        (divKey.indexOf('excellence') !== -1 && (dept.indexOf('excellence') !== -1 || dept.indexOf('digital') !== -1)) ||
+        (divKey.indexOf('design') !== -1 && (dept.indexOf('design') !== -1 || dept.indexOf('creative') !== -1)) ||
+        (divKey.indexOf('content') !== -1 && (dept.indexOf('content') !== -1 || dept.indexOf('thought') !== -1)) ||
+        (divKey.indexOf('brand') !== -1 && (dept.indexOf('brand') !== -1 || dept.indexOf('marcom') !== -1));
+    });
+    if(divUsers.length) {
+      opts.innerHTML = '<optgroup label="' + esc(val.slice(4)) + '">' +
+        divUsers.map(function(u){
+          return '<option value="owner:' + esc(u.full_name) + '">' + esc(u.full_name) + '</option>';
+        }).join('') + '</optgroup>';
+    } else {
+      opts.innerHTML = '<option value="" disabled>No users in this team</option>';
+    }
+  }
+}
+
 function populateOwnerFilterDropdown() {
   loadUsersForAssignee().then(function(users) {
     const opts = document.getElementById('projOwnerOptions');
     if(!opts) return;
-    // Show ALL users — sorted with marketing first
-    const sorted = [
-      ...users.filter(function(u){ return (u.department||'').toLowerCase().indexOf('marketing')!==-1; }),
-      ...users.filter(function(u){ return (u.department||'').toLowerCase().indexOf('marketing')===-1; })
-    ];
-    opts.innerHTML = sorted.length
-      ? sorted.map(function(u){
-          const dept=u.department?' ('+u.department+')':'';
-          return '<option value="owner:' + esc(u.full_name) + '">' + esc(u.full_name) + esc(dept) + '</option>';
-        }).join('')
-      : '<option value="" disabled>No users found</option>';
+    const deptMap = {};
+    users.forEach(function(u){
+      const dept = u.department || 'Other';
+      if(!deptMap[dept]) deptMap[dept] = [];
+      deptMap[dept].push(u);
+    });
+    const depts = Object.keys(deptMap).sort(function(a,b){
+      const aM = a.toLowerCase().indexOf('marketing') !== -1;
+      const bM = b.toLowerCase().indexOf('marketing') !== -1;
+      if(aM && !bM) return -1; if(!aM && bM) return 1;
+      return a.localeCompare(b);
+    });
+    let ownerHtml = '';
+    depts.forEach(function(dept){
+      ownerHtml += '<optgroup label="' + esc(dept) + '">';
+      deptMap[dept].forEach(function(u){
+        ownerHtml += '<option value="owner:' + esc(u.full_name) + '">' + esc(u.full_name) + '</option>';
+      });
+      ownerHtml += '</optgroup>';
+    });
+    opts.innerHTML = ownerHtml || '<option value="" disabled>No users found</option>';
   });
 }
 
@@ -5637,6 +5670,28 @@ async function markProjectComplete(){
     renderProjectStats();
     if(projectView==='table') renderProjectTable(); else renderKanban();
   }catch(e){toast('Error: '+e.message,'error');}
-}</script>
+}
+function loadXLSXThenRun(fn){
+  if(typeof XLSX!=='undefined'){fn();return;}
+  toast('Loading Excel library…');
+  var s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload=function(){if(typeof XLSX!=='undefined'){fn();}else{
+    var s2=document.createElement('script');
+    s2.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s2.onload=function(){if(typeof XLSX!=='undefined')fn();else toast('Could not load Excel library.','error');};
+    s2.onerror=function(){toast('Could not load Excel library. Check your connection.','error');};
+    document.head.appendChild(s2);
+  }};
+  s.onerror=function(){
+    var s2=document.createElement('script');
+    s2.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s2.onload=function(){if(typeof XLSX!=='undefined')fn();else toast('Could not load Excel library.','error');};
+    s2.onerror=function(){toast('Could not load Excel library. Check your connection.','error');};
+    document.head.appendChild(s2);
+  };
+  document.head.appendChild(s);
+}
+</script>
 </body>
 </html>
