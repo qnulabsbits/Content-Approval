@@ -34,6 +34,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 <style>
 .excel-menu-item{display:block;width:100%;text-align:left;padding:9px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-family:Inter,sans-serif;color:var(--text);}
 .excel-menu-item:hover{background:var(--surface2);}
+.excel-menu-item:focus{outline:none;background:var(--surface2);}
 </style>
 
 <style>
@@ -205,6 +206,13 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
             Import Excel
             <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importProjectExcel(this)"/>
           </label>
+          <div style="position:relative;display:inline-block" id="hdrExcelWrap">
+            <button class="btn btn-secondary btn-sm" onclick="toggleHdrExcel(event)" id="hdrExcelBtn">Excel &#9660;</button>
+            <div id="hdrExcelMenu" style="display:none;position:absolute;right:0;top:110%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:9999;min-width:180px;padding:4px 0;white-space:nowrap">
+              <button onclick="downloadProjectsExcel();toggleHdrExcel()" style="display:block;width:100%;text-align:left;padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-family:Inter,sans-serif;color:var(--text)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">&#8595; Download Excel</button>
+              <button onclick="downloadSampleProjectExcel();toggleHdrExcel()" style="display:block;width:100%;text-align:left;padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-family:Inter,sans-serif;color:var(--text)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">&#128196; Template Excel</button>
+            </div>
+          </div>
           <button class="btn btn-primary btn-sm" onclick="openAddProject()">+ New Project</button>
         </div>
       </div>
@@ -2177,7 +2185,7 @@ const PRIORITY_COLORS={high:'var(--accent)',medium:'var(--yellow)',low:'var(--gr
 let projectTaskCounts = {}; // projectId → {total, done}
 
 async function loadProjects() {
-  loadUsersForAssignee().then(function(){setTimeout(populateOwnerFilterDropdown,200);});
+  loadUsersForAssignee().then(function(){ populateOwnerFilterDropdown(); });
   var ss=$('projSortSelect'); if(ss) ss.value=projectSortMode;
   // Sync view toggle buttons
   ['kanban','table'].forEach(v=>{
@@ -2339,7 +2347,7 @@ function renderProjectTable() {
   +'<option value="priority_low">Priority (Low first)</option>'
   +'<option value="status">Status</option>'
   +'</select>'
-  +'<div id="excelDropWrap" style="position:relative;display:inline-block">'+'<button class="btn btn-secondary btn-sm" onclick="toggleExcelDrop()" style="font-size:12px">Excel &#9660;</button>'+'<div id="excelDrop" style="display:none;position:absolute;right:0;top:110%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:200;min-width:175px;padding:4px 0">'+'<button onclick="downloadProjectsExcel();toggleExcelDrop()" class="excel-menu-item">&#8595; Download Excel</button>'+'<button onclick="downloadSampleProjectExcel();toggleExcelDrop()" class="excel-menu-item">&#128196; Template Excel</button>'+'</div></div>'
+  
   +'</div></div>';
 
   var projList=sortedProjects(projects);
@@ -2945,18 +2953,24 @@ function applyProjectFilterAndCascade(val) {
   const opts = document.getElementById('projOwnerOptions');
   if(!opts) return;
   const users = window._allUsers || [];
-  if(!val || val === 'all' || (!val.startsWith('div:') && !val.startsWith('status:'))) {
+  // owner: selection — just apply the filter, do NOT repopulate (that would clear selection)
+  if(val && val.startsWith('owner:')) return;
+  if(!val || val === 'all' || val.startsWith('status:')) {
     // Reset to full user list grouped by dept
     populateOwnerFilterDropdown();
     return;
   }
   if(val.startsWith('div:')) {
     const divKey = val.slice(4).toLowerCase();
-    // Filter users whose department matches the subdomain
+    // If users not loaded yet, load them first then re-cascade
+    if(!users.length) {
+      opts.innerHTML = '<option value="" disabled>Loading...</option>';
+      loadUsersForAssignee().then(function(){ applyProjectFilterAndCascade(val); });
+      return;
+    }
     const divUsers = users.filter(function(u){
       const dept = (u.department||'').toLowerCase();
       return dept.indexOf(divKey) !== -1 ||
-        // Also handle abbreviated keys
         (divKey.indexOf('excellence') !== -1 && (dept.indexOf('excellence') !== -1 || dept.indexOf('digital') !== -1)) ||
         (divKey.indexOf('design') !== -1 && (dept.indexOf('design') !== -1 || dept.indexOf('creative') !== -1)) ||
         (divKey.indexOf('content') !== -1 && (dept.indexOf('content') !== -1 || dept.indexOf('thought') !== -1)) ||
@@ -2970,13 +2984,24 @@ function applyProjectFilterAndCascade(val) {
     } else {
       opts.innerHTML = '<option value="" disabled>No users in this team</option>';
     }
+    // Reset select to the div: value since we just replaced owner options
+    var sel = document.getElementById('projFilterSelect');
+    if(sel && sel.value !== val) sel.value = val;
   }
 }
 
 function populateOwnerFilterDropdown() {
+  const opts = document.getElementById('projOwnerOptions');
+  if(!opts) return;
+  // Show loading state immediately
+  opts.innerHTML = '<option value="" disabled>Loading users...</option>';
   loadUsersForAssignee().then(function(users) {
-    const opts = document.getElementById('projOwnerOptions');
-    if(!opts) return;
+    const opts2 = document.getElementById('projOwnerOptions');
+    if(!opts2) return;
+    if(!users || !users.length) {
+      opts2.innerHTML = '<option value="" disabled>No users found</option>';
+      return;
+    }
     const deptMap = {};
     users.forEach(function(u){
       const dept = u.department || 'Other';
@@ -2997,7 +3022,11 @@ function populateOwnerFilterDropdown() {
       });
       ownerHtml += '</optgroup>';
     });
-    opts.innerHTML = ownerHtml || '<option value="" disabled>No users found</option>';
+    opts2.innerHTML = ownerHtml || '<option value="" disabled>No users found</option>';
+    // Restore selected value if one was active
+    if(projectFilterMode && projectFilterMode.startsWith('owner:')) {
+      opts2.closest('select') && (opts2.closest('select').value = projectFilterMode);
+    }
   });
 }
 
@@ -3859,21 +3888,13 @@ async function loadUsersForAssignee() {
   // Always fetch fresh — deduplicate near-identical names (e.g. "Bilal" vs "Md Bilal")
   try {
     const users = await sbFetch('user_profiles?order=full_name.asc&select=id,full_name,email,department,role')||[];
-    // Deduplicate: remove users whose full_name is a substring of another user's full_name
-    // (e.g. "Bilal" is contained in "Md Bilal" → keep "Md Bilal")
-    const deduped = users.filter(function(u, i) {
-      const nameA = (u.full_name||'').toLowerCase().trim();
-      // If another user's name contains this name as a word, skip this one
-      const hasSuperSet = users.some(function(v, j) {
-        if(i===j) return false;
-        const nameB = (v.full_name||'').toLowerCase().trim();
-        // Skip if same name
-        if(nameA===nameB) return j<i; // keep first occurrence only
-        // Skip shorter if longer contains it as full word
-        if(nameB.includes(nameA) && nameB.length > nameA.length) return true;
-        return false;
-      });
-      return !hasSuperSet;
+    // Deduplicate: only remove exact duplicate emails (keep all unique users)
+    const seen = new Set();
+    const deduped = users.filter(function(u) {
+      const key = (u.email||u.id||'').toLowerCase().trim();
+      if(seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
     window._allUsers = deduped; // cache deduped list
     return deduped;
@@ -5670,7 +5691,7 @@ function renderUpdateLog(logJson){
 function crStatusBtn(id,status,label,cls){
   return '<button class="btn '+cls+' btn-sm" onclick="updateCRStatusDirect('+id+',\''+status+'\'">'+ label +'</button>';
 }
-function toggleExcelDrop(){var d=document.getElementById('excelDrop');if(d)d.style.display=d.style.display==='block'?'none':'block';}
+function toggleExcelDrop(evt){if(evt){evt.stopPropagation();}var d=document.getElementById('excelDrop');if(d)d.style.display=d.style.display==='block'?'none':'block';}
 document.addEventListener('click',function(e){if(!e.target.closest('#excelDropWrap')){var d=document.getElementById('excelDrop');if(d)d.style.display='none';}});
 async function markProjectComplete(){
   if(!activeProject) return;
@@ -5689,6 +5710,67 @@ async function markProjectComplete(){
     if(projectView==='table') renderProjectTable(); else renderKanban();
   }catch(e){toast('Error: '+e.message,'error');}
 }
+
+async function saveProjectDetails() {
+  if(!activeProject) return;
+  const title=($('pmTitleEdit')?.value||'').trim();
+  if(!title){toast('Title cannot be empty.','error');return;}
+  const btn=document.querySelector('#projectModal .btn-primary');
+  try{
+    const typeVal=$('pmTypeEdit')?.value||'campaign';
+    await dbUpdate('projects',activeProject.id,{
+      title,
+      status:$('pmStatusEdit')?.value||'todo',
+      priority:$('pmPriorityEdit')?.value||'medium',
+      owner_name:$('pmOwnerEdit')?.value||'',
+      due_date:$('pmDueEdit')?.value||null,
+      type:typeVal,
+      budget:$('pmBudgetEdit')?.value||null,
+      description:$('pmDesc')?.value||'',
+      tags:$('pmSourceEdit')?.value?JSON.stringify([$('pmSourceEdit').value]):activeProject.tags||'[]'
+    });
+    activeProject.title=title;
+    const p=projects.find(x=>String(x.id)===String(activeProject.id));
+    if(p){p.title=title;p.status=$('pmStatusEdit')?.value||'todo';}
+    $('pmTitle').textContent=title;
+    toast('Project saved.');
+    logActivity('edited','Updated project: '+title,activeProject.id,title);
+    renderProjectStats();
+    if(projectView==='table') renderProjectTable(); else renderKanban();
+  }catch(e){toast('Could not save: '+e.message,'error');}
+}
+
+async function saveProjectDesc() {
+  if(!activeProject) return;
+  const desc=$('pmDesc')?.value||'';
+  try{
+    await dbUpdate('projects',activeProject.id,{description:desc});
+    activeProject.description=desc;
+    toast('Notes saved.');
+  }catch(e){toast('Could not save: '+e.message,'error');}
+}
+
+async function deleteKPI(kpiId) {
+  if(!confirm('Remove this KPI?')) return;
+  try{
+    await sbFetch('project_kpis?id=eq.'+kpiId,{method:'DELETE'});
+    toast('KPI removed.');
+    if(activeProject) await loadProjectKPIs(activeProject.id);
+  }catch(e){toast('Could not remove: '+e.message,'error');}
+}
+
+function toggleHdrExcel(evt){
+  if(evt) evt.stopPropagation();
+  var m=document.getElementById('hdrExcelMenu');
+  if(!m) return;
+  m.style.display=m.style.display==='block'?'none':'block';
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#hdrExcelWrap')){
+    var m=document.getElementById('hdrExcelMenu');
+    if(m) m.style.display='none';
+  }
+});
 </script>
 </body>
 </html>
