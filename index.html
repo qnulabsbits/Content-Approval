@@ -461,6 +461,23 @@
   </div>
 </div>
 
+<!-- ═══════════════ IMPORT CHANGES MODAL ═══════════════ -->
+<div class="modal-overlay" id="importChangesModal">
+  <div class="modal modal-md">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div class="modal-title">Review Import Changes</div>
+        <div class="modal-sub">These items already exist. Apply or keep the original for each.</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="closeImportChanges()">Close</button>
+    </div>
+    <div id="importChangesList"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeImportChanges()">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════ HR FULLSCREEN OVERLAY ═══════════════ -->
 <div class="fs-overlay" id="hrFS">
   <div class="fs-topbar">
@@ -2058,88 +2075,187 @@ async function bulkDeleteInventory(){
 /* ── Inventory Excel import ── */
 function downloadInventoryTemplate(e) {
   e.preventDefault();
-  const ws=XLSX.utils.aoa_to_sheet([
-    ['Item Name','Item Type','Quantity'],
-    ['QNu Roll-up Banner','banners',5],
-    ['Product Brochure','brochures',100],
-  ]);
-  ws['!cols']=[{wch:30},{wch:20},{wch:12}];
-  var _wb={SheetNames:['Inventory'],Sheets:{}};
-  _wb.Sheets['Inventory']=ws;
-  var _wbout = XLSX.write(_wb, {bookType:'xlsx', type:'binary'});
-  var _buf = new ArrayBuffer(_wbout.length);
-  var _view = new Uint8Array(_buf);
-  for(var _i=0;_i<_wbout.length;_i++) _view[_i]=_wbout.charCodeAt(_i)&0xFF;
-  var _blob = new Blob([_buf],{type:'application/octet-stream'});
-  var _a = document.createElement('a');
-  _a.href = URL.createObjectURL(_blob);
-  _a.download = 'Inventory_Import_Template.xlsx';
-  document.body.appendChild(_a); _a.click(); document.body.removeChild(_a);
-  setTimeout(function(){URL.revokeObjectURL(_a.href);},1500);
-  toast('Template downloaded.');
+  try {
+    var data=[
+      ['Item','Category','Available (Qty)','Location'],
+      ['QNu Roll-up Banner','banners',5,'Office Storeroom'],
+      ['Product Brochure - QKD','brochures',100,'Office Storeroom'],
+      ['QNu Branded Pen','merchandise',50,'Office Storeroom'],
+    ];
+    var ws=XLSX.utils.aoa_to_sheet(data);
+    ws['!cols']=[{wch:35},{wch:20},{wch:16},{wch:25}];
+    // Category dropdown validation for column B (rows 2 onwards)
+    if(!ws['!dataValidations']) ws['!dataValidations']=[];
+    // Add a note row explaining valid categories
+    var noteCell={v:'Valid categories: banners, brochures, merchandise, digital, other',t:'s'};
+    // We set it as a comment-style instruction in row just before data would go
+    // XLSX data validation for dropdown
+    ws['!dataValidations'].push({
+      sqref:'B2:B1000',
+      type:'list',
+      formula1:'"banners,brochures,merchandise,digital,other"',
+      showDropDown:false,
+      showErrorMessage:true,
+      errorTitle:'Invalid Category',
+      error:'Please choose: banners, brochures, merchandise, digital, or other'
+    });
+    var _wb={SheetNames:['Inventory'],Sheets:{}};
+    _wb.Sheets['Inventory']=ws;
+    var _wbout=XLSX.write(_wb,{bookType:'xlsx',type:'binary'});
+    var _buf=new ArrayBuffer(_wbout.length);
+    var _view=new Uint8Array(_buf);
+    for(var _i=0;_i<_wbout.length;_i++) _view[_i]=_wbout.charCodeAt(_i)&0xFF;
+    var _blob=new Blob([_buf],{type:'application/octet-stream'});
+    var _a=document.createElement('a');
+    _a.href=URL.createObjectURL(_blob);
+    _a.download='Inventory_Import_Template.xlsx';
+    document.body.appendChild(_a); _a.click(); document.body.removeChild(_a);
+    setTimeout(function(){URL.revokeObjectURL(_a.href);},1500);
+    toast('Inventory template downloaded.');
+  } catch(e){ toast('Download error: '+e.message,'error'); console.error(e); }
 }
 
 async function importInventoryExcel(input) {
   const file=input.files[0]; if(!file) return;
   toast('Reading file...');
   const reader=new FileReader();
-  reader.onload=async function(e){
+  reader.onload=async function(ev){
     try {
-      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const wb=XLSX.read(ev.target.result,{type:'binary'});
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
       if(!rows.length){toast('No data found in file.','error');return;}
-      // Map headers case-insensitively
       const getVal=(row,keys)=>{
-        for(const k of keys){
-          const v=row[k]; if(v!==undefined&&v!==null&&String(v).trim()!=='') return String(v).trim();
-        }
-        for(const rk of Object.keys(row)){
-          if(keys.some(k=>k.toLowerCase()===rk.toLowerCase())){
-            const v=row[rk]; if(v!==undefined&&v!==null&&String(v).trim()!=='') return String(v).trim();
-          }
-        }
+        for(const k of keys){ const v=row[k]; if(v!==undefined&&v!==null&&String(v).trim()!=='') return String(v).trim(); }
+        for(const rk of Object.keys(row)){ if(keys.some(k=>k.toLowerCase()===rk.toLowerCase())){ const v=row[rk]; if(v!==undefined&&v!==null&&String(v).trim()!=='') return String(v).trim(); } }
         return '';
       };
-      // Validate category
       const validCats=['banners','brochures','merchandise','digital','other'];
-      const normCat=(s)=>{
-        const sl=s.toLowerCase().trim();
-        return validCats.find(c=>sl.includes(c))||'other';
-      };
-      let created=0, skipped=0, errors=0;
+      const normCat=(s)=>{ const sl=(s||'').toLowerCase().trim(); return validCats.find(c=>sl.includes(c))||'other'; };
+      // Collect rows and check for duplicates first
+      const toProcess=[];
       for(const row of rows){
-        const name=getVal(row,['Item Name','item name','Name','name']);
-        if(!name){skipped++;continue;}
-        const catRaw=getVal(row,['Item Type','item type','Category','category','Type','type']);
-        const qty=parseInt(getVal(row,['Quantity','quantity','Qty','qty']))||0;
-        const cat=normCat(catRaw||'other');
-        try{
-          // Check if item already exists
-          const exist=await sbFetch('inventory_items?name=eq.'+encodeURIComponent(name)+'&select=id,quantity').catch(()=>null);
-          if(exist&&exist.length){
-            // Update quantity only
-            await sbFetch('inventory_items?id=eq.'+exist[0].id,{method:'PATCH',
-              body:JSON.stringify({quantity:exist[0].quantity+qty,updated_by:SESSION?.user_id,updated_at:new Date().toISOString()})
-            });
-          } else {
-            await dbInsert('inventory_items',{
-              name,category:cat,quantity:qty,quantity_min:0,
-              unit:'pcs',location:'',notes:'',
-              created_by:SESSION?.user_id,updated_by:SESSION?.user_id
-            });
-          }
-          created++;
-        }catch(err){console.error('Inv import row error',name,err);errors++;}
+        const name=getVal(row,['Item','Item Name','item name','Name','name']);
+        if(!name) continue;
+        const catRaw=getVal(row,['Category','Item Type','category','item type','Type','type']);
+        const qty=parseInt(getVal(row,['Available (Qty)','Available','Quantity','quantity','Qty','qty']))||0;
+        const loc=getVal(row,['Location','location','loc']);
+        const cat=normCat(catRaw);
+        const exist=await sbFetch('inventory_items?name=eq.'+encodeURIComponent(name)+'&select=id,name,quantity,category,location').catch(()=>null);
+        toProcess.push({name,cat,qty,loc,existing:exist&&exist.length?exist[0]:null,row});
       }
-      toast(created+' item(s) imported'+(errors?' ('+errors+' errors)':'')+'.',errors&&!created?'error':'success');
-      logActivity('import','Imported '+created+' inventory items from Excel');
-      await loadInventory();
+      // Split into clean (no duplicate) and duplicates
+      const clean=toProcess.filter(r=>!r.existing);
+      const dups=toProcess.filter(r=>!!r.existing);
+      // Import clean rows immediately
+      let created=0,errors=0;
+      for(const r of clean){
+        try{
+          await dbInsert('inventory_items',{name:r.name,category:r.cat,quantity:r.qty,quantity_min:0,unit:'pcs',location:r.loc,notes:'',created_by:SESSION?.user_id,updated_by:SESSION?.user_id});
+          created++;
+        }catch(err){console.error('Inv import',r.name,err);errors++;}
+      }
+      if(dups.length){
+        // Show duplicate resolution popup
+        showInventoryDuplicatePopup(dups, created, errors);
+      } else {
+        toast(created+' item(s) imported'+(errors?' ('+errors+' errors)':'')+'.',errors&&!created?'error':'success');
+        logActivity('import','Imported '+created+' inventory items from Excel');
+        await loadInventory();
+      }
     } catch(err){toast('Could not read file: '+err.message,'error');}
   };
   reader.readAsBinaryString(file);
   input.value='';
 }
+
+function showInventoryDuplicatePopup(dups, alreadyCreated, alreadyErrors) {
+  // Build popup HTML
+  const overlay=document.createElement('div');
+  overlay.id='invDupOverlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  const panel=document.createElement('div');
+  panel.style.cssText='background:var(--surface);border-radius:12px;max-width:680px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.25)';
+  panel.innerHTML=`
+    <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:16px;font-weight:700">Duplicate Items Found</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${dups.length} item(s) already exist in inventory. Choose what to do with each.</div>
+      </div>
+      <button onclick="document.getElementById('invDupOverlay').remove();loadInventory();" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);padding:4px 8px">✕</button>
+    </div>
+    <div style="padding:16px 24px">
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <button onclick="invDupApplyAll('overwrite')" class="btn btn-primary btn-sm">Overwrite All</button>
+        <button onclick="invDupApplyAll('keep')" class="btn btn-secondary btn-sm">Keep All Existing</button>
+        <button onclick="invDupApplyAll('add')" class="btn btn-secondary btn-sm">Add Quantities Together</button>
+      </div>
+      <div id="invDupList">${dups.map(function(d,i){
+        return '<div id="invdup_'+i+'" style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;background:var(--surface2)">'
+          +'<div style="font-size:14px;font-weight:700;margin-bottom:10px">'+esc(d.name)+'</div>'
+          +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'
+          +'<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:12px">'
+          +'<div style="font-size:10px;font-weight:700;color:#92400E;text-transform:uppercase;margin-bottom:6px">📥 New (Uploading)</div>'
+          +'<div style="font-size:12px"><b>Category:</b> '+esc(d.cat)+'</div>'
+          +'<div style="font-size:12px"><b>Qty:</b> '+d.qty+'</div>'
+          +'<div style="font-size:12px"><b>Location:</b> '+esc(d.loc||'—')+'</div></div>'
+          +'<div style="background:#D1FAE5;border:1px solid #6EE7B7;border-radius:8px;padding:12px">'
+          +'<div style="font-size:10px;font-weight:700;color:#065F46;text-transform:uppercase;margin-bottom:6px">📦 Existing (Current)</div>'
+          +'<div style="font-size:12px"><b>Category:</b> '+esc(d.existing.category||'—')+'</div>'
+          +'<div style="font-size:12px"><b>Qty:</b> '+( d.existing.quantity||0)+'</div>'
+          +'<div style="font-size:12px"><b>Location:</b> '+esc(d.existing.location||'—')+'</div></div></div>'
+          +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+          +'<button onclick="invDupAction('+i+',\'overwrite\')" class="btn btn-primary btn-xs">↺ Overwrite with New</button>'
+          +'<button onclick="invDupAction('+i+',\'add\')" class="btn btn-secondary btn-xs">+ Add Qtys ('+((d.existing.quantity||0)+d.qty)+' total)</button>'
+          +'<button onclick="invDupAction('+i+',\'keep\')" class="btn btn-secondary btn-xs">✓ Keep Existing</button></div>'
+          +'<div id="invdup_status_'+i+'" style="margin-top:8px;font-size:11px;font-weight:600"></div>'
+          +'</div>';
+      }).join('')}</div>
+    </div>
+    <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+      <button onclick="invDupFinish(${dups.length},${alreadyCreated},${alreadyErrors})" class="btn btn-primary">Done</button>
+    </div>`;
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  // Store dups on window for the action handlers
+  window._invDups=dups;
+  window._invDupDone=new Array(dups.length).fill(false);
+}
+
+async function invDupAction(i, action) {
+  const d=window._invDups[i];
+  if(!d) return;
+  const statusEl=document.getElementById('invdup_status_'+i);
+  const card=document.getElementById('invdup_'+i);
+  try {
+    if(action==='overwrite'){
+      await sbFetch('inventory_items?id=eq.'+d.existing.id,{method:'PATCH',body:JSON.stringify({category:d.cat,quantity:d.qty,location:d.loc,updated_by:SESSION?.user_id,updated_at:new Date().toISOString()})});
+      if(statusEl){statusEl.textContent='✓ Overwritten with new data';statusEl.style.color='var(--blue)';}
+    } else if(action==='add'){
+      const newQty=(d.existing.quantity||0)+d.qty;
+      await sbFetch('inventory_items?id=eq.'+d.existing.id,{method:'PATCH',body:JSON.stringify({quantity:newQty,updated_by:SESSION?.user_id,updated_at:new Date().toISOString()})});
+      if(statusEl){statusEl.textContent='✓ Quantities added → '+newQty+' total';statusEl.style.color='var(--green)';}
+    } else {
+      if(statusEl){statusEl.textContent='✓ Kept existing';statusEl.style.color='var(--muted)';}
+    }
+    if(card) card.style.opacity='0.6';
+    window._invDupDone[i]=true;
+  } catch(e){ if(statusEl){statusEl.textContent='✗ Error: '+e.message;statusEl.style.color='var(--accent)';} }
+}
+
+async function invDupApplyAll(action) {
+  const dups=window._invDups||[];
+  for(let i=0;i<dups.length;i++) await invDupAction(i,action);
+}
+
+async function invDupFinish(total, alreadyCreated, alreadyErrors) {
+  document.getElementById('invDupOverlay')?.remove();
+  const done=(window._invDupDone||[]).filter(Boolean).length;
+  toast((alreadyCreated+done)+' item(s) processed.');
+  logActivity('import','Imported inventory items with '+total+' duplicates resolved');
+  await loadInventory();
+}
+
 async function bulkDeleteHR(){
   const ids=[...document.querySelectorAll('.hrChk:checked')].map(c=>c.value);
   if(!ids.length){toast('Select postings to delete','error');return;}
@@ -2854,65 +2970,76 @@ async function saveNewProject() {
 
 
 function downloadSampleProjectExcel() {
-  var rows=[
-    ['Theme / Project','Item','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Detailed Comments and Notes','Source'],
-    ['Q1 Brand Campaign','Design social media kit','inprogress','high','Aditya Vastrad','Brand Awareness & Visibility','','','All formats needed by 15 Mar','Confluence'],
-    ['Q1 Brand Campaign','Write blog post','todo','medium','Md Bilal','Content Production & Quality','','','SEO-optimised 1200 words','Confluence'],
-    ['Partner Summit 2025','Design event banners','todo','high','Designer Name','Event Reach & Engagement','','','3 sizes: 3x6ft 2x4ft 1x2ft','Briefing doc'],
-    ['Partner Summit 2025','Create invite emailer','todo','high','Content Name','','Integrated Marketing & Campaign Effectiveness','','HTML emailer 600px wide','Briefing doc'],
-  ];
-  var ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[22,30,12,10,18,30,20,20,45,20].map(function(w){return{wch:w};});
-  var _wb={SheetNames:['Weekly Tracker'],Sheets:{}};
-  _wb.Sheets['Weekly Tracker']=ws;
-  var _wbout = XLSX.write(_wb, {bookType:'xlsx', type:'binary'});
-  var _buf = new ArrayBuffer(_wbout.length);
-  var _view = new Uint8Array(_buf);
-  for(var _i=0;_i<_wbout.length;_i++) _view[_i]=_wbout.charCodeAt(_i)&0xFF;
-  var _blob = new Blob([_buf],{type:'application/octet-stream'});
-  var _a = document.createElement('a');
-  _a.href = URL.createObjectURL(_blob);
-  _a.download = 'QNu_Project_Tracker_Template.xlsx';
-  document.body.appendChild(_a); _a.click(); document.body.removeChild(_a);
-  setTimeout(function(){URL.revokeObjectURL(_a.href);},1500);
-  toast('Template Excel downloaded.');
+  try {
+    var rows=[
+      ['Theme / Project','Item','Status','Priority','Primary Owner','Assignee','KPI','Detailed Comments and Notes','Source'],
+      ['Q1 Brand Campaign','Design social media kit','inprogress','high','Aditya Vastrad','Aditya Vastrad','Brand Awareness & Visibility','All formats needed by 15 Mar','Confluence'],
+      ['Q1 Brand Campaign','Write blog post','todo','medium','Aditya Vastrad','Md Bilal','Content Production & Quality','SEO-optimised 1200 words','Confluence'],
+      ['Partner Summit 2025','Design event banners','todo','high','Aditya Vastrad','Designer Name','Event Reach & Engagement','3 sizes: 3x6ft 2x4ft 1x2ft','Briefing doc'],
+      ['Partner Summit 2025','Create invite emailer','todo','high','Aditya Vastrad','Content Name','Integrated Marketing & Campaign Effectiveness','HTML emailer 600px wide','Briefing doc'],
+    ];
+    var ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[22,30,12,10,18,18,32,45,20].map(function(w){return{wch:w};});
+    var _wb={SheetNames:['Weekly Tracker'],Sheets:{}};
+    _wb.Sheets['Weekly Tracker']=ws;
+    var _wbout=XLSX.write(_wb,{bookType:'xlsx',type:'binary'});
+    var _buf=new ArrayBuffer(_wbout.length);
+    var _view=new Uint8Array(_buf);
+    for(var _i=0;_i<_wbout.length;_i++) _view[_i]=_wbout.charCodeAt(_i)&0xFF;
+    var _blob=new Blob([_buf],{type:'application/octet-stream'});
+    var _a=document.createElement('a');
+    _a.href=URL.createObjectURL(_blob);
+    _a.download='QNu_Project_Tracker_Template.xlsx';
+    document.body.appendChild(_a); _a.click(); document.body.removeChild(_a);
+    setTimeout(function(){URL.revokeObjectURL(_a.href);},1500);
+    toast('Template Excel downloaded.');
+  } catch(e){ toast('Download error: '+e.message,'error'); console.error(e); }
 }
 
 function downloadProjectsExcel(){
-  const rows=[['Theme / Project','Item','Status','Priority','Primary Owner','KPI','Detailed Comments and Notes','Source']];
-  for(const p of projects){
-    const tags=(function(){try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
-    const pkpis=projectKPICache[p.id]||[];
-    const tasks=projectTasksCache[p.id]||[];
-    const indKPIs=pkpis.filter(k=>k.kpi_type==='individual').map(k=>k.title).join('; ');
-    const teamKPIs=pkpis.filter(k=>k.kpi_type==='team').map(k=>k.title).join('; ');
-    const sharedKPIs=pkpis.filter(k=>k.kpi_type==='shared').map(k=>k.title).join('; ');
-    if(!tasks.length){
-      const allKPIsStr=(projectKPICache[p.id]||[]).map(k=>k.title).join('; ');
-      rows.push([p.title,'',STATUS_LABELS[p.status]||p.status,p.priority||'',p.owner_name||'',allKPIsStr,p.description||'',tags.join('; ')]);
-    } else {
-      const allKPIsStr=(projectKPICache[p.id]||[]).map(k=>k.title).join('; ');
-      tasks.forEach(function(t,i){
-        rows.push([i===0?p.title:'',t.title,STATUS_LABELS[t.status]||t.status,t.priority||'',t.assignee_name||'',
-          i===0?allKPIsStr:'',t.description||'',i===0?tags.join('; '):'']);
-      });
+  try {
+    const rows=[['Theme / Project','Item','Status','Priority','Primary Owner','Assignee','KPI','Detailed Comments and Notes','Source']];
+    for(const p of projects){
+      const tags=(function(){try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
+      const pkpis=projectKPICache[p.id]||[];
+      const tasks=projectTasksCache[p.id]||[];
+      const allKPIsStr=pkpis.map(k=>k.title).join('; ');
+      if(!tasks.length){
+        rows.push([p.title,'',STATUS_LABELS[p.status]||p.status,p.priority||'',p.owner_name||'',p.owner_name||'',allKPIsStr,p.description||'',tags.join('; ')]);
+      } else {
+        tasks.forEach(function(t,i){
+          const tKPI=(t.description||'').match(/(?:Individual|Team|Shared) KPI: ([^\n]+)/)?.[1]||'';
+          const tDesc=(t.description||'').replace(/\n(?:Individual|Team|Shared) KPI:[^\n]*/g,'').replace(/\nSource:[^\n]*/g,'').trim();
+          rows.push([
+            i===0?p.title:'',
+            t.title,
+            STATUS_LABELS[t.status]||t.status,
+            t.priority||'',
+            i===0?p.owner_name||'':'',
+            t.assignee_name||'',
+            tKPI||(i===0?allKPIsStr:''),
+            tDesc||(i===0?p.description||'':''),
+            i===0?tags.join('; '):''
+          ]);
+        });
+      }
     }
-  }
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[22,30,12,10,18,30,45,20].map(w=>({wch:w}));
-  var _wb={SheetNames:['Weekly Tracker'],Sheets:{}};
-  _wb.Sheets['Weekly Tracker']=ws;
-  var _wbout=XLSX.write(_wb,{bookType:'xlsx',type:'binary'});
-  var _buf=new ArrayBuffer(_wbout.length);
-  var _view=new Uint8Array(_buf);
-  for(var _i=0;_i<_wbout.length;_i++) _view[_i]=_wbout.charCodeAt(_i)&0xFF;
-  var _blob=new Blob([_buf],{type:'application/octet-stream'});
-  var _a=document.createElement('a');
-  _a.href=URL.createObjectURL(_blob);
-  _a.download='QNu_Project_Tracker_'+new Date().toISOString().slice(0,10)+'.xlsx';
-  document.body.appendChild(_a); _a.click(); document.body.removeChild(_a);
-  setTimeout(function(){URL.revokeObjectURL(_a.href);},1500);
-  toast('Excel downloaded — '+(rows.length-1)+' row(s).');
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[22,30,12,10,18,18,30,45,20].map(w=>({wch:w}));
+    var _wb={SheetNames:['Weekly Tracker'],Sheets:{}};
+    _wb.Sheets['Weekly Tracker']=ws;
+    var _wbout=XLSX.write(_wb,{bookType:'xlsx',type:'binary'});
+    var _buf=new ArrayBuffer(_wbout.length);
+    var _view=new Uint8Array(_buf);
+    for(var _i=0;_i<_wbout.length;_i++) _view[_i]=_wbout.charCodeAt(_i)&0xFF;
+    var _blob=new Blob([_buf],{type:'application/octet-stream'});
+    var _a=document.createElement('a');
+    _a.href=URL.createObjectURL(_blob);
+    _a.download='QNu_Project_Tracker_'+new Date().toISOString().slice(0,10)+'.xlsx';
+    document.body.appendChild(_a); _a.click(); document.body.removeChild(_a);
+    setTimeout(function(){URL.revokeObjectURL(_a.href);},1500);
+    toast('Excel downloaded — '+(rows.length-1)+' row(s).');
+  } catch(e){ toast('Download error: '+e.message,'error'); console.error(e); }
 }
 
 
@@ -2956,7 +3083,6 @@ function applyProjectFilterAndCascade(val) {
   const opts = document.getElementById('projOwnerOptions');
   if(!opts) return;
   const users = window._allUsers || [];
-  // owner: or status: — just filter, never repopulate
   if(val && (val.startsWith('owner:') || val.startsWith('status:'))) return;
   if(!val || val === 'all') { populateOwnerFilterDropdown(); return; }
   if(val.startsWith('div:')) {
@@ -2984,33 +3110,25 @@ function applyProjectFilterAndCascade(val) {
 
 function populateOwnerFilterDropdown(preloaded) {
   function _render(users) {
-    var opts = document.getElementById('projOwnerOptions');
+    var opts=document.getElementById('projOwnerOptions');
     if(!opts) return;
-    if(!users||!users.length){ opts.innerHTML='<option value="" disabled>No users found</option>'; return; }
-    var deptMap = {};
-    users.forEach(function(u){
-      var dept = u.department || 'Other';
-      if(!deptMap[dept]) deptMap[dept] = [];
-      deptMap[dept].push(u);
+    if(!users||!users.length){opts.innerHTML='<option value="" disabled>No users found</option>';return;}
+    var deptMap={};
+    users.forEach(function(u){ var dept=u.department||'Other'; if(!deptMap[dept]) deptMap[dept]=[]; deptMap[dept].push(u); });
+    var depts=Object.keys(deptMap).sort(function(a,b){
+      var aM=a.toLowerCase().indexOf('marketing')!==-1,bM=b.toLowerCase().indexOf('marketing')!==-1;
+      if(aM&&!bM) return -1; if(!aM&&bM) return 1; return a.localeCompare(b);
     });
-    var depts = Object.keys(deptMap).sort(function(a,b){
-      var aM = a.toLowerCase().indexOf('marketing') !== -1;
-      var bM = b.toLowerCase().indexOf('marketing') !== -1;
-      if(aM && !bM) return -1; if(!aM && bM) return 1;
-      return a.localeCompare(b);
-    });
-    var ownerHtml = '';
+    var html='';
     depts.forEach(function(dept){
-      ownerHtml += '<optgroup label="' + esc(dept) + '">';
-      deptMap[dept].forEach(function(u){
-        ownerHtml += '<option value="owner:' + esc(u.full_name) + '">' + esc(u.full_name) + '</option>';
-      });
-      ownerHtml += '</optgroup>';
+      html+='<optgroup label="'+esc(dept)+'">';
+      deptMap[dept].forEach(function(u){ html+='<option value="owner:'+esc(u.full_name)+'">'+esc(u.full_name)+'</option>'; });
+      html+='</optgroup>';
     });
-    opts.innerHTML = ownerHtml || '<option value="" disabled>No users found</option>';
+    opts.innerHTML=html||'<option value="" disabled>No users found</option>';
   }
-  if(preloaded && preloaded.length) { _render(preloaded); return; }
-  if(window._allUsers && window._allUsers.length) { _render(window._allUsers); return; }
+  if(preloaded&&preloaded.length){ _render(preloaded); return; }
+  if(window._allUsers&&window._allUsers.length){ _render(window._allUsers); return; }
   var o=document.getElementById('projOwnerOptions');
   if(o) o.innerHTML='<option value="" disabled>Loading...</option>';
   loadUsersForAssignee().then(function(u){ _render(u); });
@@ -3467,18 +3585,18 @@ function downloadRequestTemplate(e) {
     ['QNu Roll-up Banner',2,'QNu Annual Summit','2025-03-15','Bengaluru, Hotel XYZ','Need for main stage backdrop. Return after event.'],
   ]);
   ws['!cols']=[{wch:25},{wch:10},{wch:25},{wch:15},{wch:20},{wch:40}];
-  var _wb={SheetNames:['Request'],Sheets:{}};
-  _wb.Sheets['Request']=ws;
-  var _wbout=XLSX.write(_wb,{bookType:'xlsx',type:'binary'});
-  var _buf=new ArrayBuffer(_wbout.length);
-  var _view=new Uint8Array(_buf);
-  for(var _i=0;_i<_wbout.length;_i++) _view[_i]=_wbout.charCodeAt(_i)&0xFF;
-  var _blob=new Blob([_buf],{type:'application/octet-stream'});
-  var _a=document.createElement('a');
-  _a.href=URL.createObjectURL(_blob);
-  _a.download='Inventory_Request_Template.xlsx';
-  document.body.appendChild(_a); _a.click(); document.body.removeChild(_a);
-  setTimeout(function(){URL.revokeObjectURL(_a.href);},1500);
+  var _wb6={SheetNames:['Request'],Sheets:{}};
+  _wb6.Sheets['Request']=ws;
+  var _wbout6=XLSX.write(_wb6,{bookType:'xlsx',type:'binary'});
+  var _buf6=new ArrayBuffer(_wbout6.length);
+  var _view6=new Uint8Array(_buf6);
+  for(var _i6=0;_i6<_wbout6.length;_i6++) _view6[_i6]=_wbout6.charCodeAt(_i6)&0xFF;
+  var _blob6=new Blob([_buf6],{type:'application/octet-stream'});
+  var _a6=document.createElement('a');
+  _a6.href=URL.createObjectURL(_blob6);
+  _a6.download='Inventory_Request_Template.xlsx';
+  document.body.appendChild(_a6); _a6.click(); document.body.removeChild(_a6);
+  setTimeout(function(){URL.revokeObjectURL(_a6.href);},1500);
   toast('Template downloaded.');
 }
 
@@ -5760,13 +5878,7 @@ function toggleHdrExcel(evt){
   if(!m) return;
   if(m.style.display==='block'){ m.style.display='none'; return; }
   var btn=document.getElementById('hdrExcelBtn');
-  if(btn){
-    var r=btn.getBoundingClientRect();
-    m.style.position='fixed';
-    m.style.top=(r.bottom+4)+'px';
-    m.style.left=Math.max(0,r.right-184)+'px';
-    m.style.zIndex='999999';
-  }
+  if(btn){ var r=btn.getBoundingClientRect(); m.style.position='fixed'; m.style.top=(r.bottom+4)+'px'; m.style.left=Math.max(0,r.right-184)+'px'; m.style.zIndex='999999'; }
   m.style.display='block';
 }
 document.addEventListener('click',function(e){
