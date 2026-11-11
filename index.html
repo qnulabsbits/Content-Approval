@@ -208,7 +208,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           </label>
           <div style="position:relative;display:inline-block" id="hdrExcelWrap">
             <button class="btn btn-secondary btn-sm" onclick="toggleHdrExcel(event)" id="hdrExcelBtn">Excel &#9660;</button>
-            <div id="hdrExcelMenu" style="display:none;position:fixed;top:0;right:0;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:99999;min-width:180px;padding:4px 0;white-space:nowrap">
+            <div id="hdrExcelMenu" style="display:none;position:fixed;top:0;left:0;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:999999;min-width:180px;padding:4px 0;white-space:nowrap">
               <button onclick="downloadProjectsExcel();toggleHdrExcel()" style="display:block;width:100%;text-align:left;padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-family:Inter,sans-serif;color:var(--text)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">&#8595; Download Excel</button>
               <button onclick="downloadSampleProjectExcel();toggleHdrExcel()" style="display:block;width:100%;text-align:left;padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-family:Inter,sans-serif;color:var(--text)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">&#128196; Template Excel</button>
             </div>
@@ -2185,7 +2185,7 @@ const PRIORITY_COLORS={high:'var(--accent)',medium:'var(--yellow)',low:'var(--gr
 let projectTaskCounts = {}; // projectId → {total, done}
 
 async function loadProjects() {
-  loadUsersForAssignee().then(function(users){ if(users && users.length) populateOwnerFilterDropdown(users); });
+  loadUsersForAssignee().then(function(users){ populateOwnerFilterDropdown(users); });
   var ss=$('projSortSelect'); if(ss) ss.value=projectSortMode;
   // Sync view toggle buttons
   ['kanban','table'].forEach(v=>{
@@ -2869,47 +2869,95 @@ async function saveNewProject() {
 
 
 function downloadSampleProjectExcel() {
-  var rows=[
-    ['Theme / Project','Item','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Detailed Comments and Notes','Source'],
-    ['Q1 Brand Campaign','Design social media kit','inprogress','high','Aditya Vastrad','Brand Awareness & Visibility','','','All formats needed by 15 Mar','Confluence'],
-    ['Q1 Brand Campaign','Write blog post','todo','medium','Md Bilal','Content Production & Quality','','','SEO-optimised 1200 words','Confluence'],
-    ['Partner Summit 2025','Design event banners','todo','high','Designer Name','Event Reach & Engagement','','','3 sizes: 3x6ft 2x4ft 1x2ft','Briefing doc'],
-    ['Partner Summit 2025','Create invite emailer','todo','high','Content Name','','Integrated Marketing & Campaign Effectiveness','','HTML emailer 600px wide','Briefing doc'],
-  ];
-  var ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[22,30,12,10,18,30,20,20,45,20].map(function(w){return{wch:w};});
-  var wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,'Weekly Tracker',ws);
-  XLSX.writeFile(wb,'QNu_Project_Tracker_Template.xlsx');
-  toast('Template Excel downloaded.');
+  try {
+    var rows=[
+      ['Theme / Project','Item','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Detailed Comments and Notes','Source'],
+      ['Q1 Brand Campaign','Design social media kit','inprogress','high','Aditya Vastrad','Brand Awareness & Visibility','','','All formats needed by 15 Mar','Confluence'],
+      ['Q1 Brand Campaign','Write blog post','todo','medium','Md Bilal','Content Production & Quality','','','SEO-optimised 1200 words','Confluence'],
+      ['Partner Summit 2025','Design event banners','todo','high','Designer Name','Event Reach & Engagement','','','3 sizes: 3x6ft 2x4ft 1x2ft','Briefing doc'],
+      ['Partner Summit 2025','Create invite emailer','todo','high','Content Name','','Integrated Marketing & Campaign Effectiveness','','HTML emailer 600px wide','Briefing doc'],
+    ];
+    var ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[22,30,12,10,18,30,20,20,45,20].map(function(w){return{wch:w};});
+    var wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,'Weekly Tracker',ws);
+    var wbout=XLSX.write(wb,{bookType:'xlsx',type:'binary'});
+    var buf=new ArrayBuffer(wbout.length);
+    var view=new Uint8Array(buf);
+    for(var i=0;i<wbout.length;i++) view[i]=wbout.charCodeAt(i)&0xFF;
+    var blob=new Blob([buf],{type:'application/octet-stream'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='QNu_Project_Tracker_Template.xlsx';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+    toast('Template Excel downloaded.');
+  } catch(e){ toast('Download failed: '+e.message,'error'); }
 }
 
 function downloadProjectsExcel(){
-  const rows=[['Theme / Project','Item','Status','Priority','Primary Owner','KPI','Detailed Comments and Notes','Source']];
-  for(const p of projects){
-    const tags=(function(){try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
-    const pkpis=projectKPICache[p.id]||[];
-    const tasks=projectTasksCache[p.id]||[];
-    const indKPIs=pkpis.filter(k=>k.kpi_type==='individual').map(k=>k.title).join('; ');
-    const teamKPIs=pkpis.filter(k=>k.kpi_type==='team').map(k=>k.title).join('; ');
-    const sharedKPIs=pkpis.filter(k=>k.kpi_type==='shared').map(k=>k.title).join('; ');
-    if(!tasks.length){
+  try {
+    const rows=[['Theme / Project','Item','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Detailed Comments and Notes','Source']];
+    for(const p of projects){
+      const tags=(function(){try{return JSON.parse(p.tags||'[]');}catch(_){return [];}})();
+      const pkpis=projectKPICache[p.id]||[];
+      const tasks=projectTasksCache[p.id]||[];
+      const indKPIs=pkpis.filter(k=>k.kpi_type==='individual').map(k=>k.title).join('; ');
+      const teamKPIs=pkpis.filter(k=>k.kpi_type==='team').map(k=>k.title).join('; ');
+      const sharedKPIs=pkpis.filter(k=>k.kpi_type==='shared').map(k=>k.title).join('; ');
       const allKPIsStr=(projectKPICache[p.id]||[]).map(k=>k.title).join('; ');
-      rows.push([p.title,'',STATUS_LABELS[p.status]||p.status,p.priority||'',p.owner_name||'',allKPIsStr,p.description||'',tags.join('; ')]);
-    } else {
-      const allKPIsStr=(projectKPICache[p.id]||[]).map(k=>k.title).join('; ');
-      tasks.forEach(function(t,i){
-        rows.push([i===0?p.title:'',t.title,STATUS_LABELS[t.status]||t.status,t.priority||'',t.assignee_name||'',
-          i===0?allKPIsStr:'',t.description||'',i===0?tags.join('; '):'']);
-      });
+      if(!tasks.length){
+        rows.push([p.title,'',STATUS_LABELS[p.status]||p.status,p.priority||'',p.owner_name||'',indKPIs,teamKPIs,sharedKPIs,p.description||'',tags.join('; ')]);
+      } else {
+        tasks.forEach(function(t,i){
+          const tDesc=(t.description||'').replace(/
+Individual KPI:[^
+]*/g,'').replace(/
+Team KPI:[^
+]*/g,'').replace(/
+Shared KPI:[^
+]*/g,'').replace(/
+Source:[^
+]*/g,'').trim();
+          const tIndKPI=(t.description||'').match(/Individual KPI: ([^
+]+)/)?.[1]||'';
+          const tTeamKPI=(t.description||'').match(/Team KPI: ([^
+]+)/)?.[1]||'';
+          const tSharedKPI=(t.description||'').match(/Shared KPI: ([^
+]+)/)?.[1]||'';
+          const tSrc=(t.description||'').match(/Source: ([^
+]+)/)?.[1]||tags.join('; ');
+          rows.push([
+            i===0?p.title:'',
+            t.title,
+            STATUS_LABELS[t.status]||t.status,
+            t.priority||'',
+            t.assignee_name||'',
+            tIndKPI||(i===0?indKPIs:''),
+            tTeamKPI||(i===0?teamKPIs:''),
+            tSharedKPI||(i===0?sharedKPIs:''),
+            tDesc||(i===0?p.description||'':''),
+            i===0?tSrc:''
+          ]);
+        });
+      }
     }
-  }
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[22,30,12,10,18,30,45,20].map(w=>({wch:w}));
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,'Weekly Tracker',ws);
-  XLSX.writeFile(wb,'QNu_Project_Tracker_'+new Date().toISOString().slice(0,10)+'.xlsx');
-  toast('Excel downloaded.');
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[22,30,12,10,18,22,22,22,45,20].map(w=>({wch:w}));
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,'Weekly Tracker',ws);
+    var wbout=XLSX.write(wb,{bookType:'xlsx',type:'binary'});
+    var buf=new ArrayBuffer(wbout.length);
+    var view=new Uint8Array(buf);
+    for(var i=0;i<wbout.length;i++) view[i]=wbout.charCodeAt(i)&0xFF;
+    var blob=new Blob([buf],{type:'application/octet-stream'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='QNu_Project_Tracker_'+new Date().toISOString().slice(0,10)+'.xlsx';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+    toast('Excel downloaded — '+(rows.length-1)+' row(s).');
+  } catch(e){ toast('Download failed: '+e.message,'error'); }
 }
 
 
@@ -2951,21 +2999,16 @@ function applyProjectFilterAndCascade(val) {
   applyProjectFilter(val);
   const opts = document.getElementById('projOwnerOptions');
   if(!opts) return;
-  // owner: selection — just apply the filter, do NOT repopulate the dropdown
-  if(val && val.startsWith('owner:')) return;
-  // status: selection — just apply the filter, keep owner list as-is
-  if(val && val.startsWith('status:')) return;
-  // all / empty — restore full owner list
-  if(!val || val === 'all') {
-    populateOwnerFilterDropdown();
-    return;
-  }
-  // div: selection — filter owners to that division
+  // owner: or status: — just filter, never repopulate the dropdown options
+  if(val && (val.startsWith('owner:') || val.startsWith('status:'))) return;
+  // reset to all users
+  if(!val || val === 'all') { populateOwnerFilterDropdown(); return; }
+  // div: — filter owner list to that division
   if(val.startsWith('div:')) {
     const users = window._allUsers || [];
     if(!users.length) {
-      opts.innerHTML = '<option value="" disabled>Loading...</option>';
-      loadUsersForAssignee().then(function(u){ applyProjectFilterAndCascade(val); });
+      opts.innerHTML = '<option value="" disabled>Loading users...</option>';
+      loadUsersForAssignee().then(function(){ applyProjectFilterAndCascade(val); });
       return;
     }
     const divKey = val.slice(4).toLowerCase();
@@ -2988,14 +3031,11 @@ function applyProjectFilterAndCascade(val) {
   }
 }
 
-function populateOwnerFilterDropdown(preloadedUsers) {
+function populateOwnerFilterDropdown(preloaded) {
   function _render(users) {
     const opts = document.getElementById('projOwnerOptions');
     if(!opts) return;
-    if(!users || !users.length) {
-      opts.innerHTML = '<option value="" disabled>No users found</option>';
-      return;
-    }
+    if(!users || !users.length) { opts.innerHTML = '<option value="" disabled>No users found</option>'; return; }
     const deptMap = {};
     users.forEach(function(u){
       const dept = u.department || 'Other';
@@ -3016,17 +3056,13 @@ function populateOwnerFilterDropdown(preloadedUsers) {
       });
       ownerHtml += '</optgroup>';
     });
-    opts.innerHTML = ownerHtml || '<option value="" disabled>No users found</option>';
+    document.getElementById('projOwnerOptions').innerHTML = ownerHtml || '<option value="" disabled>No users found</option>';
   }
-  if(preloadedUsers && preloadedUsers.length) {
-    _render(preloadedUsers);
-  } else if(window._allUsers && window._allUsers.length) {
-    _render(window._allUsers);
-  } else {
-    const opts = document.getElementById('projOwnerOptions');
-    if(opts) opts.innerHTML = '<option value="" disabled>Loading...</option>';
-    loadUsersForAssignee().then(function(users){ _render(users); });
-  }
+  if(preloaded && preloaded.length) { _render(preloaded); return; }
+  if(window._allUsers && window._allUsers.length) { _render(window._allUsers); return; }
+  const opts = document.getElementById('projOwnerOptions');
+  if(opts) opts.innerHTML = '<option value="" disabled>Loading...</option>';
+  loadUsersForAssignee().then(function(users){ _render(users); });
 }
 
 function switchProjectView(view) {
@@ -5759,20 +5795,18 @@ async function deleteKPI(kpiId) {
 }
 
 function toggleHdrExcel(evt){
-  if(evt) evt.stopPropagation();
+  if(evt && evt.stopPropagation) evt.stopPropagation();
   var m=document.getElementById('hdrExcelMenu');
   if(!m) return;
   if(m.style.display==='block'){
     m.style.display='none';
     return;
   }
-  // Position the menu below the button using fixed coordinates
   var btn=document.getElementById('hdrExcelBtn');
   if(btn){
     var r=btn.getBoundingClientRect();
     m.style.top=(r.bottom+4)+'px';
-    m.style.right=(window.innerWidth-r.right)+'px';
-    m.style.left='auto';
+    m.style.left=Math.max(0,r.right-180)+'px';
   }
   m.style.display='block';
 }
