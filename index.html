@@ -208,7 +208,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           </label>
           <div style="position:relative;display:inline-block" id="hdrExcelWrap">
             <button class="btn btn-secondary btn-sm" onclick="toggleHdrExcel(event)" id="hdrExcelBtn">Excel &#9660;</button>
-            <div id="hdrExcelMenu" style="display:none;position:absolute;right:0;top:110%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:9999;min-width:180px;padding:4px 0;white-space:nowrap">
+            <div id="hdrExcelMenu" style="display:none;position:fixed;top:0;right:0;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:99999;min-width:180px;padding:4px 0;white-space:nowrap">
               <button onclick="downloadProjectsExcel();toggleHdrExcel()" style="display:block;width:100%;text-align:left;padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-family:Inter,sans-serif;color:var(--text)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">&#8595; Download Excel</button>
               <button onclick="downloadSampleProjectExcel();toggleHdrExcel()" style="display:block;width:100%;text-align:left;padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-family:Inter,sans-serif;color:var(--text)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">&#128196; Template Excel</button>
             </div>
@@ -2185,7 +2185,7 @@ const PRIORITY_COLORS={high:'var(--accent)',medium:'var(--yellow)',low:'var(--gr
 let projectTaskCounts = {}; // projectId → {total, done}
 
 async function loadProjects() {
-  loadUsersForAssignee().then(function(){ populateOwnerFilterDropdown(); });
+  loadUsersForAssignee().then(function(users){ if(users && users.length) populateOwnerFilterDropdown(users); });
   var ss=$('projSortSelect'); if(ss) ss.value=projectSortMode;
   // Sync view toggle buttons
   ['kanban','table'].forEach(v=>{
@@ -2949,25 +2949,26 @@ function applyProjectFilter(val) {
 
 function applyProjectFilterAndCascade(val) {
   applyProjectFilter(val);
-  // If a subdomain is selected, cascade: show only users in that subdomain in the owner dropdown
   const opts = document.getElementById('projOwnerOptions');
   if(!opts) return;
-  const users = window._allUsers || [];
-  // owner: selection — just apply the filter, do NOT repopulate (that would clear selection)
+  // owner: selection — just apply the filter, do NOT repopulate the dropdown
   if(val && val.startsWith('owner:')) return;
-  if(!val || val === 'all' || val.startsWith('status:')) {
-    // Reset to full user list grouped by dept
+  // status: selection — just apply the filter, keep owner list as-is
+  if(val && val.startsWith('status:')) return;
+  // all / empty — restore full owner list
+  if(!val || val === 'all') {
     populateOwnerFilterDropdown();
     return;
   }
+  // div: selection — filter owners to that division
   if(val.startsWith('div:')) {
-    const divKey = val.slice(4).toLowerCase();
-    // If users not loaded yet, load them first then re-cascade
+    const users = window._allUsers || [];
     if(!users.length) {
       opts.innerHTML = '<option value="" disabled>Loading...</option>';
-      loadUsersForAssignee().then(function(){ applyProjectFilterAndCascade(val); });
+      loadUsersForAssignee().then(function(u){ applyProjectFilterAndCascade(val); });
       return;
     }
+    const divKey = val.slice(4).toLowerCase();
     const divUsers = users.filter(function(u){
       const dept = (u.department||'').toLowerCase();
       return dept.indexOf(divKey) !== -1 ||
@@ -2982,24 +2983,17 @@ function applyProjectFilterAndCascade(val) {
           return '<option value="owner:' + esc(u.full_name) + '">' + esc(u.full_name) + '</option>';
         }).join('') + '</optgroup>';
     } else {
-      opts.innerHTML = '<option value="" disabled>No users in this team</option>';
+      opts.innerHTML = '<option value="" disabled>No users in this division</option>';
     }
-    // Reset select to the div: value since we just replaced owner options
-    var sel = document.getElementById('projFilterSelect');
-    if(sel && sel.value !== val) sel.value = val;
   }
 }
 
-function populateOwnerFilterDropdown() {
-  const opts = document.getElementById('projOwnerOptions');
-  if(!opts) return;
-  // Show loading state immediately
-  opts.innerHTML = '<option value="" disabled>Loading users...</option>';
-  loadUsersForAssignee().then(function(users) {
-    const opts2 = document.getElementById('projOwnerOptions');
-    if(!opts2) return;
+function populateOwnerFilterDropdown(preloadedUsers) {
+  function _render(users) {
+    const opts = document.getElementById('projOwnerOptions');
+    if(!opts) return;
     if(!users || !users.length) {
-      opts2.innerHTML = '<option value="" disabled>No users found</option>';
+      opts.innerHTML = '<option value="" disabled>No users found</option>';
       return;
     }
     const deptMap = {};
@@ -3022,12 +3016,17 @@ function populateOwnerFilterDropdown() {
       });
       ownerHtml += '</optgroup>';
     });
-    opts2.innerHTML = ownerHtml || '<option value="" disabled>No users found</option>';
-    // Restore selected value if one was active
-    if(projectFilterMode && projectFilterMode.startsWith('owner:')) {
-      opts2.closest('select') && (opts2.closest('select').value = projectFilterMode);
-    }
-  });
+    opts.innerHTML = ownerHtml || '<option value="" disabled>No users found</option>';
+  }
+  if(preloadedUsers && preloadedUsers.length) {
+    _render(preloadedUsers);
+  } else if(window._allUsers && window._allUsers.length) {
+    _render(window._allUsers);
+  } else {
+    const opts = document.getElementById('projOwnerOptions');
+    if(opts) opts.innerHTML = '<option value="" disabled>Loading...</option>';
+    loadUsersForAssignee().then(function(users){ _render(users); });
+  }
 }
 
 function switchProjectView(view) {
@@ -5691,7 +5690,7 @@ function renderUpdateLog(logJson){
 function crStatusBtn(id,status,label,cls){
   return '<button class="btn '+cls+' btn-sm" onclick="updateCRStatusDirect('+id+',\''+status+'\'">'+ label +'</button>';
 }
-function toggleExcelDrop(evt){if(evt){evt.stopPropagation();}var d=document.getElementById('excelDrop');if(d)d.style.display=d.style.display==='block'?'none':'block';}
+function toggleExcelDrop(){var d=document.getElementById('excelDrop');if(d)d.style.display=d.style.display==='block'?'none':'block';}
 document.addEventListener('click',function(e){if(!e.target.closest('#excelDropWrap')){var d=document.getElementById('excelDrop');if(d)d.style.display='none';}});
 async function markProjectComplete(){
   if(!activeProject) return;
@@ -5763,7 +5762,19 @@ function toggleHdrExcel(evt){
   if(evt) evt.stopPropagation();
   var m=document.getElementById('hdrExcelMenu');
   if(!m) return;
-  m.style.display=m.style.display==='block'?'none':'block';
+  if(m.style.display==='block'){
+    m.style.display='none';
+    return;
+  }
+  // Position the menu below the button using fixed coordinates
+  var btn=document.getElementById('hdrExcelBtn');
+  if(btn){
+    var r=btn.getBoundingClientRect();
+    m.style.top=(r.bottom+4)+'px';
+    m.style.right=(window.innerWidth-r.right)+'px';
+    m.style.left='auto';
+  }
+  m.style.display='block';
 }
 document.addEventListener('click',function(e){
   if(!e.target.closest('#hdrExcelWrap')){
