@@ -1665,17 +1665,14 @@ function contentCollect(ct, prefix) {
 }
 
 async function loadContent() {
-  // Show/hide writer add-content form based on role (SESSION is guaranteed here)
-  const writerForm = $('contentWriterForm');
-  if (writerForm) {
-    const role = SESSION?.role;
-    if (role === 'writer' || role === 'admin') {
-      writerForm.style.display = 'block';
-      const writerInput = $('contentNewWriter');
-      if (writerInput && !writerInput.value && SESSION) writerInput.value = SESSION.full_name || '';
-    } else {
-      writerForm.style.display = 'none';
-    }
+  const writerForm=$('contentWriterForm');
+  if(writerForm){
+    const r=SESSION?.role;
+    if(r==='writer'||r==='admin'){
+      writerForm.style.display='block';
+      const wi=$('contentNewWriter');
+      if(wi&&!wi.value&&SESSION) wi.value=SESSION.full_name||'';
+    } else { writerForm.style.display='none'; }
   }
   const c = $('contentTable');
   if (c) c.innerHTML='<div class="loading-row"><span class="spinner"></span> Loading...</div>';
@@ -1997,7 +1994,7 @@ function contentTypeChange() {
   const wrap=$('contentDynFields'); const inner=$('contentDynFieldsInner');
   contentPendingImages={};
   if(!t){wrap.style.display='none';inner.innerHTML='';return;}
-  inner.innerHTML=contentBuildForm(t,{},'n_');
+  inner.innerHTML=contentBuildForm(t,{},false,'n_');
   wrap.style.display='block';
 }
 async function contentSubmitNew() {
@@ -4210,7 +4207,7 @@ init().catch(e=>{console.error(e);try{setScreen('login');}catch(_){}});
 
 // Show writer add form only for writers
 document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(initChat, 1500); // init chat after session loads
+  setTimeout(initChat, 1500);
 });
 
 
@@ -4825,39 +4822,30 @@ async function assignTask(assignedToId, assignedToName, taskTitle, taskDesc, mod
 
 async function loadLoginBanner(){
   if(!SESSION) return;
-  // Don't re-show if user already dismissed it this session
   if(SESSION._bannerDismissed) return;
-  try{ if(sessionStorage.getItem('banner_dismissed')==='1') return; }catch(_){}
+  try{if(sessionStorage.getItem('banner_dismissed')==='1') return;}catch(_){}
   const items=[];
   try{
     const tasks=await sbFetch("task_assignments?assigned_to=eq."+SESSION.user_id+"&completed=eq.false&dismissed=eq.false&select=*")||[];
-    tasks.forEach(t=>{
-      if(t.task_title&&t.task_title.trim()) items.push({html:"<b>Task from "+esc(t.assigned_by_name||"Admin")+"</b>: "+esc(t.task_title),type:"task",id:t.id});
-    });
+    tasks.forEach(t=>{if(t.task_title&&t.task_title.trim()) items.push({html:"<b>Task from "+esc(t.assigned_by_name||"Admin")+"</b>: "+esc(t.task_title),type:"task",id:t.id});});
   }catch(_){}
   try{
     const role=SESSION.role;
     const fm={seo:"writer_approved=eq.true&seo_approved=eq.false",cmo:"seo_approved=eq.true&cmo_approved=eq.false",designer:"cmo_approved=eq.true&designer_approved=eq.false",writer:"writer_approved=eq.false"};
     if(fm[role]){
       const pending=await sbFetch("content_approvals?"+fm[role]+"&select=id,title")||[];
-      // Only show items with a real title (filter out blank/null titles)
-      pending.slice(0,5).forEach(c=>{
-        if(c.title&&c.title.trim()) items.push({html:"<b>Content pending your review</b>: "+esc(c.title),type:"content",id:c.id});
-      });
+      pending.slice(0,5).forEach(c=>{if(c.title&&c.title.trim()) items.push({html:"<b>Content pending your review</b>: "+esc(c.title),type:"content",id:c.id});});
     }
   }catch(_){}
   try{
     if(SESSION.full_name){
       const pt=await sbFetch("project_tasks?assignee_name=eq."+encodeURIComponent(SESSION.full_name)+"&status=neq.done&select=id,title,project_id")||[];
-      pt.slice(0,5).forEach(t=>{
-        if(t.title&&t.title.trim()) items.push({html:"<b>Project task assigned to you</b>: "+esc(t.title),type:"project",id:t.project_id});
-      });
+      pt.slice(0,5).forEach(t=>{if(t.title&&t.title.trim()) items.push({html:"<b>Project task assigned to you</b>: "+esc(t.title),type:"project",id:t.project_id});});
     }
   }catch(_){}
   if(!items.length) return;
   const track=document.getElementById("bannerTrack"), banner=document.getElementById("loginBanner");
   if(!track||!banner) return;
-  // Show each item once then repeat for scrolling (max 3 repeats)
   const all=[...items,...items,...items];
   track.innerHTML=all.map(it=>"<div class=\"banner-item\" onclick=\"bannerClick('"+it.type+"','"+it.id+"')\">"+it.html+"</div>").join("");
   banner.classList.add("show");
@@ -4870,9 +4858,8 @@ function bannerClick(type,id){
 function closeBanner(){
   var b=document.getElementById("loginBanner"); if(b) b.classList.remove("show");
   var am=document.querySelector(".app-main"); if(am) am.style.marginTop="";
-  // Permanently suppress banner for this session so it never re-opens
   if(SESSION) SESSION._bannerDismissed=true;
-  try{ sessionStorage.setItem('banner_dismissed','1'); }catch(_){}
+  try{sessionStorage.setItem('banner_dismissed','1');}catch(_){}
 }
 
 /* ═══════════════════════════════════════════════════
