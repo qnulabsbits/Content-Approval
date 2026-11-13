@@ -765,6 +765,28 @@ async function contentOpenModal(id) {
     // Unpublish button: only visible when live
     const unpBtn = $('cfsUnpublishBtn');
     if (unpBtn) unpBtn.style.display = isLive ? 'inline-flex' : 'none';
+    // Show Zoho form status for Whitepapers/Case Studies
+    const zohoStatus = $('cfsZohoFormStatus');
+    if (zohoStatus) {
+      const ef2 = safeJSON(row.extra_fields, {});
+      if ((ct === 'Whitepaper' || ct === 'Other') && ef2.zoho_form_link) {
+        zohoStatus.style.display = 'block';
+        const nameEl = $('cfsZohoFormName');
+        const linkEl = $('cfsZohoFormLink');
+        if (nameEl) nameEl.textContent = ef2.zoho_form_name || ('Form: ' + ef2.zoho_form_link);
+        if (linkEl) {
+          linkEl.href = 'https://forms.zoho.in/qnulabs/form/' + ef2.zoho_form_link;
+        }
+      } else if ((ct === 'Whitepaper' || ct === 'Other') && row.posted_to_webflow) {
+        zohoStatus.style.display = 'block';
+        const nameEl = $('cfsZohoFormName');
+        if (nameEl) nameEl.textContent = 'No Zoho form yet — will be created on next publish.';
+        const linkEl = $('cfsZohoFormLink');
+        if (linkEl) linkEl.style.display = 'none';
+      } else {
+        zohoStatus.style.display = 'none';
+      }
+    }
   }
 
   $('contentFS').classList.add('show');
@@ -965,6 +987,11 @@ async function cfsPost() {
     btn.disabled=true;
     const unpBtn=$('cfsUnpublishBtn');
     if(unpBtn) unpBtn.style.display='inline-flex';
+    // Auto-create Zoho Form for Whitepapers and Case Studies
+    if(ct==='Whitepaper'||ct==='Other'){
+      result.textContent+=' Creating Zoho form...';
+      await zohoCreateFormForContent(contentActive, finalItemId);
+    }
     await loadContent();
   } catch(e){toast('Webflow error: '+e.message,'error');result.textContent='Error: '+e.message;result.style.color='var(--accent)';btn.disabled=false;btn.textContent='Post to Webflow';}
 }
@@ -1007,6 +1034,92 @@ async function cfsUnpublish() {
     toast('Error: '+e.message, 'error');
     if (btn) { btn.disabled = false; btn.textContent = 'Unpublish from Webflow'; }
   }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// ZOHO FORMS — Auto-create form when Whitepaper is posted to Webflow
+// ═══════════════════════════════════════════════════════════════════
+const ZOHO_FORMS_EDGE = (typeof SUPA_URL !== 'undefined' ? SUPA_URL : '') + '/functions/v1/zoho-forms';
+
+async function zohoCreateFormForContent(row, webflowItemId) {
+  try {
+    const title = row.title || 'Whitepaper';
+    // Check if we already have a form for this content
+    const existingForm = safeJSON(row.extra_fields, {}).zoho_form_link;
+    const token = await getToken();
+    const res = await fetch(ZOHO_FORMS_EDGE, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token,
+        'apikey': (typeof SUPA_KEY !== 'undefined' ? SUPA_KEY : '')
+      },
+      body: JSON.stringify({
+        action: 'create_form',
+        whitepaper_title: title
+      })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Zoho Forms error');
+
+    // Save form link name and embed code into the content's extra_fields
+    const ef = safeJSON(row.extra_fields, {});
+    ef.zoho_form_link = data.form_link_name;
+    ef.zoho_form_embed = data.embed_code;
+    ef.zoho_form_name = data.form_name;
+    await dbUpdate(CONTENT_TABLE, row.id, { extra_fields: JSON.stringify(ef) });
+    row.extra_fields = JSON.stringify(ef);
+
+    // Also update the Webflow CMS item with the form embed code
+    if (webflowItemId) {
+      await fetch(WEBFLOW_EDGE, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + (typeof SUPA_KEY !== 'undefined' ? SUPA_KEY : ''),
+          'apikey': (typeof SUPA_KEY !== 'undefined' ? SUPA_KEY : '')
+        },
+        body: JSON.stringify({
+          action: 'update_field',
+          item_id: webflowItemId,
+          fields: { 'whitepaper-form': data.embed_code },
+          row: row
+        })
+      }).catch(() => {}); // best-effort Webflow update
+    }
+
+    const msg = data.reused ? 'Existing Zoho form linked.' : 'Zoho form created: ' + data.form_name;
+    toast(msg);
+    logActivity('zoho_form', msg, row.id, row.title);
+
+    // Show form info in the result area
+    const result = $('cfsPostResult');
+    if (result) {
+      result.textContent += ' · ' + (data.reused ? 'Zoho form linked ✓' : 'Zoho form created ✓');
+    }
+  } catch(e) {
+    // Don't block the user — just show a warning
+    console.warn('Zoho Forms auto-create failed:', e.message);
+    toast('Posted to Webflow. Zoho form could not be auto-created: ' + e.message, 'error');
+  }
+}
+
+async function zohoGetFormEmbed(formLinkName) {
+  try {
+    const token = await getToken();
+    const res = await fetch(ZOHO_FORMS_EDGE, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token,
+        'apikey': (typeof SUPA_KEY !== 'undefined' ? SUPA_KEY : '')
+      },
+      body: JSON.stringify({ action: 'get_embed', form_link_name: formLinkName })
+    });
+    const data = await res.json();
+    return data.success ? data.embed_code : null;
+  } catch(e) { return null; }
 }
 
 // Writer add form
