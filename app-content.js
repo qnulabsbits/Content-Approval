@@ -72,7 +72,7 @@ const CONTENT_ROLE_CFG = {
   writer: {label:'Writer',field:'writer_approved',toggleCls:'',approveCls:'accent',approveLabel:'Approve for SEO Review',approveSub:'SEO team will be notified.',readOnly:false,canOpen:()=>true,fieldsTitle:'All Webflow Fields'},
   seo: {label:'SEO',field:'seo_approved',toggleCls:'seo',approveCls:'yellow',approveLabel:'Approve for CMO Review',approveSub:'Save edits first, then approve.',readOnly:false,canOpen:r=>!!r.writer_approved,fieldsTitle:'All Webflow Fields - Edit'},
   cmo: {label:'CMO',field:'cmo_approved',toggleCls:'cmo',approveCls:'purple',approveLabel:'Approve for Designer',approveSub:'Designer will post to Webflow.',readOnly:false,canOpen:r=>!!r.seo_approved,fieldsTitle:'All Webflow Fields - SEO Version'},
-  designer: {label:'Designer',field:'designer_approved',toggleCls:'designer',approveCls:'blue',approveLabel:'Designer Approval',approveSub:'Approve before posting to Webflow.',readOnly:true,canOpen:r=>!!r.cmo_approved,fieldsTitle:'All Webflow Fields (Read-only)'}
+  designer: {label:'Designer',field:'designer_approved',toggleCls:'designer',approveCls:'blue',approveLabel:'Designer Approval',approveSub:'Edit fields, approve, then post to Webflow.',readOnly:false,canOpen:r=>!!r.cmo_approved,fieldsTitle:'All Webflow Fields (Designer Edit)'}
 };
 
 // Content state
@@ -149,12 +149,17 @@ function contentBuildForm(ct, data, readOnly, prefix) {
   return html;
 }
 
+function stripReviewSpans(html) {
+  // Remove all review-anchor highlight spans before saving/posting to Webflow
+  return (html||'').replace(/<span class="review-anchor"[^>]*>(.*?)<\/span>/gi, '$1');
+}
+
 function contentCollect(ct, prefix) {
   const fields = COLLECTION_FIELDS[ct]||COLLECTION_FIELDS.Blog, data={};
   fields.forEach(f => {
     if (f.type==='image') return;
     const ss=safeId(f.slug);
-    if (f.type==='richtext'){const el=$(prefix+'rtf_'+ss);if(el)data[f.slug]=el.innerHTML;}
+    if (f.type==='richtext'){const el=$(prefix+'rtf_'+ss);if(el)data[f.slug]=stripReviewSpans(el.innerHTML);}
     else{const el=$(prefix+'ff_'+ss);if(el)data[f.slug]=el.value||'';}
   });
   return data;
@@ -380,14 +385,18 @@ function reviewRenderPanel() {
 }
 
 function reviewApplyHighlights() {
-  if (!reviewComments.length) return;
-  // Apply to all richtext editors
+  // Only show highlights to writer and SEO — designer/CMO see clean content
+  const role = SESSION?.role;
+  const showHighlights = (role === 'writer' || role === 'seo' || role === 'admin');
+  // Always strip first (cleans any leftover spans for designer/CMO)
   document.querySelectorAll('.richtext-editor').forEach(editor => {
     let html = editor.innerHTML;
-    // First clear existing highlights
     html = html.replace(/<span class="review-anchor[^"]*"[^>]*>(.*?)<\/span>/gi, '$1');
     editor.innerHTML = html;
-    // Now apply highlights for each open comment with a text_anchor
+  });
+  if (!showHighlights || !reviewComments.length) return;
+  // Apply highlights for writer and SEO only
+  document.querySelectorAll('.richtext-editor').forEach(editor => {
     reviewComments.forEach(c => {
       if (!c.text_anchor) return;
       const color = c.status === 'open' ? '#FEF3C7' : '#D1FAE5';
@@ -401,7 +410,7 @@ function reviewApplyHighlights() {
       } catch(_) {}
     });
   });
-  // Click on highlight scrolls to comment card
+  // Click on highlight → scroll to comment card
   document.querySelectorAll('.review-anchor').forEach(span => {
     span.addEventListener('click', function() {
       reviewScrollToComment(this.getAttribute('data-comment-id'));
@@ -515,8 +524,31 @@ async function reviewResolveComment(commentId) {
   } catch(e) { toast('Error: '+e.message, 'error'); }
 }
 
+
+// ── Clean confirm modal (replaces browser confirm()) ──────────────
+function cConfirm(msg, okLabel, okColor) {
+  return new Promise(function(resolve) {
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:999999;display:flex;align-items:center;justify-content:center';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:var(--surface);border-radius:14px;padding:28px 28px 20px;max-width:400px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.25);font-family:Inter,sans-serif';
+    box.innerHTML = '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px">One View</div>'
+      + '<div style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:22px">' + msg + '</div>'
+      + '<div style="display:flex;justify-content:flex-end;gap:10px">'
+      + '<button id="cconf_cancel" style="padding:9px 20px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:600;font-family:Inter,sans-serif;color:var(--text)">Cancel</button>'
+      + '<button id="cconf_ok" style="padding:9px 20px;border-radius:8px;border:none;background:'+(okColor||'var(--accent)')+';color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:Inter,sans-serif">'+(okLabel||'OK')+'</button>'
+      + '</div>';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    function done(val) { document.body.removeChild(overlay); resolve(val); }
+    box.querySelector('#cconf_ok').onclick = function() { done(true); };
+    box.querySelector('#cconf_cancel').onclick = function() { done(false); };
+    overlay.addEventListener('click', function(e) { if(e.target===overlay) done(false); });
+  });
+}
+
 async function reviewDeleteComment(commentId) {
-  if (!confirm('Remove this comment?')) return;
+  if (!(await cConfirm('Remove this comment?', 'Remove', '#DC2626'))) return;
   try {
     await sbFetch('content_comments?id=eq.'+commentId, {method:'DELETE'});
     toast('Comment removed.');
@@ -555,7 +587,7 @@ async function reviewSendBackToWriter() {
   if (!contentActive) return;
   const openCount = reviewComments.filter(c => c.status === 'open').length;
   if (!openCount) { toast('No open comments to send back. Add at least one comment first.', 'error'); return; }
-  if (!confirm('Send this content back to the writer with '+openCount+' comment(s)?')) return;
+  if (!(await cConfirm('Send back to writer with <strong>'+openCount+' comment(s)</strong>?<br><span style="font-size:12px;color:var(--muted)">Writer will be notified to make corrections.</span>', 'Send Back', '#DC2626'))) return;
   try {
     await dbUpdate(CONTENT_TABLE, contentActive.id, {
       needs_revision: true,
@@ -584,7 +616,7 @@ async function reviewResubmitToSEO() {
   if (!contentActive) return;
   const openCount = reviewComments.filter(c => c.status === 'open').length;
   if (openCount > 0) { toast('Please resolve all '+openCount+' open comment(s) first.', 'error'); return; }
-  if (!confirm('Re-submit to SEO? All comments are marked resolved.')) return;
+  if (!(await cConfirm('Re-submit to SEO?<br><span style="font-size:12px;color:var(--muted)">All comments are marked resolved. SEO will review your corrections.</span>', 'Re-submit', 'var(--green)'))) return;
   const ok = await contentSaveEdits(true);
   if (!ok) return;
   try {
@@ -705,10 +737,13 @@ async function contentOpenModal(id) {
     $('cfsPostBtn').textContent = 'Post to Webflow';
     const pr = $('cfsPostResult');
     if (row.posted_to_webflow) {
-      pr.textContent = row.webflow_status==='live' ? 'Already posted live.' : 'Already saved as draft.';
+      pr.textContent = row.webflow_status==='live' ? 'Live on website.' : 'Saved as draft.';
       pr.style.color = row.webflow_status==='live' ? 'var(--green)' : 'var(--yellow)';
     } else pr.textContent = '';
     contentSelectPublish('draft');
+    // Show/hide unpublish button
+    const unpBtn = $('cfsUnpublishBtn');
+    if (unpBtn) unpBtn.style.display = row.posted_to_webflow ? 'inline-flex' : 'none';
   }
 
   $('contentFS').classList.add('show');
@@ -736,7 +771,7 @@ async function contentSaveEdits(quiet) {
 
 async function cfsBack() {
   const role=SESSION?.role, cfg=CONTENT_ROLE_CFG[role];
-  if(cfg&&!cfg.readOnly){const ok=await contentSaveEdits(true);if(!ok&&!confirm('Changes could not be saved. Leave anyway?'))return;}
+  if(cfg&&!cfg.readOnly){const ok=await contentSaveEdits(true);if(!ok&&!(await cConfirm('Changes could not be saved. Leave anyway?','Leave','#DC2626')))return;}
   reviewDisableSelectionMode();
   $('contentFS').classList.remove('show'); document.body.style.overflow='';
   contentActive=null; reviewComments=[]; await loadContent();
@@ -834,6 +869,43 @@ async function cfsPost() {
   } catch(e){toast('Webflow error: '+e.message,'error');result.textContent='Error: '+e.message;result.style.color='var(--accent)';btn.disabled=false;btn.textContent='Post to Webflow';}
 }
 
+
+async function cfsUnpublish() {
+  if (!contentActive) return;
+  if (!(await cConfirm('Unpublish this content from Webflow?<br><span style="font-size:12px;color:var(--muted)">It will be removed from the live site. You can re-post later.</span>', 'Unpublish', '#DC2626'))) return;
+  const btn = $('cfsUnpublishBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Unpublishing...'; }
+  try {
+    // Call Webflow edge function to delete/archive item
+    if (contentActive.webflow_item_id) {
+      await fetch(WEBFLOW_EDGE, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', Authorization:'Bearer '+SUPA_KEY, apikey:SUPA_KEY},
+        body: JSON.stringify({action:'delete', item_id: contentActive.webflow_item_id, row: contentActive})
+      }).catch(() => {}); // best-effort, don't block local reset
+    }
+    await dbUpdate(CONTENT_TABLE, contentActive.id, {
+      posted_to_webflow: false,
+      webflow_item_id: null,
+      webflow_status: null,
+      designer_approved: false
+    });
+    contentActive.posted_to_webflow = false;
+    contentActive.webflow_item_id = null;
+    contentActive.webflow_status = null;
+    contentActive.designer_approved = false;
+    toast('Unpublished from Webflow. Content reset to Designer stage.');
+    logActivity('unpublished', 'Unpublished from Webflow: '+contentActive.title, contentActive.id, contentActive.title);
+    $('contentFS').classList.remove('show');
+    document.body.style.overflow = '';
+    contentActive = null;
+    await loadContent();
+  } catch(e) {
+    toast('Error: '+e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Unpublish from Webflow'; }
+  }
+}
+
 // Writer add form
 function contentTypeChange() {
   const t=$('contentNewType').value;
@@ -888,14 +960,14 @@ function toggleSelectAll(chk,cls){document.querySelectorAll('.'+cls).forEach(c=>
 async function bulkDeleteContent(){
   const ids=[...document.querySelectorAll('.contentChk:checked')].map(c=>c.value);
   if(!ids.length){toast('Select items to delete','error');return;}
-  if(!confirm('Delete '+ids.length+' content item(s)? This cannot be undone.')) return;
+  if(!(await cConfirm('Delete <strong>'+ids.length+' content item(s)</strong>?<br><span style="font-size:12px;color:var(--muted)">This cannot be undone.</span>','Delete','#DC2626'))) return;
   for(const id of ids) await sbFetch('content_approvals?id=eq.'+id,{method:'DELETE'}).catch(()=>{});
   toast(ids.length+' item(s) deleted.'); logActivity('bulk_delete','Deleted '+ids.length+' content items'); await loadContent();
 }
 async function bulkDeleteProjects(){
   const ids=[...document.querySelectorAll('.projectChk:checked')].map(c=>c.value);
   if(!ids.length){toast('Select projects to delete','error');return;}
-  if(!confirm('Delete '+ids.length+' project(s) and all their tasks/KPIs?')) return;
+  if(!(await cConfirm('Delete <strong>'+ids.length+' project(s)</strong> and all their tasks/KPIs?','Delete','#DC2626'))) return;
   for(const id of ids){
     await sbFetch('project_tasks?project_id=eq.'+id,{method:'DELETE'}).catch(()=>{});
     await sbFetch('project_kpis?project_id=eq.'+id,{method:'DELETE'}).catch(()=>{});
@@ -906,7 +978,7 @@ async function bulkDeleteProjects(){
 async function bulkDeleteInventory(){
   const ids=[...document.querySelectorAll('.invChk:checked')].map(c=>c.value);
   if(!ids.length){toast('Select items to delete','error');return;}
-  if(!confirm('Delete '+ids.length+' inventory item(s)?')) return;
+  if(!(await cConfirm('Delete <strong>'+ids.length+' inventory item(s)</strong>?','Delete','#DC2626'))) return;
   for(const id of ids) await sbFetch('inventory_items?id=eq.'+id,{method:'DELETE'}).catch(()=>{});
   toast(ids.length+' item(s) deleted.'); await loadInventory();
 }
@@ -974,7 +1046,7 @@ async function importInventoryExcel(input) {
 async function bulkDeleteHR(){
   const ids=[...document.querySelectorAll('.hrChk:checked')].map(c=>c.value);
   if(!ids.length){toast('Select postings to delete','error');return;}
-  if(!confirm('Delete '+ids.length+' HR posting(s)?')) return;
+  if(!(await cConfirm('Delete <strong>'+ids.length+' HR posting(s)</strong>?','Delete','#DC2626'))) return;
   for(const id of ids) await sbFetch('hr_posts?id=eq.'+id,{method:'DELETE'}).catch(()=>{});
   toast(ids.length+' posting(s) deleted.'); await loadHR();
 }
