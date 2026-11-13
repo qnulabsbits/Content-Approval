@@ -655,7 +655,7 @@ async function contentOpenModal(id) {
   $('cfsFieldsWrap').innerHTML = contentBuildForm(row.content_type||'Blog', contentGetFields(row), cfg?cfg.readOnly:true, 'cm_');
 
   // Apply highlights from existing comments
-  setTimeout(() => { reviewApplyHighlights(); }, 100);
+  setTimeout(() => { reviewApplyHighlights(); cfsSyncDateToPanelField(); }, 100);
 
   // Approve section
   if (cfg) {
@@ -733,17 +733,38 @@ async function contentOpenModal(id) {
 
   if (isDesigner) {
     $('cfsSection').textContent = SECTION_NAMES[row.content_type] || 'Case Studies';
-    $('cfsPostBtn').disabled = !row.designer_approved || !!row.posted_to_webflow;
-    $('cfsPostBtn').textContent = 'Post to Webflow';
+    // Post button: enabled when approved and NOT currently live
+    // After unpublish, designer_approved stays true so they can re-post
+    const isLive = !!row.posted_to_webflow && row.webflow_status === 'live';
+    const isDraft = !!row.posted_to_webflow && row.webflow_status !== 'live';
+    const postBtn = $('cfsPostBtn');
+    if (row.posted_to_webflow && isLive) {
+      postBtn.disabled = true;
+      postBtn.textContent = 'Live on Webflow';
+    } else if (row.posted_to_webflow && isDraft) {
+      postBtn.disabled = false;
+      postBtn.textContent = 'Re-publish Live';
+    } else if (!row.designer_approved) {
+      postBtn.disabled = true;
+      postBtn.textContent = 'Post to Webflow';
+    } else {
+      postBtn.disabled = false;
+      postBtn.textContent = row.webflow_item_id ? 'Re-publish to Webflow' : 'Post to Webflow';
+    }
     const pr = $('cfsPostResult');
     if (row.posted_to_webflow) {
-      pr.textContent = row.webflow_status==='live' ? 'Live on website.' : 'Saved as draft.';
-      pr.style.color = row.webflow_status==='live' ? 'var(--green)' : 'var(--yellow)';
-    } else pr.textContent = '';
+      pr.textContent = isLive ? '✓ Live on website.' : '✓ Saved as draft.';
+      pr.style.color = isLive ? 'var(--green)' : 'var(--yellow)';
+    } else if (row.webflow_item_id && !row.posted_to_webflow) {
+      pr.textContent = 'Currently unpublished — click to re-publish.';
+      pr.style.color = 'var(--muted)';
+    } else {
+      pr.textContent = '';
+    }
     contentSelectPublish('draft');
-    // Show/hide unpublish button
+    // Unpublish button: only visible when live
     const unpBtn = $('cfsUnpublishBtn');
-    if (unpBtn) unpBtn.style.display = row.posted_to_webflow ? 'inline-flex' : 'none';
+    if (unpBtn) unpBtn.style.display = isLive ? 'inline-flex' : 'none';
   }
 
   $('contentFS').classList.add('show');
@@ -833,10 +854,54 @@ async function cfsToggle() {
     toast(checked?'Approved.':'Approval removed.');
     logActivity(checked?'approved':'unapproved',cfg.label+' approval',contentActive.id,contentActive.title);
     $('cfsMeta2').innerHTML=contentBadge(contentGetStatus(contentActive));
-    if(role==='designer') $('cfsPostBtn').disabled=!checked;
+    if(role==='designer') {
+      const postBtn=$('cfsPostBtn');
+      if(postBtn) {
+        postBtn.disabled=!checked;
+        postBtn.textContent=checked?(contentActive.webflow_item_id?'Re-publish to Webflow':'Post to Webflow'):'Post to Webflow';
+      }
+    }
     await loadContent();
   } catch(e){box.checked=!checked;$('cfsToggleLabel').textContent=!checked?'Approved':'Pending';toast('Could not save: '+e.message,'error');}
   finally{wrap.classList.remove('saving');}
+}
+
+
+// ── Designer date field sync ──────────────────────────────────
+// The cfsDateRequired input in the post panel syncs to the
+// actual date field in the content form so both are always in sync
+function cfsValidateDateField() {
+  const dateInput = $('cfsDateRequired');
+  const msg = $('cfsDateRequiredMsg');
+  if (!dateInput || !contentActive) return;
+  const val = dateInput.value;
+  // Sync to the actual date field in the content form
+  const ct = contentActive.content_type || 'Blog';
+  const slugMap = {Blog:'date-and-Time', Whitepaper:'whitepaper-date', Newsletter:'pr-published-date', Other:'whitepaper-date'};
+  const slug = slugMap[ct];
+  const formDate = $('cm_ff_'+slug.replace(/-/g,'_').replace(/[^a-zA-Z0-9_]/g,'_'));
+  // Try the safeId version
+  const formDateAlt = $('cm_ff_'+safeId(slug));
+  const target = formDate || formDateAlt;
+  if (target && val) target.value = val;
+  if (msg) msg.style.display = val ? 'none' : 'inline';
+  // Enable/disable post button based on date + approval
+  const postBtn = $('cfsPostBtn');
+  if (postBtn && contentActive?.designer_approved) {
+    postBtn.disabled = !val;
+  }
+}
+
+function cfsSyncDateToPanelField() {
+  if (!contentActive) return;
+  const ct = contentActive.content_type || 'Blog';
+  const slugMap = {Blog:'date-and-Time', Whitepaper:'whitepaper-date', Newsletter:'pr-published-date', Other:'whitepaper-date'};
+  const slug = slugMap[ct];
+  const formDate = $('cm_ff_'+safeId(slug));
+  const panelDate = $('cfsDateRequired');
+  if (panelDate && formDate && formDate.value) {
+    panelDate.value = formDate.value;
+  }
 }
 
 function contentSelectPublish(mode) {
@@ -850,21 +915,56 @@ function contentSelectPublish(mode) {
 
 async function cfsPost() {
   if(!contentActive?.designer_approved){toast('Please approve first.','error');return;}
+  // Validate date field for Whitepapers
+  const ct=contentActive.content_type||'Blog';
+  if(ct==='Whitepaper'){
+    const dateEl=$('cm_ff_whitepaper-date');
+    if(!dateEl||!dateEl.value){toast('Please enter the Whitepaper Date before publishing.','error');if(dateEl)dateEl.focus();return;}
+  }
+  if(ct==='Newsletter'){
+    const dateEl=$('cm_ff_pr-published-date');
+    if(!dateEl||!dateEl.value){toast('Please enter the PR Published Date before publishing.','error');if(dateEl)dateEl.focus();return;}
+  }
+  if(ct==='Blog'){
+    const dateEl=$('cm_ff_date-and-Time');
+    if(!dateEl||!dateEl.value){toast('Please enter the Blog Date before publishing.','error');if(dateEl)dateEl.focus();return;}
+  }
   const btn=$('cfsPostBtn'), result=$('cfsPostResult');
   btn.disabled=true; btn.textContent='Posting...'; result.textContent='';
   try {
-    const ct=contentActive.content_type||'Blog';
+    // Sync date panel field back to form before saving
+    cfsValidateDateField();
+    // Save latest edits first so Webflow gets the most current content
+    await contentSaveEdits(true);
     const ef=contentGetFields(contentActive);
-    const r=await fetch(WEBFLOW_EDGE,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+SUPA_KEY,apikey:SUPA_KEY},body:JSON.stringify({extra_fields:ef,row:{...contentActive,extra_fields:JSON.stringify(ef)},publish_mode:contentPublishMode})});
+    // If item already exists in Webflow → UPDATE it, not create a new one
+    const existingItemId=contentActive.webflow_item_id||null;
+    const payload={
+      extra_fields:ef,
+      row:{...contentActive,extra_fields:JSON.stringify(ef)},
+      publish_mode:contentPublishMode,
+      item_id:existingItemId,       // null = create new, string = update existing
+      action: existingItemId ? 'update' : 'create'
+    };
+    const r=await fetch(WEBFLOW_EDGE,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+SUPA_KEY,apikey:SUPA_KEY},body:JSON.stringify(payload)});
     const d=await r.json();
     if(!d.success) throw new Error(d.error||'Webflow rejected the post.');
-    await dbUpdate(CONTENT_TABLE,contentActive.id,{posted_to_webflow:true,webflow_item_id:d.item_id,webflow_status:d.status});
-    contentActive.posted_to_webflow=true; contentActive.webflow_status=d.status;
+    // Always store the item_id so future posts update the same item
+    const finalItemId=d.item_id||existingItemId;
+    await dbUpdate(CONTENT_TABLE,contentActive.id,{posted_to_webflow:true,webflow_item_id:finalItemId,webflow_status:d.status});
+    contentActive.posted_to_webflow=true;
+    contentActive.webflow_item_id=finalItemId;
+    contentActive.webflow_status=d.status;
     const live=d.status==='live';
     toast(live?'Posted live on Webflow.':'Saved as draft in Webflow.');
-    result.textContent=live?'Live on website.':'Saved as draft.'; result.style.color=live?'var(--green)':'var(--yellow)';
-    logActivity('posted','Posted to Webflow as '+d.status,contentActive.id,contentActive.title);
+    result.textContent=live?'✓ Live on website.':'✓ Saved as draft.';
+    result.style.color=live?'var(--green)':'var(--yellow)';
+    logActivity('posted','Posted to Webflow as '+d.status+(existingItemId?' (updated)':' (new)'),contentActive.id,contentActive.title);
     $('cfsMeta2').innerHTML=contentBadge(contentGetStatus(contentActive));
+    // Update button states: post disabled (already posted), unpublish visible
+    btn.disabled=true;
+    const unpBtn=$('cfsUnpublishBtn');
+    if(unpBtn) unpBtn.style.display='inline-flex';
     await loadContent();
   } catch(e){toast('Webflow error: '+e.message,'error');result.textContent='Error: '+e.message;result.style.color='var(--accent)';btn.disabled=false;btn.textContent='Post to Webflow';}
 }
@@ -872,34 +972,37 @@ async function cfsPost() {
 
 async function cfsUnpublish() {
   if (!contentActive) return;
-  if (!(await cConfirm('Unpublish this content from Webflow?<br><span style="font-size:12px;color:var(--muted)">It will be removed from the live site. You can re-post later.</span>', 'Unpublish', '#DC2626'))) return;
+  if (!(await cConfirm('Unpublish this content from Webflow?<br><span style="font-size:12px;color:var(--muted)">It will be taken down from the live site. You can re-post it later.</span>', 'Unpublish', '#DC2626'))) return;
   const btn = $('cfsUnpublishBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Unpublishing...'; }
   try {
-    // Call Webflow edge function to delete/archive item
+    // Tell Webflow to unpublish (move to draft) — keep the item_id so re-post updates same item
     if (contentActive.webflow_item_id) {
       await fetch(WEBFLOW_EDGE, {
         method: 'POST',
         headers: {'Content-Type':'application/json', Authorization:'Bearer '+SUPA_KEY, apikey:SUPA_KEY},
-        body: JSON.stringify({action:'delete', item_id: contentActive.webflow_item_id, row: contentActive})
-      }).catch(() => {}); // best-effort, don't block local reset
+        body: JSON.stringify({action:'unpublish', item_id: contentActive.webflow_item_id, row: contentActive})
+      }).catch(() => {}); // best-effort
     }
+    // Keep webflow_item_id so next publish UPDATES the same CMS item
     await dbUpdate(CONTENT_TABLE, contentActive.id, {
       posted_to_webflow: false,
-      webflow_item_id: null,
-      webflow_status: null,
-      designer_approved: false
+      webflow_status: 'draft',
+      designer_approved: true   // keep designer_approved so they can re-post without re-approving
     });
     contentActive.posted_to_webflow = false;
-    contentActive.webflow_item_id = null;
-    contentActive.webflow_status = null;
-    contentActive.designer_approved = false;
-    toast('Unpublished from Webflow. Content reset to Designer stage.');
+    contentActive.webflow_status = 'draft';
+    // Update UI in-place: show Post button enabled, hide Unpublish
+    const postBtn = $('cfsPostBtn');
+    if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'Re-publish to Webflow'; }
+    if (btn) { btn.style.display = 'none'; btn.disabled = false; btn.textContent = 'Unpublish from Webflow'; }
+    const result = $('cfsPostResult');
+    if (result) { result.textContent = 'Taken down — click Re-publish to restore.'; result.style.color = 'var(--muted)'; }
+    toast('Unpublished. Click "Re-publish to Webflow" to restore it.');
     logActivity('unpublished', 'Unpublished from Webflow: '+contentActive.title, contentActive.id, contentActive.title);
-    $('contentFS').classList.remove('show');
-    document.body.style.overflow = '';
-    contentActive = null;
+    // Update the row in the content table locally without closing
     await loadContent();
+    return; // don't close the overlay — let designer re-post immediately if needed
   } catch(e) {
     toast('Error: '+e.message, 'error');
     if (btn) { btn.disabled = false; btn.textContent = 'Unpublish from Webflow'; }
