@@ -360,6 +360,76 @@
   </div>
 </div>
 
+<div class="page" id="pg-leaves">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Leave Management</div>
+      <div class="page-sub">Apply for leave, track approvals and view calendar</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="lvTeamBtn" onclick="leavesToggleTeam()" class="btn btn-secondary btn-sm">👥 Team Calendar</button>
+      <button onclick="$('lvApplyPanel').style.display=$('lvApplyPanel').style.display==='none'?'block':'none'" class="btn btn-primary btn-sm">+ Apply for Leave</button>
+    </div>
+  </div>
+  <div class="stats-grid" style="margin-bottom:20px">
+    <div class="stat-card"><div class="stat-label">My Requests</div><div class="stat-value" id="lv_total">0</div></div>
+    <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value" id="lv_pending" style="color:var(--yellow)">0</div></div>
+    <div class="stat-card"><div class="stat-label">Approved</div><div class="stat-value" id="lv_approved" style="color:var(--green)">0</div></div>
+    <div class="stat-card"><div class="stat-label">WFH This Year</div><div class="stat-value" id="lv_wfh" style="color:var(--blue)">0</div></div>
+  </div>
+  <div id="lvApplyPanel" style="display:none;margin-bottom:20px">
+    <div class="card card-pad">
+      <div class="card-title" style="margin-bottom:16px">New Leave Request</div>
+      <div class="field-grid">
+        <div class="field-group"><div class="field-label">Leave Type <span class="req">*</span></div>
+          <select class="field-select" id="lvType">
+            <option value="">Select type...</option>
+            <option value="CL">Casual Leave</option>
+            <option value="SL">Sick Leave</option>
+            <option value="WFH">Work From Home</option>
+            <option value="OD">On Duty Outside Office</option>
+            <option value="PL">Privilege Leave</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="field-group"><div class="field-label">Duration</div>
+          <select class="field-select" id="lvDuration">
+            <option value="full">Full Day</option>
+            <option value="first_half">First Half</option>
+            <option value="second_half">Second Half</option>
+          </select>
+        </div>
+        <div class="field-group"><div class="field-label">From Date <span class="req">*</span></div><input type="date" class="field-date" id="lvFrom"/></div>
+        <div class="field-group"><div class="field-label">To Date <span class="req">*</span></div><input type="date" class="field-date" id="lvTo"/></div>
+        <div class="field-group full"><div class="field-label">Reason <span class="req">*</span></div>
+          <textarea class="field-textarea" id="lvReason" rows="3" maxlength="300" placeholder="Please provide a reason for your leave request (max 300 characters)..."></textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button id="lvSubmitBtn" onclick="leaveSubmit()" class="btn btn-primary">Submit Request</button>
+        <button onclick="$('lvApplyPanel').style.display='none'" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+    <div class="card card-pad">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div class="card-title" style="margin:0">Leave Requests</div>
+        <div id="leavesFilterTabs" style="display:flex;gap:6px">
+          <button class="ftab active" onclick="leavesSetFilter('all',this)">All</button>
+          <button class="ftab" onclick="leavesSetFilter('pending',this)">Pending</button>
+          <button class="ftab" onclick="leavesSetFilter('approved',this)">Approved</button>
+          <button class="ftab" onclick="leavesSetFilter('rejected',this)">Rejected</button>
+        </div>
+      </div>
+      <div id="leavesTable"><div class="loading-row"><span class="spinner"></span> Loading...</div></div>
+    </div>
+    <div class="card card-pad" style="position:sticky;top:20px">
+      <div id="leavesCalendar"></div>
+    </div>
+  </div>
+</div>
+
 <div class="page" id="pg-settings">
       <div class="page-header">
         <div>
@@ -368,6 +438,11 @@
         </div>
       </div>
       <div style="max-width:560px;display:flex;flex-direction:column;gap:20px">
+        <!-- Email Templates (admin only) -->
+        <div class="card card-pad" id="emailTemplatesSection" style="margin-bottom:16px">
+          <div class="card-title" style="margin-bottom:16px">📧 Email Templates</div>
+          <div id="emailTemplatesWrap"><div class="loading-row"><span class="spinner"></span> Loading...</div></div>
+        </div>
         <!-- Profile card -->
         <div class="card card-pad">
           <div class="card-title">Profile</div>
@@ -1278,6 +1353,7 @@
 <script src="app-chat.js"></script>
 <script src="app-tasks.js"></script>
 <script src="app-banner.js"></script>
+<script src="app-leaves.js"></script>
 <script src="app-settings.js"></script>
 <script src="app-subtasks.js"></script>
 <script src="app-requests.js"></script>
