@@ -486,6 +486,25 @@
 
       <div id="cfsPostSection" style="display:none;margin-top:16px">
         <div id="cfsDesignerInfo" style="font-size:13px;font-weight:600;color:var(--blue);margin-bottom:12px">Webflow Section: <span id="cfsSection">-</span></div>
+        <!-- PDF Upload for Whitepapers only -->
+        <div id="cfsPdfUploadRow" style="display:none;background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;padding:12px 14px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#15803D">📄 Whitepaper PDF <span style="color:#DC2626">*</span></div>
+              <div style="font-size:11px;color:#166534;margin-top:2px">Required · This PDF is sent to users via email only — not published on the website</div>
+            </div>
+            <div>
+              <input type="file" id="cfsPdfInput" accept="application/pdf" style="display:none" onchange="cfsUploadPDF(this)"/>
+              <button id="cfsPdfUploadBtn" onclick="document.getElementById('cfsPdfInput').click()" style="background:#15803D;color:#fff;border:none;padding:8px 16px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;font-family:Inter,sans-serif">Upload PDF</button>
+            </div>
+          </div>
+          <div id="cfsPdfStatus" style="display:none;align-items:center;gap:8px;background:#fff;border-radius:7px;padding:8px 10px;border:1px solid #86EFAC">
+            <span style="font-size:16px">✅</span>
+            <span id="cfsPdfName" style="font-size:12px;font-weight:600;color:#15803D;flex:1"></span>
+            <button onclick="document.getElementById('cfsPdfInput').click()" style="background:none;border:none;cursor:pointer;font-size:11px;color:#6B7280;font-weight:600">Replace</button>
+          </div>
+        </div>
+
         <!-- Date field required before publishing -->
         <div id="cfsDateRequiredRow" style="display:flex;align-items:center;gap:12px;background:#FFF7ED;border:1.5px solid #FED7AA;border-radius:10px;padding:12px 14px;margin-bottom:14px;flex-wrap:wrap">
           <div style="font-size:13px;font-weight:700;color:#C2410C">📅 Publication Date <span style="color:#DC2626">*</span></div>
