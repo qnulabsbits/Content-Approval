@@ -73,3 +73,91 @@ async function updateOwnProfile() {
 }
 
 function toggleSettingsPw(id,btn){const el=document.getElementById(id);if(!el)return;if(el.type==="password"){el.type="text";btn.textContent="Hide";}else{el.type="password";btn.textContent="Show";}}
+
+/* ═══════════════════════════════════════════════════
+   EMAIL TEMPLATES MODULE (inside Settings)
+═══════════════════════════════════════════════════ */
+
+let emailTemplates = {};
+
+async function loadEmailTemplates() {
+  try {
+    const rows = await sbFetch('email_templates?select=*') || [];
+    rows.forEach(r => emailTemplates[r.template_key] = r);
+    renderEmailTemplates();
+  } catch(e) { toast('Could not load templates: '+e.message,'error'); }
+}
+
+function renderEmailTemplates() {
+  const wrap = $('emailTemplatesWrap'); if (!wrap) return;
+  const isAdmin = SESSION?.role === 'admin';
+  if (!isAdmin) { wrap.innerHTML='<div class="empty-state"><div class="empty-title">Admin only</div></div>'; return; }
+
+  const t1 = emailTemplates['whitepaper_user']    || {};
+  const t2 = emailTemplates['whitepaper_internal'] || {};
+
+  wrap.innerHTML = `
+    <!-- Template 1: User thank you email -->
+    <div class="card card-pad" style="margin-bottom:20px">
+      <div class="card-title" style="margin-bottom:4px">📧 User Thank You Email</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Sent to the person who downloads the whitepaper. Use variables: <code>{{full_name}}</code> <code>{{whitepaper_title}}</code> <code>{{pdf_url}}</code> <code>{{company}}</code></div>
+      <div class="field-grid">
+        <div class="field-group full">
+          <div class="field-label">Email Subject</div>
+          <input type="text" class="field-input" id="et_user_subject" value="${esc(t1.subject||'Download | {{whitepaper_title}}')}"/>
+        </div>
+        <div class="field-group full">
+          <div class="field-label">Email Body (HTML)</div>
+          <textarea class="field-textarea" id="et_user_body" style="min-height:200px;font-family:monospace;font-size:12px">${esc(t1.body_html||'')}</textarea>
+        </div>
+      </div>
+      <button onclick="saveEmailTemplate('whitepaper_user')" class="btn btn-primary btn-sm" style="margin-top:12px">Save User Template</button>
+    </div>
+
+    <!-- Template 2: Internal notification -->
+    <div class="card card-pad">
+      <div class="card-title" style="margin-bottom:4px">📬 Internal Notification Email</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Sent to your team when someone downloads a whitepaper. Variables: <code>{{full_name}}</code> <code>{{email}}</code> <code>{{company}}</code> <code>{{designation}}</code> <code>{{phone}}</code> <code>{{how_heard}}</code> <code>{{whitepaper_title}}</code></div>
+      <div class="field-grid">
+        <div class="field-group full">
+          <div class="field-label">Recipient Emails <span style="font-size:11px;color:var(--muted)">(comma separated)</span></div>
+          <input type="text" class="field-input" id="et_internal_recipients" value="${esc(t2.recipients||'')}" placeholder="email1@qnulabs.com, email2@qnulabs.com"/>
+        </div>
+        <div class="field-group full">
+          <div class="field-label">Email Subject</div>
+          <input type="text" class="field-input" id="et_internal_subject" value="${esc(t2.subject||'New Whitepaper Download | {{whitepaper_title}}')}"/>
+        </div>
+        <div class="field-group full">
+          <div class="field-label">Email Body (HTML)</div>
+          <textarea class="field-textarea" id="et_internal_body" style="min-height:200px;font-family:monospace;font-size:12px">${esc(t2.body_html||'')}</textarea>
+        </div>
+      </div>
+      <button onclick="saveEmailTemplate('whitepaper_internal')" class="btn btn-primary btn-sm" style="margin-top:12px">Save Internal Template</button>
+    </div>
+  `;
+}
+
+async function saveEmailTemplate(key) {
+  const isUser = key === 'whitepaper_user';
+  const subject    = $(isUser ? 'et_user_subject'    : 'et_internal_subject')?.value.trim();
+  const body       = $(isUser ? 'et_user_body'       : 'et_internal_body')?.value.trim();
+  const recipients = isUser ? '' : ($('et_internal_recipients')?.value.trim() || '');
+  if (!subject || !body) { toast('Subject and body are required.','error'); return; }
+  try {
+    const existing = emailTemplates[key];
+    if (existing?.id) {
+      await sbFetch('email_templates?id=eq.'+existing.id, {method:'PATCH', body:JSON.stringify({
+        subject, body_html:body, recipients,
+        updated_by: SESSION.full_name||SESSION.email,
+        updated_at: new Date().toISOString()
+      })});
+    } else {
+      await dbInsert('email_templates', {
+        template_key:key, subject, body_html:body, recipients,
+        updated_by: SESSION.full_name||SESSION.email
+      });
+    }
+    toast('Template saved.');
+    await loadEmailTemplates();
+  } catch(e) { toast('Save failed: '+e.message,'error'); }
+}
