@@ -371,11 +371,29 @@
       <button onclick="$('lvApplyPanel').style.display=$('lvApplyPanel').style.display==='none'?'block':'none'" class="btn btn-primary btn-sm">+ Apply for Leave</button>
     </div>
   </div>
-  <div class="stats-grid" style="margin-bottom:20px">
-    <div class="stat-card"><div class="stat-label">My Requests</div><div class="stat-value" id="lv_total">0</div></div>
-    <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value" id="lv_pending" style="color:var(--yellow)">0</div></div>
-    <div class="stat-card"><div class="stat-label">Approved</div><div class="stat-value" id="lv_approved" style="color:var(--green)">0</div></div>
-    <div class="stat-card"><div class="stat-label">WFH This Year</div><div class="stat-value" id="lv_wfh" style="color:var(--blue)">0</div></div>
+  <!-- Stats row: compact single line -->
+  <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;display:flex;align-items:center;gap:10px;min-width:120px">
+      <div style="font-size:22px;font-weight:800;color:var(--text)" id="lv_total">0</div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;line-height:1.3">My<br/>Requests</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;display:flex;align-items:center;gap:10px;min-width:120px">
+      <div style="font-size:22px;font-weight:800;color:#F59E0B" id="lv_pending">0</div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;line-height:1.3">Pending<br/>Requests</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;display:flex;align-items:center;gap:10px;min-width:120px">
+      <div style="font-size:22px;font-weight:800;color:#10B981" id="lv_approved">0</div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;line-height:1.3">Approved<br/>Leaves</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;display:flex;align-items:center;gap:10px;min-width:120px">
+      <div style="font-size:22px;font-weight:800;color:#3B82F6" id="lv_wfh">0</div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;line-height:1.3">WFH<br/>This Year</div>
+    </div>
+    <!-- Red notice -->
+    <div style="flex:1;min-width:220px;background:#FEF2F2;border:1.5px solid #FCA5A5;border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">⚠️</span>
+      <div style="font-size:12px;font-weight:700;color:#DC2626;line-height:1.5">Please apply for leave at least <u>1 month in advance</u>.<br/><span style="font-weight:400;color:#B91C1C">Last-minute requests may not be approved.</span></div>
+    </div>
   </div>
   <div id="lvApplyPanel" style="display:none;margin-bottom:20px">
     <div class="card card-pad">
@@ -411,7 +429,7 @@
       </div>
     </div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+  <div style="display:grid;grid-template-columns:1fr 440px;gap:20px;align-items:start">
     <div class="card card-pad">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
         <div class="card-title" style="margin:0">Leave Requests</div>
@@ -424,7 +442,7 @@
       </div>
       <div id="leavesTable"><div class="loading-row"><span class="spinner"></span> Loading...</div></div>
     </div>
-    <div class="card card-pad" style="position:sticky;top:20px">
+    <div class="card card-pad" style="min-height:480px">
       <div id="leavesCalendar"></div>
     </div>
   </div>
