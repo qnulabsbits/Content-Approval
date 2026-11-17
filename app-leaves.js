@@ -267,15 +267,15 @@ function renderLeavesCalendar() {
     const dots = dayLeaves.slice(0,3).map(l => {
       const lt = LEAVE_TYPES[l.leave_type] || LEAVE_TYPES.Other;
       const opacity = l.status === 'pending' ? '0.5' : '1';
-      return `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${lt.color};opacity:${opacity};margin:0 1px" title="${esc(l.user_name||'')} - ${lt.label}"></span>`;
+      return `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${lt.color};opacity:${opacity};margin:0 1px" title="${esc(l.user_name||'')} - ${lt.label}"></span>`;
     }).join('');
     const hasMore = dayLeaves.length > 3;
     h += `<div onclick="leavesCalDayClick(${year},${month+1},${day})" 
-      style="min-height:52px;border-radius:8px;padding:5px;cursor:${dayLeaves.length?'pointer':'default'};
+      style="min-height:68px;border-radius:8px;padding:6px;cursor:${dayLeaves.length?'pointer':'default'};
       background:${isToday?'var(--accent)':'var(--surface2)'};
       border:1.5px solid ${isToday?'var(--accent)':'var(--border)'};
       transition:all 0.15s">
-      <div style="font-size:12px;font-weight:${isToday?'700':'600'};color:${isToday?'#fff':'var(--text)'}">${day}</div>
+      <div style="font-size:13px;font-weight:${isToday?'700':'600'};color:${isToday?'#fff':'var(--text)'}">${day}</div>
       <div style="margin-top:3px">${dots}${hasMore?`<span style="font-size:9px;color:var(--muted)">+${dayLeaves.length-3}</span>`:''}</div>
     </div>`;
   }
