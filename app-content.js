@@ -72,7 +72,7 @@ const CONTENT_ROLE_CFG = {
   writer: {label:'Writer',field:'writer_approved',toggleCls:'',approveCls:'accent',approveLabel:'Approve for SEO Review',approveSub:'SEO team will be notified.',readOnly:false,canOpen:()=>true,fieldsTitle:'All Webflow Fields'},
   seo: {label:'SEO',field:'seo_approved',toggleCls:'seo',approveCls:'yellow',approveLabel:'Approve for CMO Review',approveSub:'Save edits first, then approve.',readOnly:false,canOpen:r=>!!r.writer_approved,fieldsTitle:'All Webflow Fields - Edit'},
   cmo: {label:'CMO',field:'cmo_approved',toggleCls:'cmo',approveCls:'purple',approveLabel:'Approve for Designer',approveSub:'Designer will post to Webflow.',readOnly:false,canOpen:r=>!!r.seo_approved,fieldsTitle:'All Webflow Fields - SEO Version'},
-  designer: {label:'Designer',field:'designer_approved',toggleCls:'designer',approveCls:'blue',approveLabel:'Designer Approval',approveSub:'Edit fields, approve, then post to Webflow.',readOnly:false,canOpen:r=>!!r.cmo_approved,fieldsTitle:'All Webflow Fields (Designer Edit)'}
+  designer: {label:'Designer',field:'designer_approved',toggleCls:'designer',approveCls:'blue',approveLabel:'Designer Approval',approveSub:'Edit fields, approve, then post to Webflow.',readOnly:false,canOpen:r=>!!r.cmo_approved||!!r.posted_to_webflow||!!r.webflow_item_id,fieldsTitle:'All Webflow Fields (Designer Edit)'}
 };
 
 // Content state
@@ -84,7 +84,9 @@ let reviewComments = [];      // loaded comments for current content
 let reviewMode = false;       // SEO review mode active
 
 function contentGetStatus(row) {
-  if (row.posted_to_webflow) return 'posted';
+  if (row.posted_to_webflow && row.webflow_status === 'live') return 'posted';
+  if (row.posted_to_webflow) return 'posted'; // draft in webflow
+  if (row.webflow_item_id && !row.posted_to_webflow) return 'unpublished'; // was live, now unpublished
   if (row.designer_approved) return 'ready';
   if (row.cmo_approved) return 'with-designer';
   if (row.seo_approved) return 'with-cmo';
@@ -95,13 +97,26 @@ function contentGetStatus(row) {
 }
 
 function contentBadge(s) {
-  const m={
+  const styles={
+    draft:         'background:#F3F4F6;color:#6B7280;border-color:#D1D5DB',
+    submitted:     'background:#EFF6FF;color:#3B82F6;border-color:#BFDBFE',
+    'needs-revision':'background:#FEF3C7;color:#D97706;border-color:#FCD34D',
+    'with-seo':    'background:#FFFBEB;color:#D97706;border-color:#FDE68A',
+    'with-cmo':    'background:#F5F3FF;color:#7C3AED;border-color:#DDD6FE',
+    'with-designer':'background:#EFF6FF;color:#2563EB;border-color:#BFDBFE',
+    ready:         'background:#D1FAE5;color:#059669;border-color:#6EE7B7',
+    posted:        'background:#D1FAE5;color:#059669;border-color:#6EE7B7',
+    unpublished:   'background:#F3F4F6;color:#6B7280;border-color:#D1D5DB'
+  };
+  const labels={
     draft:'Draft', submitted:'Submitted',
     'needs-revision':'Needs Revision',
     'with-seo':'With SEO', 'with-cmo':'With CMO',
-    'with-designer':'With Designer', ready:'Ready to Post', posted:'Posted'
+    'with-designer':'With Designer', ready:'Ready to Post',
+    posted:'Posted', unpublished:'Unpublished'
   };
-  return `<span class="badge ${s}"><span class="badge-dot"></span>${m[s]||'Draft'}</span>`;
+  const st = styles[s] || styles.draft;
+  return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid;${st}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span>${labels[s]||'Draft'}</span>`;
 }
 
 function contentTypePill(row) {
@@ -242,7 +257,14 @@ function contentRenderTable() {
       cells+=`<td data-noopen="1"><span class="td-muted" style="font-size:11px">Awaiting prev.</span></td>`;
     }
     cells+=`<td data-noopen="1">${dl}</td>`;
-    if (role==='designer') cells+=`<td>${row.posted_to_webflow?`<span style="color:var(--green);font-size:12px;font-weight:600">${row.webflow_status==='live'?'Live':'Draft'}</span>`:'<span class="td-muted">Not posted</span>'}</td>`;
+    if (role==='designer') {
+      let wfLabel = '';
+      if (row.posted_to_webflow && row.webflow_status==='live') wfLabel = '<span style="color:var(--green);font-size:12px;font-weight:600">● Live</span>';
+      else if (row.posted_to_webflow) wfLabel = '<span style="color:var(--yellow);font-size:12px;font-weight:600">● Draft</span>';
+      else if (row.webflow_item_id) wfLabel = '<span style="color:var(--muted);font-size:12px;font-weight:600">↓ Unpublished</span>';
+      else wfLabel = '<span class="td-muted">Not posted</span>';
+      cells += `<td>${wfLabel}</td>`;
+    }
     cells+=`<td><div style="display:flex;align-items:center;gap:6px">${contentBadge(s)}${bell}</div></td>`;
     const chkCell=isAdminView?`<td data-noopen="1"><input type="checkbox" class="contentChk" value="${row.id}"/></td>`:'';
     h+=`<tr${can?` data-copen="${row.id}"`:' class="disabled-row"'}>${chkCell}${cells}</tr>`;
@@ -1106,13 +1128,14 @@ async function cfsUnpublish() {
       }).catch(() => {}); // best-effort
     }
     // Keep webflow_item_id so next publish UPDATES the same CMS item
+    // Set webflow_status to null (not live, not draft in our system) to reflect unpublished state
     await dbUpdate(CONTENT_TABLE, contentActive.id, {
       posted_to_webflow: false,
-      webflow_status: 'draft',
+      webflow_status: null,
       designer_approved: true   // keep designer_approved so they can re-post without re-approving
     });
     contentActive.posted_to_webflow = false;
-    contentActive.webflow_status = 'draft';
+    contentActive.webflow_status = null;
     // Update UI in-place: show Post button enabled, hide Unpublish
     const postBtn = $('cfsPostBtn');
     if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'Re-publish to Webflow'; }
