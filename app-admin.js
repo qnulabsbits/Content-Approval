@@ -85,7 +85,8 @@ function renderAdminUsers() {
     {id:'inventory',label:'Inventory (View)'},
     {id:'inventory_write',label:'Inventory (Write)'},
     {id:'hr',label:'HR Module'},
-    {id:'requests',label:'Requests'}
+    {id:'requests',label:'Requests'},
+    {id:'leaves',label:'Leave Management'}
   ];
   const rColors={writer:'var(--accent)',seo:'var(--yellow)',cmo:'var(--purple)',designer:'var(--blue)',admin:'#1A1A1A',hr:'var(--teal)'};
   let h='';
@@ -131,7 +132,7 @@ function toggleModulePerm(input) {
 function grantAllPerms(uid){
   var user=adminUsers.find(function(u){return u.id===uid;}); if(!user) return;
   var perms={};
-  ['content','projects','crm','analytics','reports','inventory','inventory_write','hr'].forEach(function(m){perms[m]=true;});
+  ['content','projects','crm','analytics','reports','inventory','inventory_write','hr','requests','leaves'].forEach(function(m){perms[m]=true;});
   user.module_permissions=perms;
   // Re-render checkboxes for this user
   document.querySelectorAll('input[data-uid="'+uid+'"]').forEach(function(cb){cb.checked=true;});
