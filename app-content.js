@@ -663,6 +663,7 @@ async function contentOpenModal(id) {
   const row = contentRows.find(r => String(r.id) === id);
   if (!row) return;
   const role = SESSION?.role, cfg = CONTENT_ROLE_CFG[role];
+  const ct = row.content_type || 'Blog';  // needed throughout this function
   contentActive = row;
   reviewMode = false;
 
@@ -687,8 +688,14 @@ async function contentOpenModal(id) {
     $('cfsApproveLabel').className = 'approve-label '+cfg.approveCls;
     $('cfsApproveLabel').textContent = cfg.approveLabel;
     $('cfsApproveSub').textContent = cfg.approveSub;
-    $('cfsToggle').className = 'toggle '+cfg.toggleCls;
-    $('cfsToggleInput').checked = !!row[cfg.field];
+    const toggleWrap=$('cfsToggleWrap'); if(toggleWrap) toggleWrap.className='toggle '+cfg.toggleCls;
+    // Set checkbox without triggering onchange (prevents premature save on modal open)
+    const toggleInput = $('cfsToggleInput');
+    if (toggleInput) {
+      toggleInput.setAttribute('data-loading', '1');
+      toggleInput.checked = !!row[cfg.field];
+      setTimeout(() => toggleInput.removeAttribute('data-loading'), 50);
+    }
     $('cfsToggleLabel').textContent = row[cfg.field] ? 'Approved' : 'Pending';
   } else { $('cfsApproveSection').style.display = 'none'; }
 
@@ -901,9 +908,12 @@ async function cfsUploadWord(input) {
 async function cfsToggle() {
   if(!contentActive) return;
   const role=SESSION?.role, cfg=CONTENT_ROLE_CFG[role]; if(!cfg) return;
-  const box=$('cfsToggleInput'), checked=box.checked, wrap=$('cfsToggle');
+  const box=$('cfsToggleInput');
+  // Skip if this change was triggered programmatically during modal open
+  if(box && box.getAttribute('data-loading')) return;
+  const checked=box.checked, wrap=$('cfsToggle');
   $('cfsToggleLabel').textContent=checked?'Approved':'Pending';
-  wrap.classList.add('saving');
+  const wrap2=$('cfsToggleWrap'); if(wrap2) wrap2.classList.add('saving');
   try {
     if(!cfg.readOnly){const ok=await contentSaveEdits(true);if(!ok)throw new Error('Could not save edits.');}
     const data={}; data[cfg.field]=checked;
@@ -922,7 +932,7 @@ async function cfsToggle() {
     }
     await loadContent();
   } catch(e){box.checked=!checked;$('cfsToggleLabel').textContent=!checked?'Approved':'Pending';toast('Could not save: '+e.message,'error');}
-  finally{wrap.classList.remove('saving');}
+  finally{const wrap2=$('cfsToggleWrap');if(wrap2)wrap2.classList.remove('saving');}
 }
 
 
