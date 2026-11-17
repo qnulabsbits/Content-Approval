@@ -733,6 +733,21 @@ async function contentOpenModal(id) {
 
   if (isDesigner) {
     $('cfsSection').textContent = SECTION_NAMES[row.content_type] || 'Case Studies';
+    // Show PDF upload only for Whitepapers
+    const pdfRow = $('cfsPdfUploadRow');
+    if (pdfRow) {
+      pdfRow.style.display = (ct === 'Whitepaper') ? 'block' : 'none';
+      // Show existing PDF if already uploaded
+      const ef2 = safeJSON(row.extra_fields, {});
+      const pdfStatus = $('cfsPdfStatus');
+      const pdfName = $('cfsPdfName');
+      if (ef2.whitepaper_pdf_url && pdfStatus) {
+        pdfStatus.style.display = 'flex';
+        if (pdfName) pdfName.textContent = ef2.whitepaper_pdf_name || 'PDF uploaded';
+      } else if (pdfStatus) {
+        pdfStatus.style.display = 'none';
+      }
+    }
     // Post button: enabled when approved and NOT currently live
     // After unpublish, designer_approved stays true so they can re-post
     const isLive = !!row.posted_to_webflow && row.webflow_status === 'live';
@@ -889,6 +904,77 @@ async function cfsToggle() {
 }
 
 
+
+// ── Designer PDF upload for Whitepapers ──────────────────────────
+async function cfsUploadPDF(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.type !== 'application/pdf') { toast('Please select a PDF file.', 'error'); return; }
+  if (file.size > 50 * 1024 * 1024) { toast('PDF must be under 50MB.', 'error'); return; }
+  const btn = $('cfsPdfUploadBtn');
+  const status = $('cfsPdfStatus');
+  const nameEl = $('cfsPdfName');
+  if (btn) { btn.disabled = true; btn.textContent = 'Uploading...'; }
+  try {
+    toast('Uploading PDF to storage...');
+    // Upload to Supabase Storage
+    const fileName = 'whitepapers/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const token = await getToken();
+    const uploadRes = await fetch(SUPA_URL + '/storage/v1/object/whitepaper-pdfs/' + fileName, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'apikey': SUPA_KEY,
+        'Content-Type': 'application/pdf',
+        'x-upsert': 'true'
+      },
+      body: file
+    });
+    if (!uploadRes.ok) {
+      const err = await uploadRes.text();
+      throw new Error('Upload failed: ' + err);
+    }
+    // Get public URL
+    const pdfUrl = SUPA_URL + '/storage/v1/object/public/whitepaper-pdfs/' + fileName;
+    // Save to content extra_fields
+    if (contentActive) {
+      const ef = safeJSON(contentActive.extra_fields, {});
+      ef.whitepaper_pdf_url = pdfUrl;
+      ef.whitepaper_pdf_name = file.name;
+      await dbUpdate(CONTENT_TABLE, contentActive.id, { extra_fields: JSON.stringify(ef) });
+      contentActive.extra_fields = JSON.stringify(ef);
+    }
+    // Update UI
+    if (status) status.style.display = 'flex';
+    if (nameEl) nameEl.textContent = file.name;
+    toast('PDF uploaded successfully.');
+    // Update post button state
+    cfsPDFUploadCheck();
+  } catch(e) {
+    toast('PDF upload failed: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Upload PDF'; }
+    input.value = '';
+  }
+}
+
+function cfsPDFUploadCheck() {
+  // For Whitepapers: Post button requires PDF to be uploaded
+  if (!contentActive) return;
+  const ct = contentActive.content_type || 'Blog';
+  if (ct !== 'Whitepaper') return;
+  const ef = safeJSON(contentActive.extra_fields, {});
+  const hasPdf = !!ef.whitepaper_pdf_url;
+  const hasDate = !!($('cfsDateRequired')?.value);
+  const postBtn = $('cfsPostBtn');
+  if (postBtn && contentActive.designer_approved) {
+    postBtn.disabled = !hasPdf || !hasDate;
+    if (!hasPdf) postBtn.title = 'Please upload the whitepaper PDF first';
+    else if (!hasDate) postBtn.title = 'Please set the publication date first';
+    else postBtn.title = '';
+  }
+}
+
 // ── Designer date field sync ──────────────────────────────────
 // The cfsDateRequired input in the post panel syncs to the
 // actual date field in the content form so both are always in sync
@@ -956,6 +1042,15 @@ async function cfsPost() {
   try {
     // Sync date panel field back to form before saving
     cfsValidateDateField();
+    // For Whitepapers: validate PDF uploaded
+    if (ct === 'Whitepaper') {
+      const ef = safeJSON(contentActive.extra_fields, {});
+      if (!ef.whitepaper_pdf_url) {
+        toast('Please upload the whitepaper PDF before publishing.', 'error');
+        btn.disabled = false; btn.textContent = 'Post to Webflow';
+        return;
+      }
+    }
     // Save latest edits first so Webflow gets the most current content
     await contentSaveEdits(true);
     const ef=contentGetFields(contentActive);
@@ -987,10 +1082,9 @@ async function cfsPost() {
     btn.disabled=true;
     const unpBtn=$('cfsUnpublishBtn');
     if(unpBtn) unpBtn.style.display='inline-flex';
-    // Auto-create Zoho Form for Whitepapers and Case Studies
-    if(ct==='Whitepaper'||ct==='Other'){
-      result.textContent+=' Creating Zoho form...';
-      await zohoCreateFormForContent(contentActive, finalItemId);
+    // For Whitepapers: generate custom form embed with PDF URL baked in
+    if (ct === 'Whitepaper') {
+      await cfsGenerateAndPushFormEmbed(contentActive, finalItemId);
     }
     await loadContent();
   } catch(e){toast('Webflow error: '+e.message,'error');result.textContent='Error: '+e.message;result.style.color='var(--accent)';btn.disabled=false;btn.textContent='Post to Webflow';}
@@ -1120,6 +1214,56 @@ async function zohoGetFormEmbed(formLinkName) {
     const data = await res.json();
     return data.success ? data.embed_code : null;
   } catch(e) { return null; }
+}
+
+
+// ── Whitepaper form embed generator ──────────────────────────────
+const WHITEPAPER_FORM_EDGE = (typeof SUPA_URL !== 'undefined' ? SUPA_URL : '') + '/functions/v1/whitepaper-form';
+const ZOHO_MASTER_FORM_URL = 'https://zfrmz.in/C0vXEMkEHJVvLqe2MaFC';
+
+async function cfsGenerateAndPushFormEmbed(row, webflowItemId) {
+  try {
+    const ef = safeJSON(row.extra_fields, {});
+    const title = encodeURIComponent(row.title || 'Whitepaper');
+    const pdfUrl = encodeURIComponent(ef.whitepaper_pdf_url || '');
+    // Generate form embed with hidden fields pre-filled via URL params
+    const formSrc = `${ZOHO_MASTER_FORM_URL}?Whitepaper_Title=${title}&Whitepaper_URL=${pdfUrl}`;
+    const embedCode = `<div class="iframe-wrapper">
+<iframe aria-label="${(row.title||'Whitepaper').replace(/"/g,"'")}" frameborder="0" src="${formSrc}"></iframe>
+</div>
+<style>
+.iframe-wrapper iframe { width:520px; height:600px; border:none; }
+@media screen and (max-width:991px){ .iframe-wrapper iframe { width:290px; height:580px; } }
+@media screen and (max-width:767px){ .iframe-wrapper iframe { width:290px; height:580px; } }
+</style>`;
+
+    // Save embed to content extra_fields
+    ef.whitepaper_form_embed = embedCode;
+    await dbUpdate(CONTENT_TABLE, row.id, { extra_fields: JSON.stringify(ef) });
+    row.extra_fields = JSON.stringify(ef);
+
+    // Push embed to Webflow CMS embed field
+    if (webflowItemId) {
+      await fetch(WEBFLOW_EDGE, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + SUPA_KEY,
+          'apikey': SUPA_KEY
+        },
+        body: JSON.stringify({
+          action: 'update_field',
+          item_id: webflowItemId,
+          fields: { 'embed': embedCode, 'm-embed': embedCode },
+          row: row
+        })
+      }).catch(e => console.warn('Webflow embed update failed:', e.message));
+    }
+    toast('Form embed generated and pushed to Webflow. ✓');
+  } catch(e) {
+    console.warn('Form embed generation failed:', e.message);
+    toast('Posted to Webflow. Form embed could not be generated: ' + e.message, 'error');
+  }
 }
 
 // Writer add form
