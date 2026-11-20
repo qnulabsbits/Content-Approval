@@ -762,6 +762,15 @@ async function contentOpenModal(id) {
 
   if (isDesigner) {
     $('cfsSection').textContent = SECTION_NAMES[row.content_type] || 'Case Studies';
+    // Load email template and restricted domains for designer
+    const restrictedSection = $('cfsRestrictedDomainsSection');
+    if (ct === 'Whitepaper') {
+      if (restrictedSection) restrictedSection.style.display = 'block';
+      setTimeout(() => { cfsLoadDesignerEmailTemplate(); loadRestrictedDomains(); }, 200);
+    } else {
+      const etw = $('cfsEmailTemplateWrap'); if(etw) etw.style.display='none';
+      if (restrictedSection) restrictedSection.style.display = 'none';
+    }
     // Show PDF upload only for Whitepapers
     const pdfRow = $('cfsPdfUploadRow');
     if (pdfRow) {
@@ -1297,6 +1306,103 @@ async function cfsGenerateAndPushFormEmbed(row, webflowItemId) {
     console.warn('Form embed generation failed:', e.message);
     toast('Posted to Webflow. Form embed could not be generated: ' + e.message, 'error');
   }
+}
+
+
+// ── Designer: load/save per-whitepaper email template ─────────────
+async function cfsLoadDesignerEmailTemplate() {
+  if (!contentActive) return;
+  const ef = safeJSON(contentActive.extra_fields, {});
+  const wrap = $('cfsEmailTemplateWrap'); if (!wrap) return;
+  // Load global template as default
+  try {
+    const rows = await sbFetch('email_templates?template_key=eq.whitepaper_user&select=*') || [];
+    const global = rows[0] || {};
+    const perWP = ef.custom_email_template || '';
+    const $subj = $('cfsEmailSubject');
+    const $body = $('cfsEmailBody');
+    if ($subj) $subj.value = ef.custom_email_subject || global.subject || 'Download | {{whitepaper_title}}';
+    if ($body) $body.value = perWP || global.body_html || '';
+    wrap.style.display = 'block';
+  } catch(e) { console.warn('Email template load failed:', e); }
+}
+
+async function cfsSaveDesignerEmailTemplate() {
+  if (!contentActive) return;
+  const subj = $('cfsEmailSubject')?.value.trim();
+  const body = $('cfsEmailBody')?.value.trim();
+  if (!subj || !body) { toast('Subject and body required.','error'); return; }
+  try {
+    const ef = safeJSON(contentActive.extra_fields, {});
+    ef.custom_email_subject = subj;
+    ef.custom_email_template = body;
+    await dbUpdate(CONTENT_TABLE, contentActive.id, { extra_fields: JSON.stringify(ef) });
+    contentActive.extra_fields = JSON.stringify(ef);
+    toast('Email template saved for this whitepaper.');
+  } catch(e) { toast('Save failed: '+e.message,'error'); }
+}
+
+function cfsPreviewEmailTemplate() {
+  const body = $('cfsEmailBody')?.value || '';
+  const preview = body
+    .replace(/\{\{full_name\}\}/g, 'Rahul Sharma')
+    .replace(/\{\{whitepaper_title\}\}/g, contentActive?.title || 'Whitepaper Title')
+    .replace(/\{\{pdf_url\}\}/g, 'https://example.com/whitepaper.pdf')
+    .replace(/\{\{company\}\}/g, 'Infosys')
+    .replace(/\{\{designation\}\}/g, 'CTO');
+  const win = window.open('','_blank','width=640,height=600');
+  win.document.write(preview);
+}
+
+// ── Restricted domains management ─────────────────────────────────
+let restrictedDomains = [];
+
+async function loadRestrictedDomains() {
+  try {
+    const rows = await sbFetch('app_settings?setting_key=eq.restricted_email_domains&select=*') || [];
+    restrictedDomains = rows[0] ? safeJSON(rows[0].setting_value, []) : [];
+    renderRestrictedDomains();
+  } catch(e) { console.warn('Load domains failed:', e); }
+}
+
+function renderRestrictedDomains() {
+  const wrap = $('cfsRestrictedDomainsWrap'); if (!wrap) return;
+  wrap.innerHTML = restrictedDomains.map(d =>
+    `<span style="display:inline-flex;align-items:center;gap:5px;background:#FEF2F2;border:1px solid #FCA5A5;border-radius:16px;padding:3px 10px;font-size:12px;font-weight:600;color:#DC2626;margin:3px">
+      ${esc(d)}
+      <button onclick="removeDomain('${esc(d)}')" style="background:none;border:none;cursor:pointer;font-size:14px;color:#DC2626;line-height:1;padding:0">×</button>
+    </span>`
+  ).join('') + `<span style="display:inline-flex;align-items:center;gap:5px;margin:3px">
+    <input id="newDomainInput" type="text" placeholder="add domain..." style="border:1px solid var(--border);border-radius:16px;padding:3px 10px;font-size:12px;width:140px;outline:none" onkeydown="if(event.key==='Enter') addDomain()"/>
+    <button onclick="addDomain()" style="background:var(--accent);color:#fff;border:none;border-radius:12px;padding:3px 10px;font-size:12px;cursor:pointer">Add</button>
+  </span>`;
+}
+
+async function addDomain() {
+  const inp = $('newDomainInput'); if (!inp) return;
+  const d = inp.value.trim().toLowerCase().replace(/^@/,'');
+  if (!d || restrictedDomains.includes(d)) { toast('Domain already exists or empty','error'); return; }
+  restrictedDomains.push(d);
+  await saveRestrictedDomains();
+  inp.value = '';
+}
+
+async function removeDomain(d) {
+  restrictedDomains = restrictedDomains.filter(x=>x!==d);
+  await saveRestrictedDomains();
+}
+
+async function saveRestrictedDomains() {
+  try {
+    const rows = await sbFetch('app_settings?setting_key=eq.restricted_email_domains&select=id') || [];
+    if (rows[0]) {
+      await sbFetch('app_settings?setting_key=eq.restricted_email_domains', {method:'PATCH', body:JSON.stringify({setting_value:JSON.stringify(restrictedDomains),updated_by:SESSION.full_name||SESSION.email,updated_at:new Date().toISOString()})});
+    } else {
+      await dbInsert('app_settings',{setting_key:'restricted_email_domains',setting_value:JSON.stringify(restrictedDomains),updated_by:SESSION.full_name||SESSION.email});
+    }
+    toast('Restricted domains updated.');
+    renderRestrictedDomains();
+  } catch(e) { toast('Save failed: '+e.message,'error'); }
 }
 
 // Writer add form
