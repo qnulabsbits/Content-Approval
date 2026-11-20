@@ -333,27 +333,20 @@ function wpExportTitleExcel(title, e) {
 
 
 // ── Upload Leads page (sub-item of CRM) ──────────────────────────
-function loadUploadLeads() {
-  // Render business cards into the upload-leads page pane
-  const targetPane = $('crmCardsPane2');
-  if (targetPane) {
-    // Temporarily redirect crmCardsPane to crmCardsPane2
-    const orig = $('crmCardsPane');
-    if (orig) orig.id = 'crmCardsPane_bak';
-    targetPane.id = 'crmCardsPane';
-    loadBusinessCards().then(() => {
-      // Restore IDs
-      targetPane.id = 'crmCardsPane2';
-      const bak = $('crmCardsPane_bak');
-      if (bak) bak.id = 'crmCardsPane';
-    }).catch(() => {
-      targetPane.id = 'crmCardsPane2';
-      const bak = $('crmCardsPane_bak');
-      if (bak) bak.id = 'crmCardsPane';
-    });
-  } else {
-    loadBusinessCards();
-  }
+async function loadUploadLeads() {
+  // Load cards and render into the upload-leads page
+  try {
+    bizCards = await sbFetch('business_cards?order=created_at.desc&select=*') || [];
+  } catch(e) { bizCards = []; }
+  const wrap = $('crmCardsPane2');
+  if (!wrap) return;
+  // Temporarily point renderBusinessCards at crmCardsPane2
+  const orig = $('crmCardsPane');
+  if (orig) orig.id = '_crmCardsPane_hidden';
+  wrap.id = 'crmCardsPane';
+  renderBusinessCards();
+  wrap.id = 'crmCardsPane2';
+  if (orig) orig.id = 'crmCardsPane';
 }
 
 /* ═══════════════════════════════════════════════════
