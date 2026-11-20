@@ -181,6 +181,12 @@ function contentCollect(ct, prefix) {
 }
 
 async function loadContent() {
+  // Show Email Settings button for admin and designer
+  const emailBtn = $('contentEmailSettingsBtn');
+  if (emailBtn) {
+    const r2 = SESSION?.role;
+    emailBtn.style.display = (r2==='admin'||r2==='designer') ? 'block' : 'none';
+  }
   const writerForm=$('contentWriterForm');
   if(writerForm){
     const r=SESSION?.role;
@@ -1403,6 +1409,129 @@ async function saveRestrictedDomains() {
     toast('Restricted domains updated.');
     renderRestrictedDomains();
   } catch(e) { toast('Save failed: '+e.message,'error'); }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// EMAIL SETTINGS OVERLAY (admin + designer)
+// ═══════════════════════════════════════════════════════════════════
+let esRestrictedDomains = [];
+let esTemplates = {};
+
+async function openEmailSettings() {
+  $('emailSettingsFS').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  await esLoadAll();
+}
+
+function closeEmailSettings() {
+  $('emailSettingsFS').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+async function esLoadAll() {
+  // Load restricted domains
+  try {
+    const rows = await sbFetch('app_settings?setting_key=eq.restricted_email_domains&select=*') || [];
+    esRestrictedDomains = rows[0] ? safeJSON(rows[0].setting_value, []) : [];
+    esRenderDomains();
+  } catch(e) { console.warn('Load domains failed:', e); }
+
+  // Load email templates
+  try {
+    const rows = await sbFetch('email_templates?select=*') || [];
+    rows.forEach(r => esTemplates[r.template_key] = r);
+    const user = esTemplates['whitepaper_user'] || {};
+    const internal = esTemplates['whitepaper_internal'] || {};
+    if ($('esUserSubject')) $('esUserSubject').value = user.subject || 'Download | {{whitepaper_title}}';
+    if ($('esUserBody')) $('esUserBody').value = user.body_html || '';
+    if ($('esInternalRecipients')) $('esInternalRecipients').value = internal.recipients || '';
+    if ($('esInternalSubject')) $('esInternalSubject').value = internal.subject || 'New Whitepaper Download | {{whitepaper_title}}';
+    if ($('esInternalBody')) $('esInternalBody').value = internal.body_html || '';
+  } catch(e) { console.warn('Load templates failed:', e); }
+}
+
+function esRenderDomains() {
+  const wrap = $('esRestrictedDomainsWrap'); if (!wrap) return;
+  wrap.innerHTML = (esRestrictedDomains.length ? esRestrictedDomains.map(d =>
+    `<span style="display:inline-flex;align-items:center;gap:5px;background:#FEF2F2;border:1px solid #FCA5A5;border-radius:16px;padding:4px 12px;font-size:12px;font-weight:600;color:#DC2626;margin:3px">
+      ${esc(d)}
+      <button onclick="esRemoveDomain('${esc(d)}')" style="background:none;border:none;cursor:pointer;font-size:16px;color:#DC2626;line-height:1;padding:0 0 0 4px">×</button>
+    </span>`
+  ).join('') : '<span style="font-size:12px;color:var(--muted)">No domains restricted yet.</span>');
+}
+
+async function esAddDomain() {
+  const inp = $('esNewDomain'); if (!inp) return;
+  const d = inp.value.trim().toLowerCase().replace(/^@/,'').replace(/^https?:\/\//,'');
+  if (!d) { toast('Please enter a domain.','error'); return; }
+  if (esRestrictedDomains.includes(d)) { toast('Domain already in list.','error'); return; }
+  esRestrictedDomains.push(d);
+  await esSaveDomains();
+  inp.value = '';
+}
+
+async function esRemoveDomain(d) {
+  esRestrictedDomains = esRestrictedDomains.filter(x => x !== d);
+  await esSaveDomains();
+}
+
+async function esSaveDomains() {
+  try {
+    const rows = await sbFetch('app_settings?setting_key=eq.restricted_email_domains&select=id') || [];
+    if (rows[0]) {
+      await sbFetch('app_settings?setting_key=eq.restricted_email_domains', {method:'PATCH', body:JSON.stringify({setting_value:JSON.stringify(esRestrictedDomains),updated_by:SESSION.full_name||SESSION.email,updated_at:new Date().toISOString()})});
+    } else {
+      await dbInsert('app_settings',{setting_key:'restricted_email_domains',setting_value:JSON.stringify(esRestrictedDomains),updated_by:SESSION.full_name||SESSION.email});
+    }
+    toast('Domains saved.');
+    esRenderDomains();
+    // Sync to old renderRestrictedDomains if open
+    restrictedDomains = esRestrictedDomains.slice();
+    if (typeof renderRestrictedDomains === 'function') renderRestrictedDomains();
+  } catch(e) { toast('Save failed: '+e.message,'error'); }
+}
+
+async function esSaveUserTemplate() {
+  const subject = $('esUserSubject')?.value.trim();
+  const body = $('esUserBody')?.value.trim();
+  if (!subject || !body) { toast('Subject and body required.','error'); return; }
+  try {
+    const existing = esTemplates['whitepaper_user'];
+    if (existing?.id) {
+      await sbFetch('email_templates?id=eq.'+existing.id, {method:'PATCH', body:JSON.stringify({subject,body_html:body,updated_by:SESSION.full_name||SESSION.email,updated_at:new Date().toISOString()})});
+    } else {
+      await dbInsert('email_templates',{template_key:'whitepaper_user',subject,body_html:body,recipients:'',updated_by:SESSION.full_name||SESSION.email});
+    }
+    toast('User email template saved. ✓');
+    await esLoadAll();
+  } catch(e) { toast('Save failed: '+e.message,'error'); }
+}
+
+async function esSaveInternalTemplate() {
+  const recipients = $('esInternalRecipients')?.value.trim();
+  const subject = $('esInternalSubject')?.value.trim();
+  const body = $('esInternalBody')?.value.trim();
+  if (!subject || !body) { toast('Subject and body required.','error'); return; }
+  try {
+    const existing = esTemplates['whitepaper_internal'];
+    if (existing?.id) {
+      await sbFetch('email_templates?id=eq.'+existing.id, {method:'PATCH', body:JSON.stringify({subject,body_html:body,recipients,updated_by:SESSION.full_name||SESSION.email,updated_at:new Date().toISOString()})});
+    } else {
+      await dbInsert('email_templates',{template_key:'whitepaper_internal',subject,body_html:body,recipients,updated_by:SESSION.full_name||SESSION.email});
+    }
+    toast('Internal email template saved. ✓');
+    await esLoadAll();
+  } catch(e) { toast('Save failed: '+e.message,'error'); }
+}
+
+function esPreviewTemplate(which) {
+  let body = which === 'user' ? ($('esUserBody')?.value || '') : ($('esInternalBody')?.value || '');
+  if (!body) { toast('Nothing to preview — paste HTML first.','error'); return; }
+  const vars = { full_name:'Rahul Sharma', whitepaper_title:'QKD for Enterprise', pdf_url:'https://qnulabs.com/whitepaper.pdf', company:'Infosys', designation:'CTO', email:'rahul@infosys.com', phone:'+91 99999 99999', how_heard:'LinkedIn' };
+  body = body.replace(/\{\{(\w+)\}\}/g, (_,k) => vars[k] || '{{'+k+'}}');
+  const win = window.open('','_blank','width=680,height=700');
+  if (win) { win.document.open(); win.document.write(body); win.document.close(); }
 }
 
 // Writer add form
