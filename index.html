@@ -360,6 +360,30 @@
   </div>
 </div>
 
+<div class="page" id="pg-crm">
+  <div class="page-header">
+    <div>
+      <div class="page-title">CRM Dashboard</div>
+      <div class="page-sub">Leads, Deals, Business Cards and Download Analytics from Zoho CRM</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="crmFetchLeads()" class="btn btn-secondary btn-sm">↻ Refresh</button>
+    </div>
+  </div>
+  <!-- Tabs -->
+  <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);padding-bottom:0">
+    <button id="crmTab_leads"    onclick="crmSetTab('leads')"     class="ftab active"  style="border-radius:8px 8px 0 0;padding:10px 20px;font-weight:700">👤 Leads</button>
+    <button id="crmTab_deals"    onclick="crmSetTab('deals')"     class="ftab"         style="border-radius:8px 8px 0 0;padding:10px 20px;font-weight:700">💼 Deals</button>
+    <button id="crmTab_analytics" onclick="crmSetTab('analytics')" class="ftab"        style="border-radius:8px 8px 0 0;padding:10px 20px;font-weight:700">📊 WP Downloads</button>
+    <button id="crmTab_cards"    onclick="crmSetTab('cards')"     class="ftab"         style="border-radius:8px 8px 0 0;padding:10px 20px;font-weight:700">📇 Business Cards</button>
+  </div>
+  <!-- Panes -->
+  <div id="crmPane_leads"     class="card card-pad"><div id="crmLeadsTable"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
+  <div id="crmPane_deals"     class="card card-pad" style="display:none"><div id="crmDealsTable"></div></div>
+  <div id="crmPane_analytics" class="card card-pad" style="display:none"><div id="crmAnalyticsPane"></div></div>
+  <div id="crmPane_cards"     class="card card-pad" style="display:none"><div id="crmCardsPane"></div></div>
+</div>
+
 <div class="page" id="pg-leaves">
   <div class="page-header">
     <div>
@@ -616,6 +640,32 @@
         <button class="webflow-btn" id="cfsPostBtn" onclick="cfsPost()" disabled>Post to Webflow</button>
         <div class="post-result" id="cfsPostResult"></div>
         <button id="cfsUnpublishBtn" onclick="cfsUnpublish()" style="display:none;margin-top:12px;background:#DC2626;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:Inter,sans-serif">↩ Unpublish from Webflow</button>
+
+        <!-- Email Template Editor (Whitepapers only) -->
+        <div id="cfsEmailTemplateWrap" style="display:none;margin-top:16px;border:1.5px solid #BFDBFE;border-radius:10px;background:#EFF6FF;padding:14px 16px">
+          <div style="font-size:13px;font-weight:700;color:#1D4ED8;margin-bottom:4px">📧 Whitepaper Email Template</div>
+          <div style="font-size:11px;color:#3B82F6;margin-bottom:10px">Customise the email sent to users who download this whitepaper. Variables: <code>{{full_name}}</code> <code>{{whitepaper_title}}</code> <code>{{pdf_url}}</code> <code>{{company}}</code></div>
+          <div style="margin-bottom:8px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">SUBJECT</div>
+            <input type="text" id="cfsEmailSubject" class="field-input" style="width:100%;box-sizing:border-box;font-size:12px"/>
+          </div>
+          <div style="margin-bottom:8px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">BODY (HTML) — paste HTML or type here</div>
+            <textarea id="cfsEmailBody" style="width:100%;min-height:120px;border:1.5px solid var(--border);border-radius:7px;padding:8px;font-size:11px;font-family:monospace;resize:vertical;box-sizing:border-box"></textarea>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="cfsSaveDesignerEmailTemplate()" class="btn btn-primary btn-xs">Save Template</button>
+            <button onclick="cfsPreviewEmailTemplate()" class="btn btn-secondary btn-xs">Preview</button>
+          </div>
+        </div>
+
+        <!-- Restricted Email Domains -->
+        <div id="cfsRestrictedDomainsSection" style="display:none;margin-top:12px;border:1.5px solid #FCA5A5;border-radius:10px;background:#FEF2F2;padding:12px 14px">
+          <div style="font-size:13px;font-weight:700;color:#DC2626;margin-bottom:4px">🚫 Restricted Email Domains</div>
+          <div style="font-size:11px;color:#B91C1C;margin-bottom:8px">Forms from these domains will be blocked with a message.</div>
+          <div id="cfsRestrictedDomainsWrap"></div>
+        </div>
+
         <!-- Zoho Form status for Whitepapers -->
         <div id="cfsZohoFormStatus" style="display:none;margin-top:14px;padding:12px 14px;background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:10px">
           <div style="font-size:12px;font-weight:700;color:#1D4ED8;margin-bottom:4px">📋 Zoho Download Form</div>
@@ -1371,6 +1421,7 @@
 <script src="app-chat.js"></script>
 <script src="app-tasks.js"></script>
 <script src="app-banner.js"></script>
+<script src="app-crm.js"></script>
 <script src="app-leaves.js"></script>
 <script src="app-settings.js"></script>
 <script src="app-subtasks.js"></script>
