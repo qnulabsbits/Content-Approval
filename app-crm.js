@@ -6,7 +6,7 @@
    - Whitepaper Download Analytics
 ═══════════════════════════════════════════════════ */
 
-const ZOHO_CRM_EDGE = (typeof SUPA_URL !== 'undefined' ? SUPA_URL : '') + '/functions/v1/zoho-crm';
+const ZOHO_CRM_EDGE = SUPA_URL + '/functions/v1/zoho-crm';
 
 let crmLeads = [], crmDeals = [], crmTab = 'leads';
 let crmLeadsPage = 1, crmDealsPage = 1;
@@ -40,7 +40,8 @@ async function crmFetchLeads() {
     crmLeads = data.leads || [];
     renderCRMLeadsTable();
   } catch(e) {
-    if (wrap) wrap.innerHTML = `<div class="empty-state"><div class="empty-title">Could not load leads</div><div class="empty-sub">${esc(e.message)}</div></div>`;
+    if (wrap) wrap.innerHTML = `<div class="empty-state"><div class="empty-title">Could not load leads from Zoho CRM</div><div class="empty-sub">${esc(e.message)}</div><div style="margin-top:12px"><button onclick="crmFetchLeads()" class="btn btn-primary btn-sm">Retry</button></div></div>`;
+    console.error('CRM leads error:', e);
   }
 }
 
@@ -328,6 +329,31 @@ function wpExportTitleExcel(title, e) {
   const _a=document.createElement('a'); _a.href=URL.createObjectURL(new Blob([_b],{type:'application/octet-stream'})); _a.download=title.replace(/[^a-z0-9]/gi,'_').slice(0,40)+'_Downloads.xlsx';
   document.body.appendChild(_a); _a.click(); document.body.removeChild(_a); setTimeout(()=>URL.revokeObjectURL(_a.href),1500);
   toast('Exported.');
+}
+
+
+// ── Upload Leads page (sub-item of CRM) ──────────────────────────
+function loadUploadLeads() {
+  // Render business cards into the upload-leads page pane
+  const targetPane = $('crmCardsPane2');
+  if (targetPane) {
+    // Temporarily redirect crmCardsPane to crmCardsPane2
+    const orig = $('crmCardsPane');
+    if (orig) orig.id = 'crmCardsPane_bak';
+    targetPane.id = 'crmCardsPane';
+    loadBusinessCards().then(() => {
+      // Restore IDs
+      targetPane.id = 'crmCardsPane2';
+      const bak = $('crmCardsPane_bak');
+      if (bak) bak.id = 'crmCardsPane';
+    }).catch(() => {
+      targetPane.id = 'crmCardsPane2';
+      const bak = $('crmCardsPane_bak');
+      if (bak) bak.id = 'crmCardsPane';
+    });
+  } else {
+    loadBusinessCards();
+  }
 }
 
 /* ═══════════════════════════════════════════════════
