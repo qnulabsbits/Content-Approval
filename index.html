@@ -109,7 +109,10 @@
           <div class="page-title">Content Approval</div>
           <div class="page-sub">Manage content through the full approval pipeline to Webflow</div>
         </div>
-        <div class="page-actions">
+        <div class="page-actions" style="display:flex;align-items:center;gap:8px">
+          <div id="contentEmailSettingsBtn" style="display:none">
+            <button onclick="openEmailSettings()" class="btn btn-secondary btn-sm">📧 Email Settings</button>
+          </div>
           <span id="contentLastUpdated" style="font-size:11px;color:var(--muted)"></span>
         </div>
       </div>
@@ -220,7 +223,20 @@
     </div>
 
     <!-- ═══ CRM PAGE (placeholder) ═══ -->
-    <div class="page" id="pg-crm">
+    <div class="page" id="pg-upload-leads">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Upload Leads</div>
+      <div class="page-sub">Scan business cards, upload photos, or import from Excel to add leads to Zoho CRM</div>
+    </div>
+    <button onclick="bizStartScan()" class="btn btn-primary btn-sm">+ Add Cards / Import</button>
+  </div>
+  <div class="card card-pad">
+    <div id="crmCardsPane2"></div>
+  </div>
+</div>
+
+<div class="page" id="pg-crm">
       <div class="page-header"><div><div class="page-title">CRM Dashboard</div><div class="page-sub">Zoho CRM integration coming soon</div></div></div>
       <div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Zoho CRM Integration</div><div class="empty-sub">Your Zoho CRM data will appear here once connected. Share your Zoho credentials to get started.</div></div>
     </div>
@@ -682,6 +698,77 @@
         <div style="font-size:11px;color:var(--muted)">Yellow = needs fixing · Green = corrected</div>
       </div>
       <div id="reviewCommentPanel" style="padding:12px;flex:1"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ EMAIL SETTINGS OVERLAY ═══════════════ -->
+<div class="fs-overlay" id="emailSettingsFS">
+  <div class="fs-topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="fs-back" onclick="closeEmailSettings()">Back</button>
+      <div>
+        <div style="font-size:15px;font-weight:700">Email Settings</div>
+        <div style="font-size:11px;color:var(--muted)">Manage email templates and restricted domains for whitepaper downloads</div>
+      </div>
+    </div>
+  </div>
+  <div class="fs-body" style="max-width:860px;margin:0 auto">
+
+    <!-- Restricted Domains -->
+    <div class="card card-pad" style="margin-bottom:20px">
+      <div class="card-title" style="margin-bottom:4px">🚫 Restricted Email Domains</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Email addresses from these domains will be blocked when submitting the whitepaper download form. Users will see: <em>"This email domain is not accepted. Please use your work email."</em></div>
+      <div id="esRestrictedDomainsWrap" style="margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+        <input type="text" id="esNewDomain" class="field-input" placeholder="e.g. gmail.com" style="max-width:220px"/>
+        <button onclick="esAddDomain()" class="btn btn-primary btn-sm">+ Add Domain</button>
+      </div>
+    </div>
+
+    <!-- User Thank You Email -->
+    <div class="card card-pad" style="margin-bottom:20px">
+      <div class="card-title" style="margin-bottom:4px">📧 User Thank You Email</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Sent to the person who downloads the whitepaper. Available variables: <code>{{full_name}}</code> <code>{{whitepaper_title}}</code> <code>{{pdf_url}}</code> <code>{{company}}</code> <code>{{designation}}</code></div>
+      <div class="field-grid">
+        <div class="field-group full">
+          <div class="field-label">Subject</div>
+          <input type="text" id="esUserSubject" class="field-input"/>
+        </div>
+        <div class="field-group full">
+          <div class="field-label">HTML Body — paste your HTML code here</div>
+          <textarea id="esUserBody" style="width:100%;min-height:200px;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:monospace;resize:vertical;box-sizing:border-box"></textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button onclick="esSaveUserTemplate()" class="btn btn-primary btn-sm">Save User Template</button>
+        <button onclick="esPreviewTemplate('user')" class="btn btn-secondary btn-sm">👁 Preview Email</button>
+      </div>
+    </div>
+
+    <!-- Internal Notification Email -->
+    <div class="card card-pad">
+      <div class="card-title" style="margin-bottom:4px">📬 Internal Notification Email</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Sent to your team when someone downloads a whitepaper. Variables: <code>{{full_name}}</code> <code>{{email}}</code> <code>{{company}}</code> <code>{{whitepaper_title}}</code> <code>{{phone}}</code> <code>{{how_heard}}</code></div>
+      <div class="field-grid">
+        <div class="field-group full">
+          <div class="field-label">Recipient Emails <span style="font-size:11px;color:var(--muted)">(comma separated)</span></div>
+          <input type="text" id="esInternalRecipients" class="field-input" placeholder="email1@qnulabs.com, email2@qnulabs.com"/>
+        </div>
+        <div class="field-group full">
+          <div class="field-label">Subject</div>
+          <input type="text" id="esInternalSubject" class="field-input"/>
+        </div>
+        <div class="field-group full">
+          <div class="field-label">HTML Body</div>
+          <textarea id="esInternalBody" style="width:100%;min-height:160px;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:monospace;resize:vertical;box-sizing:border-box"></textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button onclick="esSaveInternalTemplate()" class="btn btn-primary btn-sm">Save Internal Template</button>
+        <button onclick="esPreviewTemplate('internal')" class="btn btn-secondary btn-sm">👁 Preview Email</button>
+      </div>
     </div>
 
   </div>
