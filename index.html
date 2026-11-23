@@ -293,33 +293,48 @@
       <div class="table-wrap"><div id="inventoryTable"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
     </div>
 
-    <!-- ═══ HR PAGE ═══ -->
+    <!-- ═══ HR MODULE ═══ -->
     <div class="page" id="pg-hr">
       <div class="page-header">
         <div>
           <div class="page-title">HR Module</div>
-          <div class="page-sub">Job postings — HR Executive approval → Designer → Webflow</div>
+          <div class="page-sub">Create and publish job postings directly to Webflow</div>
         </div>
-        <div class="page-actions">
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" onclick="hrOpenEmailSettings()">📧 Email Settings</button>
           <button class="btn btn-primary btn-sm" onclick="openAddJobPosting()">+ New Job Posting</button>
         </div>
       </div>
-      <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
-        <div class="stat-card s-total"><div class="stat-label">Total Postings</div><div class="stat-value" id="hrs0">-</div></div>
-        <div class="stat-card s-accent"><div class="stat-label">Awaiting Approval</div><div class="stat-value" id="hrs1">-</div></div>
-        <div class="stat-card s-blue"><div class="stat-label">With Designer</div><div class="stat-value" id="hrs2">-</div></div>
-        <div class="stat-card s-green"><div class="stat-label">Posted</div><div class="stat-value" id="hrs3">-</div></div>
-      </div>
-      <div class="section-header">
-        <div class="section-title">Job Postings</div>
-        <div class="filter-tabs">
-          <button class="ftab active" onclick="hrFilter='all';renderHRTable()">All</button>
-          <button class="ftab" onclick="hrFilter='pending';renderHRTable()">Pending</button>
-          <button class="ftab" onclick="hrFilter='withdesigner';renderHRTable()">With Designer</button>
-          <button class="ftab" onclick="hrFilter='posted';renderHRTable()">Posted</button>
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;display:flex;align-items:center;gap:10px">
+          <div style="font-size:22px;font-weight:800;color:var(--text)" id="hrs0">0</div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;line-height:1.3">Total<br/>Postings</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;display:flex;align-items:center;gap:10px">
+          <div style="font-size:22px;font-weight:800;color:#10B981" id="hrs1">0</div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;line-height:1.3">Live<br/>on Website</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;display:flex;align-items:center;gap:10px">
+          <div style="font-size:22px;font-weight:800;color:#F59E0B" id="hrs2">0</div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;line-height:1.3">Draft<br/>in Webflow</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;display:flex;align-items:center;gap:10px">
+          <div style="font-size:22px;font-weight:800;color:#3B82F6" id="hrs3">0</div>
+          <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;line-height:1.3">Not<br/>Posted Yet</div>
         </div>
       </div>
-      <div class="table-wrap"><div id="hrTable"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
+      <div class="card card-pad">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div class="card-title" style="margin:0">Job Postings</div>
+          <div id="hrFilterTabs" style="display:flex;gap:6px">
+            <button class="ftab active" onclick="hrSetFilter('all',this)">All</button>
+            <button class="ftab" onclick="hrSetFilter('live',this)">● Live</button>
+            <button class="ftab" onclick="hrSetFilter('draft',this)">Draft</button>
+            <button class="ftab" onclick="hrSetFilter('local',this)">Not Posted</button>
+          </div>
+        </div>
+        <div id="hrTable"><div class="loading-row"><span class="spinner"></span> Loading...</div></div>
+      </div>
     </div>
 
     <!-- ═══ ADMIN PAGE ═══ -->
@@ -783,60 +798,104 @@
     <div style="display:flex;align-items:center;gap:12px">
       <button class="fs-back" onclick="closeHRFS()">Back</button>
       <div>
-        <div style="font-size:15px;font-weight:700" id="hrfsTitle">-</div>
-        <div style="font-size:11px;color:var(--muted)" id="hrfsSub">-</div>
+        <div style="font-size:15px;font-weight:700">Job Posting</div>
+        <div style="font-size:11px;color:var(--muted)">HR Module — Post directly to Webflow</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px"><div id="hrfsMeta1"></div></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="btn btn-secondary btn-sm" onclick="hrSaveEdits(false)">Save</button>
+    </div>
   </div>
-  <div class="fs-body">
-    <div class="fs-meta-row">
-      <div class="fs-meta-item"><div class="fs-meta-label">Department</div><div class="fs-meta-value" id="hrfsDept">-</div></div>
-      <div class="fs-meta-item"><div class="fs-meta-label">Job Type</div><div class="fs-meta-value" id="hrfsType">-</div></div>
-      <div class="fs-meta-item"><div class="fs-meta-label">Location</div><div class="fs-meta-value" id="hrfsLocation">-</div></div>
-      <div class="fs-meta-item"><div class="fs-meta-label">Salary Range</div><div class="fs-meta-value" id="hrfsSalary">-</div></div>
+  <div style="display:flex;flex:1;overflow:hidden;height:calc(100% - 56px)">
+    <div class="fs-body" style="flex:1;overflow-y:auto;padding:20px">
+      <div class="card card-pad" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:16px">Basic Information</div>
+        <div class="field-grid">
+          <div class="field-group full"><div class="field-label">Job Title <span class="req">*</span></div><input type="text" class="field-input" id="hrfs_title"/></div>
+          <div class="field-group"><div class="field-label">Job ID</div><input type="text" class="field-input" id="hrfs_job_id" placeholder="e.g. QNU-0001"/></div>
+          <div class="field-group"><div class="field-label">Department</div><select class="field-select" id="hrfs_department"><option value="">Select...</option><option>Engineering</option><option>Product</option><option>Marketing</option><option>Sales</option><option>Operations</option><option>HR</option><option>Finance</option><option>Legal</option><option>Design</option><option>Other</option></select></div>
+          <div class="field-group"><div class="field-label">Location</div><input type="text" class="field-input" id="hrfs_location" placeholder="e.g. Bengaluru"/></div>
+          <div class="field-group"><div class="field-label">Work Mode</div><select class="field-select" id="hrfs_work_mode"><option>Onsite</option><option>Remote</option><option>Hybrid</option></select></div>
+          <div class="field-group"><div class="field-label">Employment Type</div><select class="field-select" id="hrfs_emp_type"><option>Full-time</option><option>Part-time</option><option>Contract</option><option>Internship</option></select></div>
+          <div class="field-group"><div class="field-label">Experience</div><input type="text" class="field-input" id="hrfs_experience" placeholder="e.g. 5+ years"/></div>
+          <div class="field-group"><div class="field-label">Posted Date <span class="req">*</span></div><input type="date" class="field-date" id="hrfs_posted_date"/></div>
+          <div class="field-group"><div class="field-label">Reports To</div><input type="text" class="field-input" id="hrfs_reports_to"/></div>
+          <div class="field-group"><div class="field-label">Team Size</div><input type="text" class="field-input" id="hrfs_team_size" placeholder="e.g. ~15-20 engineers"/></div>
+          <div class="field-group full"><div class="field-label">Works With</div><input type="text" class="field-input" id="hrfs_works_with"/></div>
+          <div class="field-group full"><div class="field-label">Short Description</div><textarea class="field-textarea" id="hrfs_short_desc" rows="2"></textarea></div>
+          <div class="field-group"><div class="field-label">Major Requirement</div><textarea class="field-textarea" id="hrfs_major_req" rows="3"></textarea></div>
+          <div class="field-group"><div class="field-label">Closing Line</div><input type="text" class="field-input" id="hrfs_closing"/></div>
+          <div class="field-group" style="display:flex;align-items:center;gap:10px"><div class="field-label" style="margin:0">Show "New" Badge</div><label class="toggle"><input type="checkbox" id="hrfs_new_badge"/><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+      <div class="card card-pad" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:12px">About the Role</div>
+        <div class="richtext-wrap"><div class="richtext-toolbar"><button type="button" class="rt-btn" data-target="hrfs_about" data-cmd="bold"><b>B</b></button><button type="button" class="rt-btn" data-target="hrfs_about" data-cmd="italic"><i>I</i></button><button type="button" class="rt-btn" data-target="hrfs_about" data-cmd="insertUnorderedList">List</button><button type="button" class="rt-btn" data-target="hrfs_about" data-cmd="removeFormat">Clear</button></div><div class="richtext-editor" id="hrfs_about" contenteditable="true"></div></div>
+      </div>
+      <div class="card card-pad" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:12px">Responsibilities</div>
+        <div class="richtext-wrap"><div class="richtext-toolbar"><button type="button" class="rt-btn" data-target="hrfs_responsibilities" data-cmd="bold"><b>B</b></button><button type="button" class="rt-btn" data-target="hrfs_responsibilities" data-cmd="italic"><i>I</i></button><button type="button" class="rt-btn" data-target="hrfs_responsibilities" data-cmd="insertUnorderedList">List</button><button type="button" class="rt-btn" data-target="hrfs_responsibilities" data-cmd="removeFormat">Clear</button></div><div class="richtext-editor" id="hrfs_responsibilities" contenteditable="true"></div></div>
+      </div>
+      <div class="card card-pad" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:12px">Qualifications</div>
+        <div class="richtext-wrap"><div class="richtext-toolbar"><button type="button" class="rt-btn" data-target="hrfs_qualifications" data-cmd="bold"><b>B</b></button><button type="button" class="rt-btn" data-target="hrfs_qualifications" data-cmd="italic"><i>I</i></button><button type="button" class="rt-btn" data-target="hrfs_qualifications" data-cmd="insertUnorderedList">List</button><button type="button" class="rt-btn" data-target="hrfs_qualifications" data-cmd="removeFormat">Clear</button></div><div class="richtext-editor" id="hrfs_qualifications" contenteditable="true"></div></div>
+      </div>
+      <div class="card card-pad" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:12px">Benefits and Culture</div>
+        <div class="richtext-wrap"><div class="richtext-toolbar"><button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="bold"><b>B</b></button><button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="italic"><i>I</i></button><button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="insertUnorderedList">List</button><button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="removeFormat">Clear</button></div><div class="richtext-editor" id="hrfs_benefits" contenteditable="true"></div></div>
+      </div>
     </div>
-    <div class="card card-pad" style="margin-bottom:16px">
-      <div class="card-title">Job Description</div>
-      <div id="hrfsDesc" style="font-size:13px;line-height:1.7"></div>
-    </div>
-    <div class="field-grid" style="margin-bottom:16px">
+    <div style="width:300px;min-width:260px;border-left:2px solid var(--border);overflow-y:auto;padding:20px;background:var(--surface2)">
       <div class="card card-pad">
-        <div class="card-title">Requirements</div>
-        <div id="hrfsReq" style="font-size:13px;line-height:1.7"></div>
-      </div>
-      <div class="card card-pad">
-        <div class="card-title">Responsibilities</div>
-        <div id="hrfsResp" style="font-size:13px;line-height:1.7"></div>
-      </div>
-    </div>
-    <div id="hrfsApproveSection" style="display:block">
-      <div class="approve-inner accent" id="hrfsApproveInner">
-        <div>
-          <div class="approve-label" id="hrfsApproveLabel">Approve for Designer</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">Designer will post this to Webflow</div>
+        <div class="card-title" style="margin-bottom:12px">Publish to Webflow</div>
+        <div class="publish-options" style="margin-bottom:12px">
+          <div class="publish-opt selected-draft" id="hrfsOptDraft" onclick="hrSelectPublish('draft')"><div class="publish-opt-title">Save as Draft</div><div class="publish-opt-sub">Not live yet</div></div>
+          <div class="publish-opt" id="hrfsOptLive" onclick="hrSelectPublish('live')"><div class="publish-opt-title">Publish Live</div><div class="publish-opt-sub">Goes live immediately</div></div>
         </div>
-        <div class="toggle-wrap">
-          <label class="toggle" id="hrfsToggle"><input type="checkbox" id="hrfsToggleInput" data-hrtype="hr" onchange="hrFsToggle()"/><span class="toggle-slider"></span></label>
-          <span class="toggle-label" id="hrfsToggleLabel">Pending</span>
-        </div>
+        <div style="margin-bottom:12px;padding:8px 10px;background:#fff;border-radius:7px;font-size:12px;font-weight:600;color:var(--blue)">Mode: <span id="hrfsPublishMode">Save as Draft</span></div>
+        <button class="webflow-btn" id="hrfsPostBtn" onclick="hrPost()" style="width:100%;margin-bottom:8px">Post to Webflow</button>
+        <div class="post-result" id="hrfsPostResult"></div>
+        <button id="hrfsUnpublishBtn" onclick="hrUnpublish()" style="display:none;width:100%;margin-top:10px;background:#DC2626;color:#fff;border:none;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:Inter,sans-serif">↩ Unpublish from Webflow</button>
       </div>
-    </div>
-    <div id="hrfsPostSection" style="display:none;margin-top:16px">
-      <div class="card card-pad" style="border:2px solid var(--blue);background:var(--blue-light);margin-bottom:14px">
-        <div class="card-title" style="color:var(--blue)">Post to Webflow</div>
-        <div class="publish-options">
-          <div class="publish-opt selected-draft" id="hrOptDraft" onclick="hrSelectPublish('draft')"><div class="publish-opt-title">Save as Draft</div><div class="publish-opt-sub">In Webflow CMS but not live</div></div>
-          <div class="publish-opt" id="hrOptLive" onclick="hrSelectPublish('live')"><div class="publish-opt-title">Publish Live</div><div class="publish-opt-sub">Goes live immediately</div></div>
-        </div>
-        <div style="margin-top:10px;padding:8px 12px;background:#fff;border-radius:8px;font-size:12px;font-weight:600;color:var(--blue)">Selected: <span id="hrPublishMode">Save as Draft</span></div>
-      </div>
-      <button class="webflow-btn" id="hrfsPostBtn" onclick="hrPost()" disabled>Post to Webflow</button>
-      <div class="post-result" id="hrfsPostResult"></div>
     </div>
   </div>
 </div>
 
+<!-- ═══════════════ HR EMAIL SETTINGS OVERLAY ═══════════════ -->
+<div class="fs-overlay" id="hrEmailSettingsFS">
+  <div class="fs-topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="fs-back" onclick="hrCloseEmailSettings()">Back</button>
+      <div><div style="font-size:15px;font-weight:700">HR Email Settings</div><div style="font-size:11px;color:var(--muted)">Configure email templates for job applications</div></div>
+    </div>
+    <button onclick="hrSaveEmailSettings()" class="btn btn-primary btn-sm">Save All Settings</button>
+  </div>
+  <div class="fs-body" style="max-width:860px;margin:0 auto">
+    <div class="card card-pad" style="margin-bottom:20px">
+      <div class="card-title" style="margin-bottom:4px">📬 Notification Recipients</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">HR team members who receive new application emails. Comma separated. careers@qnulabs.com will be added when ready.</div>
+      <input type="text" id="hrEsRecipients" class="field-input" placeholder="careers@qnulabs.com, hr@qnulabs.com"/>
+    </div>
+    <div class="card card-pad" style="margin-bottom:20px">
+      <div class="card-title" style="margin-bottom:4px">📧 Applicant Thank You Email</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Sent to the applicant. Variables: <code>{{job_title}}</code> <code>{{full_name}}</code> <code>{{email}}</code></div>
+      <div class="field-grid">
+        <div class="field-group full"><div class="field-label">Subject</div><input type="text" id="hrEsApplicantSubject" class="field-input"/></div>
+        <div class="field-group full"><div class="field-label">HTML Body (leave blank for default)</div><textarea id="hrEsApplicantBody" style="width:100%;min-height:140px;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:monospace;resize:vertical;box-sizing:border-box"></textarea></div>
+      </div>
+      <button onclick="hrPreviewEmailTemplate('applicant')" class="btn btn-secondary btn-sm" style="margin-top:10px">👁 Preview</button>
+    </div>
+    <div class="card card-pad">
+      <div class="card-title" style="margin-bottom:4px">📋 HR Notification Email</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Sent to HR team on each application. Variables: <code>{{job_title}}</code> <code>{{full_name}}</code> <code>{{email}}</code> <code>{{phone}}</code> <code>{{notice_period}}</code> <code>{{current_ctc}}</code> <code>{{expected_ctc}}</code></div>
+      <div class="field-grid">
+        <div class="field-group full"><div class="field-label">Subject</div><input type="text" id="hrEsNotifSubject" class="field-input"/></div>
+        <div class="field-group full"><div class="field-label">HTML Body (leave blank for default)</div><textarea id="hrEsNotifBody" style="width:100%;min-height:140px;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:monospace;resize:vertical;box-sizing:border-box"></textarea></div>
+      </div>
+      <button onclick="hrPreviewEmailTemplate('notification')" class="btn btn-secondary btn-sm" style="margin-top:10px">👁 Preview</button>
+    </div>
+  </div>
+</div>
 <!-- ═══════════════ PROJECT MODAL ═══════════════ -->
 <div class="modal-overlay" id="projectModal">
   <div class="modal modal-lg">
@@ -1083,29 +1142,6 @@
 </div>
 
 <!-- ═══════════════ HR ADD JOB MODAL ═══════════════ -->
-<div class="modal-overlay" id="addJobModal">
-  <div class="modal modal-lg">
-    <div class="modal-title">New Job Posting</div>
-    <div class="modal-sub">Create a job posting to go through HR approval then Designer to Webflow</div>
-    <div class="field-grid">
-      <div class="field-group full"><div class="field-label">Job Title <span class="req">*</span></div><input class="field-input" id="jpTitle" placeholder="e.g. Senior Marketing Manager"/></div>
-      <div class="field-group"><div class="field-label">Department</div><input class="field-input" id="jpDept" placeholder="e.g. Marketing"/></div>
-      <div class="field-group"><div class="field-label">Job Type</div>
-        <select class="field-select" id="jpJobType"><option value="full-time">Full-time</option><option value="part-time">Part-time</option><option value="contract">Contract</option><option value="internship">Internship</option></select>
-      </div>
-      <div class="field-group"><div class="field-label">Location</div><input class="field-input" id="jpLocation" placeholder="e.g. Bengaluru / Remote"/></div>
-      <div class="field-group"><div class="field-label">Salary Range</div><input class="field-input" id="jpSalary" placeholder="e.g. 8–12 LPA"/></div>
-      <div class="field-group"><div class="field-label">Submitted by</div><input class="field-input" id="jpSubmitter" placeholder="Your name" readonly/></div>
-      <div class="field-group full"><div class="field-label">Job Description <span class="req">*</span></div><textarea class="field-textarea" id="jpDesc" placeholder="Describe the role..." style="min-height:100px"></textarea></div>
-      <div class="field-group full"><div class="field-label">Requirements</div><textarea class="field-textarea" id="jpReq" placeholder="Skills, experience, qualifications..." style="min-height:80px"></textarea></div>
-      <div class="field-group full"><div class="field-label">Responsibilities</div><textarea class="field-textarea" id="jpResp" placeholder="Key responsibilities and deliverables..." style="min-height:80px"></textarea></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('addJobModal')">Cancel</button>
-      <button class="btn btn-primary" id="jpSaveBtn" onclick="saveJobPosting()">Save Job Posting</button>
-    </div>
-  </div>
-</div>
 
 <!-- ═══════════════ ADMIN MODALS ═══════════════ -->
 <div class="modal-overlay" id="admCreateModal">
