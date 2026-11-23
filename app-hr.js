@@ -219,11 +219,11 @@ function closeHRFS() {
   document.body.style.overflow='';
   hrActive=null;
   loadHR();
+  hrLoadApplications();
 }
 
 // ── Save edits ────────────────────────────────────────────────────
 async function hrSaveEdits(quiet) {
-  if (!hrActive) return true;
   const get=(id)=>$(id)?.value?.trim()||'';
   const getRich=(id)=>$(id)?.innerHTML||'';
   const title = get('hrfs_title');
@@ -253,9 +253,25 @@ async function hrSaveEdits(quiet) {
   };
 
   try {
-    await dbUpdate('hr_posts', hrActive.id, data);
-    Object.assign(hrActive, data);
-    if(!quiet) toast('Saved.');
+    if (!hrActive) {
+      // New posting — create in Supabase
+      const inserted = await dbInsert('hr_posts', {
+        ...data,
+        submitted_by: SESSION?.user_id,
+        submitted_by_name: SESSION?.full_name||SESSION?.email,
+        posted_to_webflow: false, hr_approved: false, designer_approved: false
+      });
+      await loadHR();
+      // Set hrActive to the newly created post
+      hrActive = hrPosts.find(p=>p.title===title&&!p.posted_to_webflow) || hrPosts[0];
+      logActivity('created','New job posting: '+title);
+      if(!quiet) toast('Job posting created.');
+    } else {
+      // Update existing
+      await dbUpdate('hr_posts', hrActive.id, data);
+      Object.assign(hrActive, data);
+      if(!quiet) toast('Saved.');
+    }
     return true;
   } catch(e) { toast('Save failed: '+e.message,'error'); return false; }
 }
@@ -369,72 +385,38 @@ function hrSelectPublish(mode) {
   $('hrfsPublishMode').textContent=mode==='draft'?'Save as Draft':'Publish Live';
 }
 
-// ── Create new job posting ────────────────────────────────────────
+// ── Create new job posting — opens fullscreen directly ───────────
 function openAddJobPosting() {
-  const overlay = document.createElement('div');
-  overlay.id = 'hrAddOverlay';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
-  overlay.innerHTML=`<div style="background:var(--surface);border-radius:14px;max-width:460px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,0.25)">
-    <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:15px;font-weight:700">New Job Posting</div>
-      <button onclick="document.getElementById('hrAddOverlay').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
-    </div>
-    <div style="padding:20px 24px">
-      <div class="field-group full" style="margin-bottom:12px">
-        <div class="field-label">Job Title <span class="req">*</span></div>
-        <input type="text" id="hrNewTitle" class="field-input" placeholder="e.g. Architect, Secure Communication"/>
-      </div>
-      <div class="field-group full" style="margin-bottom:12px">
-        <div class="field-label">Job ID</div>
-        <input type="text" id="hrNewJobId" class="field-input" placeholder="e.g. QNU-0001"/>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-        <div class="field-group">
-          <div class="field-label">Department</div>
-          <select id="hrNewDept" class="field-select">
-            ${HR_DEPARTMENTS.map(d=>`<option>${d}</option>`).join('')}
-          </select>
-        </div>
-        <div class="field-group">
-          <div class="field-label">Work Mode</div>
-          <select id="hrNewWorkMode" class="field-select">
-            ${HR_WORK_MODES.map(m=>`<option>${m}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
-        <button onclick="document.getElementById('hrAddOverlay').remove()" class="btn btn-secondary">Cancel</button>
-        <button onclick="hrCreateNew()" class="btn btn-primary">Create & Edit</button>
-      </div>
-    </div>
-  </div>`;
-  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
-  document.body.appendChild(overlay);
-  setTimeout(()=>$('hrNewTitle')?.focus(),100);
-}
-
-async function hrCreateNew() {
-  const title = $('hrNewTitle')?.value.trim();
-  if(!title){toast('Please enter a job title.','error');return;}
-  try {
-    await dbInsert('hr_posts',{
-      title,
-      job_id: $('hrNewJobId')?.value.trim()||'',
-      department: $('hrNewDept')?.value||'Engineering',
-      work_mode: $('hrNewWorkMode')?.value||'Onsite',
-      slug: slugify(title),
-      submitted_by: SESSION?.user_id,
-      submitted_by_name: SESSION?.full_name||SESSION?.email,
-      posted_to_webflow: false, hr_approved: false, designer_approved: false
-    });
-    toast('Job posting created.');
-    logActivity('created','New job posting: '+title);
-    document.getElementById('hrAddOverlay')?.remove();
-    await loadHR();
-    // Auto-open the new post for editing
-    const newPost = hrPosts[0];
-    if(newPost) openHRModal(newPost.id);
-  } catch(e){toast('Could not create: '+e.message,'error');}
+  // Set hrActive to null = new posting mode
+  hrActive = null;
+  // Clear all fields
+  const clear = (id,val='') => { const el=$(id); if(el) el.value=val; };
+  const clearRich = id => { const el=$(id); if(el) el.innerHTML=''; };
+  clear('hrfs_title'); clear('hrfs_job_id'); clear('hrfs_location');
+  clear('hrfs_experience'); clear('hrfs_short_desc'); clear('hrfs_reports_to');
+  clear('hrfs_team_size'); clear('hrfs_works_with'); clear('hrfs_major_req');
+  clear('hrfs_closing');
+  // Set defaults
+  clear('hrfs_department','Engineering');
+  clear('hrfs_work_mode','Onsite');
+  clear('hrfs_emp_type','Full-time');
+  // Set today's date
+  clear('hrfs_posted_date', new Date().toISOString().slice(0,10));
+  const chk = $('hrfs_new_badge'); if(chk) chk.checked = true;
+  clearRich('hrfs_about'); clearRich('hrfs_responsibilities');
+  clearRich('hrfs_qualifications'); clearRich('hrfs_benefits');
+  // Post section
+  const postBtn=$('hrfsPostBtn');
+  if(postBtn){postBtn.disabled=false;postBtn.textContent='Post to Webflow';}
+  const unpBtn=$('hrfsUnpublishBtn');
+  if(unpBtn) unpBtn.style.display='none';
+  const result=$('hrfsPostResult');
+  if(result){result.textContent='';result.style.color='';}
+  hrSelectPublish('draft');
+  // Open fullscreen
+  $('hrFS').classList.add('show');
+  document.body.style.overflow='hidden';
+  setTimeout(()=>$('hrfs_title')?.focus(),100);
 }
 
 async function hrDeletePost(id, e) {
