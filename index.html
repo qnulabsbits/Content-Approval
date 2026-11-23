@@ -229,7 +229,6 @@
       <div class="page-title">Upload Leads</div>
       <div class="page-sub">Scan business cards, upload photos, or import from Excel to add leads to Zoho CRM</div>
     </div>
-    <button onclick="bizStartScan()" class="btn btn-primary btn-sm">+ Add Cards / Import</button>
   </div>
   <div class="card card-pad">
     <div id="crmCardsPane2"></div>
@@ -238,10 +237,19 @@
 
 
 
-    <!-- ═══ ANALYTICS PAGE (placeholder) ═══ -->
+    <!-- ═══ ANALYTICS PAGE ═══ -->
     <div class="page" id="pg-analytics">
-      <div class="page-header"><div><div class="page-title">Analytics Hub</div><div class="page-sub">GA4, GSC, LinkedIn, YouTube, X analytics coming soon</div></div></div>
-      <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Analytics Integration</div><div class="empty-sub">Connect GA4, Google Search Console, LinkedIn, YouTube and X to see live analytics here.</div></div>
+      <div class="page-header">
+        <div>
+          <div class="page-title">Analytics Hub</div>
+          <div class="page-sub">Whitepaper download analytics and more</div>
+        </div>
+        <button onclick="wpExportAllExcel()" class="btn btn-secondary btn-sm">📊 Export All Excel</button>
+      </div>
+      <div class="card card-pad">
+        <div class="card-title" style="margin-bottom:16px">📥 Whitepaper Downloads</div>
+        <div id="crmAnalyticsPane"></div>
+      </div>
     </div>
 
     <!-- ═══ REPORTS PAGE (placeholder) ═══ -->
@@ -377,7 +385,7 @@
   <div class="page-header">
     <div>
       <div class="page-title">CRM Dashboard</div>
-      <div class="page-sub">Leads, Deals, Business Cards and Download Analytics from Zoho CRM</div>
+      <div class="page-sub">Leads and Deals from Zoho CRM</div>
     </div>
     <div style="display:flex;gap:8px">
       <button onclick="crmFetchLeads()" class="btn btn-secondary btn-sm">↻ Refresh</button>
@@ -385,10 +393,8 @@
   </div>
   <!-- Tabs -->
   <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);padding-bottom:0">
-    <button id="crmTab_leads"    onclick="crmSetTab('leads')"     class="ftab active"  style="border-radius:8px 8px 0 0;padding:10px 20px;font-weight:700">👤 Leads</button>
-    <button id="crmTab_deals"    onclick="crmSetTab('deals')"     class="ftab"         style="border-radius:8px 8px 0 0;padding:10px 20px;font-weight:700">💼 Deals</button>
-    <button id="crmTab_analytics" onclick="crmSetTab('analytics')" class="ftab"        style="border-radius:8px 8px 0 0;padding:10px 20px;font-weight:700">📊 WP Downloads</button>
-    <button id="crmTab_cards"    onclick="crmSetTab('cards')"     class="ftab"         style="border-radius:8px 8px 0 0;padding:10px 20px;font-weight:700">📇 Business Cards</button>
+    <button id="crmTab_leads" onclick="crmSetTab('leads')" class="ftab active" style="border-radius:8px 8px 0 0;padding:10px 20px;font-weight:700">👤 Leads</button>
+    <button id="crmTab_deals" onclick="crmSetTab('deals')" class="ftab"        style="border-radius:8px 8px 0 0;padding:10px 20px;font-weight:700">💼 Deals</button>
   </div>
   <!-- Panes -->
   <div id="crmPane_leads"     class="card card-pad"><div id="crmLeadsTable"><div class="loading-row"><span class="spinner"></span> Loading...</div></div></div>
