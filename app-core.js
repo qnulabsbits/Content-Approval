@@ -154,7 +154,19 @@ function showPage(pageId) {
   if (pg) pg.classList.add('active');
   const si = document.querySelector('.sidebar-item[data-page="'+pageId+'"]');
   if (si) si.classList.add('active');
-  const loaders = { content:loadContent, projects:loadProjects, inventory:loadInventory, hr:()=>{loadHR();hrLoadApplications();}, admin:loadAdmin, settings:()=>{loadSettings();loadEmailTemplates();}, requests:loadRequestsPage, leaves:()=>{loadLeaves();setTimeout(renderLeavesCalendar,300);}, crm:loadCRM, 'upload-leads':loadUploadLeads, analytics:loadAnalyticsPage };
+  const loaders = {
+    content:  loadContent,
+    projects: loadProjects,
+    inventory:loadInventory,
+    hr:       ()=>{ if(typeof loadHR==='function') loadHR(); if(typeof hrLoadApplications==='function') hrLoadApplications(); },
+    admin:    loadAdmin,
+    settings: ()=>{ if(typeof loadSettings==='function') loadSettings(); if(typeof loadEmailTemplates==='function') loadEmailTemplates(); },
+    requests: loadRequestsPage,
+    leaves:   ()=>{ if(typeof loadLeaves==='function'){ loadLeaves(); setTimeout(()=>{ if(typeof renderLeavesCalendar==='function') renderLeavesCalendar(); },300); } },
+    crm:      ()=>{ if(typeof loadCRM==='function') loadCRM(); },
+    'upload-leads': ()=>{ if(typeof loadUploadLeads==='function') loadUploadLeads(); },
+    analytics:()=>{ if(typeof loadAnalyticsPage==='function') loadAnalyticsPage(); }
+  };
   if (loaders[pageId]) loaders[pageId]();
 }
 
