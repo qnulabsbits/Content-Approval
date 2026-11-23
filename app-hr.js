@@ -3,7 +3,7 @@
    HR posts directly to Webflow (no designer needed)
 ═══════════════════════════════════════════════════ */
 
-const HR_WEBFLOW_COLLECTION = 'job-listings';
+const HR_WEBFLOW_COLLECTION = '6afec0ac4612e299b5a39967';
 const HR_CAREERS_URL = 'https://staging-qnu.webflow.io/job-listings/';
 
 let hrPosts = [], hrFilter = 'all', hrActive = null, hrPublishMode = 'draft';
@@ -310,7 +310,7 @@ async function hrPost() {
         'qualifications':      hrActive.qualifications||'',
         'benefits-and-culture': hrActive.benefits_and_culture||'',
         'apply-link':          applyLink,
-        'posted-date':         hrActive.posted_date||new Date().toISOString(),
+        'posted-date':         hrActive.posted_date ? new Date(hrActive.posted_date).toISOString() : new Date().toISOString(),
         'show-new-badge':      !!hrActive.show_new_badge,
         'reports-to':          hrActive.reports_to||'',
         'team-size':           hrActive.team_size||'',
