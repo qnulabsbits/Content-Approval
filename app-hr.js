@@ -403,13 +403,14 @@ async function hrUnpublish() {
 
 function hrSelectPublish(mode) {
   hrPublishMode=mode;
-  $('hrfsOptDraft').className='publish-opt'+(mode==='draft'?' selected-draft':'');
-  $('hrfsOptLive').className='publish-opt'+(mode==='live'?' selected-live':'');
-  $('hrfsPublishMode').textContent=mode==='draft'?'Save as Draft':'Publish Live';
+  const od=$('hrfsOptDraft'); if(od) od.className='publish-opt'+(mode==='draft'?' selected-draft':'');
+  const ol=$('hrfsOptLive'); if(ol) ol.className='publish-opt'+(mode==='live'?' selected-live':'');
+  const pm=$('hrfsPublishMode'); if(pm) pm.textContent=mode==='draft'?'Save as Draft':'Publish Live';
 }
 
 // ── Create new job posting — opens fullscreen directly ───────────
 function openAddJobPosting() {
+  try {
   // Set hrActive to null = new posting mode
   hrActive = null;
   // Clear all fields
@@ -443,7 +444,8 @@ function openAddJobPosting() {
   // Open fullscreen
   $('hrFS').classList.add('show');
   document.body.style.overflow='hidden';
-  setTimeout(()=>$('hrfs_title')?.focus(),100);
+  setTimeout(()=>{ $('hrfs_title')?.focus(); hrUpdateUrlPreview(); },100);
+  } catch(e) { console.error('openAddJobPosting error:', e); toast('Error opening form: '+e.message,'error'); }
 }
 
 async function hrDeletePost(id, e) {
