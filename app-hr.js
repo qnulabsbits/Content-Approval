@@ -27,6 +27,183 @@ function hrUpdateUrlPreview() {
   preview.style.color = 'var(--accent)';
 }
 
+
+// ── Excel Template Download ───────────────────────────────────────
+function hrDownloadTemplate() {
+  const headers = [
+    'Name (Job Title)*',
+    'Job ID',
+    'Department',
+    'Location',
+    'Work Mode (Onsite/Remote/Hybrid)',
+    'Employment Type (Full-time/Part-time/Contract/Internship)',
+    'Experience',
+    'Short Description',
+    'About the Role',
+    'Responsibilities',
+    'Qualifications',
+    'Benefits and Culture',
+    'Reports To',
+    'Team Size',
+    'Works With',
+    'Major Requirement',
+    'Closing Line',
+    'Show New Badge (true/false)',
+    'Posted Date (YYYY-MM-DD)'
+  ];
+  const sampleRow = [
+    'Software Engineer, Backend',
+    'QNU-0002',
+    'Engineering',
+    'Bengaluru',
+    'Onsite',
+    'Full-time',
+    '3-5 years',
+    'Build secure backend systems at QNu Labs.',
+    'QNu Labs is hiring a Backend Engineer to work on quantum-safe systems.',
+    '• Design and build REST APIs • Write clean, testable code • Collaborate with product team',
+    '• 3+ years backend experience • Python or Go • Experience with distributed systems',
+    '• Competitive salary • Work on cutting-edge quantum tech • Great team culture',
+    'VP Engineering',
+    '~10 engineers',
+    'Product, QA, Security',
+    'Hands-on experience with cryptographic protocols is a must.',
+    'We build the future of secure communications.',
+    'true',
+    new Date().toISOString().slice(0,10)
+  ];
+  const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
+  // Style header row width
+  ws['!cols'] = headers.map(() => ({ wch: 30 }));
+  const _wb = {SheetNames:['Job Postings Template'], Sheets:{}};
+  _wb.Sheets['Job Postings Template'] = ws;
+  const _o=XLSX.write(_wb,{bookType:'xlsx',type:'binary'});
+  const _b=new ArrayBuffer(_o.length), _v=new Uint8Array(_b);
+  for(let i=0;i<_o.length;i++) _v[i]=_o.charCodeAt(i)&0xFF;
+  const _a=document.createElement('a');
+  _a.href=URL.createObjectURL(new Blob([_b],{type:'application/octet-stream'}));
+  _a.download='HR_Job_Postings_Template.xlsx';
+  document.body.appendChild(_a); _a.click();
+  document.body.removeChild(_a);
+  setTimeout(()=>URL.revokeObjectURL(_a.href),1500);
+  toast('Template downloaded.');
+}
+
+// ── Bulk Upload from Excel ────────────────────────────────────────
+async function hrBulkUploadExcel(input) {
+  const file = input.files[0]; if (!file) return;
+  input.value = '';
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'binary'});
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval:''});
+      if (!rows.length) { toast('No data found in file.','error'); return; }
+      hrShowBulkPreview(rows);
+    } catch(err) { toast('Could not read file: '+err.message,'error'); }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function hrParseBulkRow(row) {
+  const get = (keys) => {
+    for (const k of keys) {
+      const v = row[k] || row[k.toLowerCase()] || row[k.replace(/[^a-zA-Z]/g,'').toLowerCase()];
+      if (v !== undefined && v !== '') return String(v).trim();
+    }
+    return '';
+  };
+  return {
+    title:              get(['Name (Job Title)*','Name','Job Title','Title','name']),
+    job_id:             get(['Job ID','job_id','JobID']),
+    department:         get(['Department','department']),
+    location:           get(['Location','location']),
+    work_mode:          get(['Work Mode (Onsite/Remote/Hybrid)','Work Mode','work_mode','WorkMode']),
+    employment_type:    get(['Employment Type (Full-time/Part-time/Contract/Internship)','Employment Type','employment_type']),
+    experience:         get(['Experience','experience']),
+    short_description:  get(['Short Description','short_description','ShortDescription']),
+    about_the_role:     get(['About the Role','about_the_role','About']),
+    responsibilities:   get(['Responsibilities','responsibilities']),
+    qualifications:     get(['Qualifications','qualifications']),
+    benefits_and_culture: get(['Benefits and Culture','benefits_and_culture','Benefits']),
+    reports_to:         get(['Reports To','reports_to']),
+    team_size:          get(['Team Size','team_size']),
+    works_with:         get(['Works With','works_with']),
+    major_requirement:  get(['Major Requirement','major_requirement']),
+    closing_line:       get(['Closing Line','closing_line']),
+    show_new_badge:     get(['Show New Badge (true/false)','Show New Badge','show_new_badge']) === 'true',
+    posted_date:        get(['Posted Date (YYYY-MM-DD)','Posted Date','posted_date']) || new Date().toISOString(),
+    slug:               slugify(get(['Name (Job Title)*','Name','Title','name'])),
+    submitted_by:       SESSION?.user_id,
+    submitted_by_name:  SESSION?.full_name||SESSION?.email,
+    posted_to_webflow:  false, hr_approved:false, designer_approved:false
+  };
+}
+
+function hrShowBulkPreview(rows) {
+  const parsed = rows.map(hrParseBulkRow).filter(r => r.title);
+  if (!parsed.length) { toast('No valid rows found. Make sure "Name (Job Title)*" column is filled.','error'); return; }
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = `<div style="background:var(--surface);border-radius:14px;max-width:900px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3)">
+    <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1">
+      <div>
+        <div style="font-size:15px;font-weight:700">Bulk Upload Preview</div>
+        <div style="font-size:12px;color:var(--muted)">${parsed.length} job posting(s) found — review before importing</div>
+      </div>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <div style="padding:16px 24px;overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Title</th><th>Job ID</th><th>Dept</th><th>Location</th>
+          <th>Work Mode</th><th>Type</th><th>Experience</th>
+        </tr></thead>
+        <tbody>${parsed.map((r,i) => `<tr>
+          <td class="td-num">${i+1}</td>
+          <td style="font-weight:700;max-width:200px">${esc(r.title)}</td>
+          <td style="font-size:12px">${esc(r.job_id||'-')}</td>
+          <td style="font-size:12px">${esc(r.department||'-')}</td>
+          <td style="font-size:12px">${esc(r.location||'-')}</td>
+          <td style="font-size:12px">${esc(r.work_mode||'-')}</td>
+          <td style="font-size:12px">${esc(r.employment_type||'-')}</td>
+          <td style="font-size:12px">${esc(r.experience||'-')}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+    <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:var(--surface)">
+      <button onclick="this.closest('[style*=fixed]').remove()" class="btn btn-secondary">Cancel</button>
+      <button onclick="hrImportBulk(this)" class="btn btn-primary">Import ${parsed.length} Job Posting(s)</button>
+    </div>
+  </div>`;
+  overlay._parsedRows = parsed;
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
+}
+
+async function hrImportBulk(btn) {
+  const overlay = btn.closest('[style*=fixed]');
+  const rows = overlay._parsedRows;
+  if (!rows?.length) return;
+  btn.disabled = true;
+  let done = 0, errors = 0;
+  btn.textContent = `Importing 0/${rows.length}...`;
+  for (const row of rows) {
+    try {
+      await dbInsert('hr_posts', row);
+      done++;
+    } catch(e) {
+      console.error('Import row failed:', e.message);
+      errors++;
+    }
+    btn.textContent = `Importing ${done+errors}/${rows.length}...`;
+  }
+  overlay.remove();
+  toast(`${done} job posting(s) imported${errors?' ('+errors+' failed)':''}.`);
+  await loadHR();
+}
+
 // ── Load ──────────────────────────────────────────────────────────
 async function loadHR() {
   const c=$('hrTable');
