@@ -813,7 +813,17 @@
         <div class="field-grid">
           <div class="field-group full"><div class="field-label">Job Title <span class="req">*</span></div><input type="text" class="field-input" id="hrfs_title"/></div>
           <div class="field-group"><div class="field-label">Job ID</div><input type="text" class="field-input" id="hrfs_job_id" placeholder="e.g. QNU-0001"/></div>
-          <div class="field-group"><div class="field-label">Department</div><select class="field-select" id="hrfs_department"><option value="">Select...</option><option>Engineering</option><option>Product</option><option>Marketing</option><option>Sales</option><option>Operations</option><option>HR</option><option>Finance</option><option>Legal</option><option>Design</option><option>Other</option></select></div>
+          <div class="field-group"><div class="field-label">Department</div>
+            <select class="field-select" id="hrfs_department" onchange="const o=document.getElementById('hrfs_dept_other_wrap');if(o)o.style.display=this.value==='Other'?'block':'none'">
+              <option value="">Select...</option>
+              <option>Engineering</option><option>Product</option><option>Marketing</option>
+              <option>Sales</option><option>Operations</option><option>HR</option>
+              <option>Finance</option><option>Legal</option><option>Design</option><option>Other</option>
+            </select>
+            <div id="hrfs_dept_other_wrap" style="display:none;margin-top:6px">
+              <input type="text" class="field-input" id="hrfs_department_other" placeholder="Enter department name"/>
+            </div>
+          </div>
           <div class="field-group"><div class="field-label">Location</div><input type="text" class="field-input" id="hrfs_location" placeholder="e.g. Bengaluru"/></div>
           <div class="field-group"><div class="field-label">Work Mode</div><select class="field-select" id="hrfs_work_mode"><option>Onsite</option><option>Remote</option><option>Hybrid</option></select></div>
           <div class="field-group"><div class="field-label">Employment Type</div><select class="field-select" id="hrfs_emp_type"><option>Full-time</option><option>Part-time</option><option>Contract</option><option>Internship</option></select></div>
