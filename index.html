@@ -796,25 +796,36 @@
 <div class="fs-overlay" id="hrFS">
   <div class="fs-topbar">
     <div style="display:flex;align-items:center;gap:12px">
-      <button class="fs-back" onclick="closeHRFS()">Back</button>
+      <button class="fs-back" onclick="closeHRFS()">← Back</button>
       <div>
         <div style="font-size:15px;font-weight:700">Job Posting</div>
-        <div style="font-size:11px;color:var(--muted)">HR Module — Post directly to Webflow</div>
+        <div style="font-size:11px;color:var(--muted)">HR Module — Post directly to Webflow careers page</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <button class="btn btn-secondary btn-sm" onclick="hrSaveEdits(false)">Save</button>
-    </div>
+    <button class="btn btn-secondary btn-sm" onclick="hrSaveEdits(false)">Save Draft</button>
   </div>
+
   <div style="display:flex;flex:1;overflow:hidden;height:calc(100% - 56px)">
-    <div class="fs-body" style="flex:1;overflow-y:auto;padding:20px">
-      <div class="card card-pad" style="margin-bottom:16px">
-        <div class="card-title" style="margin-bottom:16px">Basic Information</div>
-        <div class="field-grid">
-          <div class="field-group full"><div class="field-label">Job Title <span class="req">*</span></div><input type="text" class="field-input" id="hrfs_title"/></div>
-          <div class="field-group"><div class="field-label">Job ID</div><input type="text" class="field-input" id="hrfs_job_id" placeholder="e.g. QNU-0001"/></div>
-          <div class="field-group"><div class="field-label">Department</div>
-            <select class="field-select" id="hrfs_department" onchange="const o=document.getElementById('hrfs_dept_other_wrap');if(o)o.style.display=this.value==='Other'?'block':'none'">
+
+    <!-- ── Left: Fields (exact Webflow CMS order) ── -->
+    <div class="fs-body" style="flex:1;overflow-y:auto;padding:24px 28px">
+
+      <!-- Basic Info (matches Webflow "Basic info" section) -->
+      <div class="card card-pad" style="margin-bottom:20px">
+        <div class="card-title" style="margin-bottom:16px;font-size:16px">Basic info</div>
+        <div class="field-group full" style="margin-bottom:14px">
+          <div class="field-label">Name <span class="req">*</span></div>
+          <input type="text" class="field-input" id="hrfs_title" placeholder="e.g. Architect, Secure Communication" oninput="hrUpdateUrlPreview()"/>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="field-group">
+            <div class="field-label">Job ID</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Requisition or Greenhouse job ID, e.g. 8398613</div>
+            <textarea class="field-textarea" id="hrfs_job_id" rows="2" placeholder="e.g. QNU-0001"></textarea>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Department</div>
+            <select class="field-select" id="hrfs_department" onchange="const o=document.getElementById('hrfs_dept_other_wrap');if(o)o.style.display=this.value==='Other'?'block':'none'" style="margin-bottom:6px">
               <option value="">Select...</option>
               <option value="Engineering">Engineering</option>
               <option value="Product">Product</option>
@@ -827,80 +838,193 @@
               <option value="Design">Design</option>
               <option value="Other">Other</option>
             </select>
-            <div id="hrfs_dept_other_wrap" style="display:none;margin-top:6px">
+            <div id="hrfs_dept_other_wrap" style="display:none">
               <input type="text" class="field-input" id="hrfs_department_other" placeholder="Type department name..."/>
             </div>
           </div>
-          <div class="field-group"><div class="field-label">Location</div><input type="text" class="field-input" id="hrfs_location" placeholder="e.g. Bengaluru"/></div>
-          <div class="field-group"><div class="field-label">Work Mode</div>
+          <div class="field-group">
+            <div class="field-label">Location</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">e.g. Bengaluru, India</div>
+            <textarea class="field-textarea" id="hrfs_location" rows="2" placeholder="e.g. Bengaluru"></textarea>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Work Mode</div>
             <select class="field-select" id="hrfs_work_mode">
-              <option value="">Select...</option>
+              <option value="">Select an option...</option>
               <option value="Onsite">Onsite</option>
               <option value="Remote">Remote</option>
               <option value="Hybrid">Hybrid</option>
-            </select></div>
-          <div class="field-group"><div class="field-label">Employment Type</div>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Employment Type</div>
             <select class="field-select" id="hrfs_emp_type">
-              <option value="">Select...</option>
+              <option value="">Select an option...</option>
               <option value="Full-time">Full-time</option>
               <option value="Part-time">Part-time</option>
               <option value="Contract">Contract</option>
               <option value="Internship">Internship</option>
-            </select></div>
-          <div class="field-group"><div class="field-label">Experience</div><input type="text" class="field-input" id="hrfs_experience" placeholder="e.g. 5+ years"/></div>
-          <div class="field-group"><div class="field-label">Posted Date <span class="req">*</span></div><input type="date" class="field-date" id="hrfs_posted_date"/></div>
-          <div class="field-group full"><div class="field-label">Short Description <span style="font-size:11px;color:var(--muted)">(shown on careers list)</span></div><textarea class="field-textarea" id="hrfs_short_desc" rows="2"></textarea></div>
-          <div class="field-group" style="display:flex;align-items:center;gap:10px"><div class="field-label" style="margin:0">Show "New" Badge</div><label class="toggle"><input type="checkbox" id="hrfs_new_badge"/><span class="toggle-slider"></span></label></div>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Experience</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">e.g. 5+ years</div>
+            <textarea class="field-textarea" id="hrfs_experience" rows="2" placeholder="e.g. 12–15 years"></textarea>
+          </div>
+        </div>
+        <div class="field-group full" style="margin-top:14px">
+          <div class="field-label">Short Description</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">One or two lines shown on the careers list card</div>
+          <textarea class="field-textarea" id="hrfs_short_desc" rows="3"></textarea>
         </div>
       </div>
-      <div class="card card-pad" style="margin-bottom:16px">
-        <div class="card-title" style="margin-bottom:12px">About the Role</div>
-        <div class="richtext-wrap"><div class="richtext-toolbar"><button type="button" class="rt-btn" data-target="hrfs_about" data-cmd="bold"><b>B</b></button><button type="button" class="rt-btn" data-target="hrfs_about" data-cmd="italic"><i>I</i></button><button type="button" class="rt-btn" data-target="hrfs_about" data-cmd="insertUnorderedList">List</button><button type="button" class="rt-btn" data-target="hrfs_about" data-cmd="removeFormat">Clear</button></div><div class="richtext-editor" id="hrfs_about" contenteditable="true"></div></div>
+
+      <!-- About the Role -->
+      <div class="card card-pad" style="margin-bottom:20px">
+        <div class="card-title" style="margin-bottom:4px">About the Role</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Overview paragraph shown at the top of the job page</div>
+        <div class="richtext-wrap">
+          <div class="richtext-toolbar">
+            <button type="button" class="rt-btn" data-target="hrfs_about" data-cmd="bold"><b>B</b></button>
+            <button type="button" class="rt-btn" data-target="hrfs_about" data-cmd="italic"><i>I</i></button>
+            <button type="button" class="rt-btn" data-target="hrfs_about" data-cmd="insertUnorderedList">• List</button>
+            <button type="button" class="rt-btn" data-target="hrfs_about" data-cmd="removeFormat">Clear</button>
+          </div>
+          <div class="richtext-editor" id="hrfs_about" contenteditable="true" style="min-height:140px"></div>
+        </div>
       </div>
-      <div class="card card-pad" style="margin-bottom:16px">
-        <div class="card-title" style="margin-bottom:12px">Responsibilities</div>
-        <div class="richtext-wrap"><div class="richtext-toolbar"><button type="button" class="rt-btn" data-target="hrfs_responsibilities" data-cmd="bold"><b>B</b></button><button type="button" class="rt-btn" data-target="hrfs_responsibilities" data-cmd="italic"><i>I</i></button><button type="button" class="rt-btn" data-target="hrfs_responsibilities" data-cmd="insertUnorderedList">List</button><button type="button" class="rt-btn" data-target="hrfs_responsibilities" data-cmd="removeFormat">Clear</button></div><div class="richtext-editor" id="hrfs_responsibilities" contenteditable="true"></div></div>
+
+      <!-- Responsibilities -->
+      <div class="card card-pad" style="margin-bottom:20px">
+        <div class="card-title" style="margin-bottom:4px">Responsibilities</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">What the person will do day-to-day</div>
+        <div class="richtext-wrap">
+          <div class="richtext-toolbar">
+            <button type="button" class="rt-btn" data-target="hrfs_responsibilities" data-cmd="bold"><b>B</b></button>
+            <button type="button" class="rt-btn" data-target="hrfs_responsibilities" data-cmd="italic"><i>I</i></button>
+            <button type="button" class="rt-btn" data-target="hrfs_responsibilities" data-cmd="insertUnorderedList">• List</button>
+            <button type="button" class="rt-btn" data-target="hrfs_responsibilities" data-cmd="removeFormat">Clear</button>
+          </div>
+          <div class="richtext-editor" id="hrfs_responsibilities" contenteditable="true" style="min-height:160px"></div>
+        </div>
       </div>
-      <div class="card card-pad" style="margin-bottom:16px">
-        <div class="card-title" style="margin-bottom:12px">Qualifications</div>
-        <div class="richtext-wrap"><div class="richtext-toolbar"><button type="button" class="rt-btn" data-target="hrfs_qualifications" data-cmd="bold"><b>B</b></button><button type="button" class="rt-btn" data-target="hrfs_qualifications" data-cmd="italic"><i>I</i></button><button type="button" class="rt-btn" data-target="hrfs_qualifications" data-cmd="insertUnorderedList">List</button><button type="button" class="rt-btn" data-target="hrfs_qualifications" data-cmd="removeFormat">Clear</button></div><div class="richtext-editor" id="hrfs_qualifications" contenteditable="true"></div></div>
+
+      <!-- Qualifications -->
+      <div class="card card-pad" style="margin-bottom:20px">
+        <div class="card-title" style="margin-bottom:4px">Qualifications</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Desirable skills, knowledge and experience</div>
+        <div class="richtext-wrap">
+          <div class="richtext-toolbar">
+            <button type="button" class="rt-btn" data-target="hrfs_qualifications" data-cmd="bold"><b>B</b></button>
+            <button type="button" class="rt-btn" data-target="hrfs_qualifications" data-cmd="italic"><i>I</i></button>
+            <button type="button" class="rt-btn" data-target="hrfs_qualifications" data-cmd="insertUnorderedList">• List</button>
+            <button type="button" class="rt-btn" data-target="hrfs_qualifications" data-cmd="removeFormat">Clear</button>
+          </div>
+          <div class="richtext-editor" id="hrfs_qualifications" contenteditable="true" style="min-height:160px"></div>
+        </div>
       </div>
-      <div class="card card-pad" style="margin-bottom:16px">
-        <div class="card-title" style="margin-bottom:12px">Benefits and Culture</div>
-        <div class="richtext-wrap"><div class="richtext-toolbar"><button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="bold"><b>B</b></button><button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="italic"><i>I</i></button><button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="insertUnorderedList">List</button><button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="removeFormat">Clear</button></div><div class="richtext-editor" id="hrfs_benefits" contenteditable="true"></div></div>
+
+      <!-- Benefits and Culture -->
+      <div class="card card-pad" style="margin-bottom:20px">
+        <div class="card-title" style="margin-bottom:4px">Benefits and Culture</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Optional: why work at QNu Labs</div>
+        <div class="richtext-wrap">
+          <div class="richtext-toolbar">
+            <button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="bold"><b>B</b></button>
+            <button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="italic"><i>I</i></button>
+            <button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="insertUnorderedList">• List</button>
+            <button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="removeFormat">Clear</button>
+          </div>
+          <div class="richtext-editor" id="hrfs_benefits" contenteditable="true" style="min-height:140px"></div>
+        </div>
       </div>
-      <div class="card card-pad" style="margin-bottom:16px">
-        <div class="card-title" style="margin-bottom:4px">Major Requirement</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">The highlighted must-have requirement shown prominently on the job page</div>
-        <div class="richtext-wrap"><div class="richtext-toolbar"><button type="button" class="rt-btn" data-target="hrfs_major_req" data-cmd="bold"><b>B</b></button><button type="button" class="rt-btn" data-target="hrfs_major_req" data-cmd="italic"><i>I</i></button><button type="button" class="rt-btn" data-target="hrfs_major_req" data-cmd="insertUnorderedList">List</button><button type="button" class="rt-btn" data-target="hrfs_major_req" data-cmd="removeFormat">Clear</button></div><div class="richtext-editor" id="hrfs_major_req" contenteditable="true"></div></div>
-      </div>
-      <!-- Extra fields: reports-to, team-size, works-with, closing-line -->
-      <div class="card card-pad" style="margin-bottom:16px">
+
+      <!-- Apply Link + Posted Date + Show New Badge + Reports To + Team Size + Works With -->
+      <div class="card card-pad" style="margin-bottom:20px">
         <div class="card-title" style="margin-bottom:16px">Additional Details</div>
-        <div class="field-grid">
-          <div class="field-group"><div class="field-label">Reports To</div><textarea class="field-textarea" id="hrfs_reports_to" rows="2" placeholder="e.g. VP Engineering"></textarea></div>
-          <div class="field-group"><div class="field-label">Team Size</div><textarea class="field-textarea" id="hrfs_team_size" rows="2" placeholder="e.g. ~15-20 engineers"></textarea></div>
-          <div class="field-group full"><div class="field-label">Works With</div><textarea class="field-textarea" id="hrfs_works_with" rows="2"></textarea></div>
-          <div class="field-group full"><div class="field-label">Closing Line</div><input type="text" class="field-input" id="hrfs_closing" placeholder="e.g. We need someone who has built the boxes."/></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="field-group">
+            <div class="field-label">Posted Date</div>
+            <input type="date" class="field-date" id="hrfs_posted_date"/>
+          </div>
+          <div class="field-group" style="display:flex;align-items:center;gap:10px;padding-top:20px">
+            <label class="toggle"><input type="checkbox" id="hrfs_new_badge"/><span class="toggle-slider"></span></label>
+            <div>
+              <div class="field-label" style="margin:0">Show New Badge</div>
+              <div style="font-size:11px;color:var(--muted)">Shows the 'New' tag next to the title</div>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Reports To</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">e.g. VP Engineering</div>
+            <textarea class="field-textarea" id="hrfs_reports_to" rows="2"></textarea>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Team Size</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">The 'You Guide' line, e.g. ~15-20 engineers</div>
+            <textarea class="field-textarea" id="hrfs_team_size" rows="2"></textarea>
+          </div>
+          <div class="field-group full">
+            <div class="field-label">Works With</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Teams this role works with</div>
+            <textarea class="field-textarea" id="hrfs_works_with" rows="2"></textarea>
+          </div>
         </div>
       </div>
+
+      <!-- Major Requirement -->
+      <div class="card card-pad" style="margin-bottom:20px">
+        <div class="card-title" style="margin-bottom:4px">Major Requirement</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">The highlighted must-have requirement shown prominently on the job page</div>
+        <div class="richtext-wrap">
+          <div class="richtext-toolbar">
+            <button type="button" class="rt-btn" data-target="hrfs_major_req" data-cmd="bold"><b>B</b></button>
+            <button type="button" class="rt-btn" data-target="hrfs_major_req" data-cmd="italic"><i>I</i></button>
+            <button type="button" class="rt-btn" data-target="hrfs_major_req" data-cmd="insertUnorderedList">• List</button>
+            <button type="button" class="rt-btn" data-target="hrfs_major_req" data-cmd="removeFormat">Clear</button>
+          </div>
+          <div class="richtext-editor" id="hrfs_major_req" contenteditable="true" style="min-height:100px"></div>
+        </div>
+      </div>
+
+      <!-- Closing Line -->
+      <div class="card card-pad" style="margin-bottom:20px">
+        <div class="card-title" style="margin-bottom:4px">Closing Line</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Short punchline shown at the end of the requirements</div>
+        <input type="text" class="field-input" id="hrfs_closing" placeholder="e.g. We need someone who has built the boxes."/>
+      </div>
+
     </div>
-    <div style="width:300px;min-width:260px;border-left:2px solid var(--border);overflow-y:auto;padding:20px;background:var(--surface2)">
-      <div class="card card-pad">
+
+    <!-- ── Right: Publish Panel ── -->
+    <div style="width:290px;min-width:260px;border-left:2px solid var(--border);overflow-y:auto;padding:20px;background:var(--surface2)">
+      <div class="card card-pad" style="margin-bottom:16px">
         <div class="card-title" style="margin-bottom:12px">Publish to Webflow</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Posts to staging-qnu.webflow.io/job-listings/</div>
         <div class="publish-options" style="margin-bottom:12px">
-          <div class="publish-opt selected-draft" id="hrfsOptDraft" onclick="hrSelectPublish('draft')"><div class="publish-opt-title">Save as Draft</div><div class="publish-opt-sub">Not live yet</div></div>
-          <div class="publish-opt" id="hrfsOptLive" onclick="hrSelectPublish('live')"><div class="publish-opt-title">Publish Live</div><div class="publish-opt-sub">Goes live immediately</div></div>
+          <div class="publish-opt selected-draft" id="hrfsOptDraft" onclick="hrSelectPublish('draft')">
+            <div class="publish-opt-title">Save as Draft</div>
+            <div class="publish-opt-sub">Not visible on site yet</div>
+          </div>
+          <div class="publish-opt" id="hrfsOptLive" onclick="hrSelectPublish('live')">
+            <div class="publish-opt-title">Publish Live</div>
+            <div class="publish-opt-sub">Goes live immediately</div>
+          </div>
         </div>
-        <div style="margin-bottom:12px;padding:8px 10px;background:#fff;border-radius:7px;font-size:12px;font-weight:600;color:var(--blue)">Mode: <span id="hrfsPublishMode">Save as Draft</span></div>
         <button class="webflow-btn" id="hrfsPostBtn" onclick="hrPost()" style="width:100%;margin-bottom:8px">Post to Webflow</button>
-        <div class="post-result" id="hrfsPostResult"></div>
-        <button id="hrfsUnpublishBtn" onclick="hrUnpublish()" style="display:none;width:100%;margin-top:10px;background:#DC2626;color:#fff;border:none;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:Inter,sans-serif">↩ Unpublish from Webflow</button>
+        <div class="post-result" id="hrfsPostResult" style="font-size:12px;margin-bottom:8px"></div>
+        <button id="hrfsUnpublishBtn" onclick="hrUnpublish()" style="display:none;width:100%;background:#DC2626;color:#fff;border:none;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:Inter,sans-serif;margin-top:4px">↩ Unpublish from Webflow</button>
+      </div>
+
+      <!-- Job URL preview -->
+      <div class="card card-pad" style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">JOB URL</div>
+        <div id="hrfsUrlPreview" style="font-size:11px;color:var(--accent);word-break:break-all;line-height:1.5">Fill in job title to preview URL</div>
       </div>
     </div>
+
   </div>
 </div>
-
 <!-- ═══════════════ HR EMAIL SETTINGS OVERLAY ═══════════════ -->
 <div class="fs-overlay" id="hrEmailSettingsFS">
   <div class="fs-topbar">
