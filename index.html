@@ -816,25 +816,40 @@
           <div class="field-group"><div class="field-label">Department</div>
             <select class="field-select" id="hrfs_department" onchange="const o=document.getElementById('hrfs_dept_other_wrap');if(o)o.style.display=this.value==='Other'?'block':'none'">
               <option value="">Select...</option>
-              <option>Engineering</option><option>Product</option><option>Marketing</option>
-              <option>Sales</option><option>Operations</option><option>HR</option>
-              <option>Finance</option><option>Legal</option><option>Design</option><option>Other</option>
+              <option value="Engineering">Engineering</option>
+              <option value="Product">Product</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Sales">Sales</option>
+              <option value="Operations">Operations</option>
+              <option value="HR">HR</option>
+              <option value="Finance">Finance</option>
+              <option value="Legal">Legal</option>
+              <option value="Design">Design</option>
+              <option value="Other">Other</option>
             </select>
             <div id="hrfs_dept_other_wrap" style="display:none;margin-top:6px">
-              <input type="text" class="field-input" id="hrfs_department_other" placeholder="Enter department name"/>
+              <input type="text" class="field-input" id="hrfs_department_other" placeholder="Type department name..."/>
             </div>
           </div>
           <div class="field-group"><div class="field-label">Location</div><input type="text" class="field-input" id="hrfs_location" placeholder="e.g. Bengaluru"/></div>
-          <div class="field-group"><div class="field-label">Work Mode</div><select class="field-select" id="hrfs_work_mode"><option>Onsite</option><option>Remote</option><option>Hybrid</option></select></div>
-          <div class="field-group"><div class="field-label">Employment Type</div><select class="field-select" id="hrfs_emp_type"><option>Full-time</option><option>Part-time</option><option>Contract</option><option>Internship</option></select></div>
+          <div class="field-group"><div class="field-label">Work Mode</div>
+            <select class="field-select" id="hrfs_work_mode">
+              <option value="">Select...</option>
+              <option value="Onsite">Onsite</option>
+              <option value="Remote">Remote</option>
+              <option value="Hybrid">Hybrid</option>
+            </select></div>
+          <div class="field-group"><div class="field-label">Employment Type</div>
+            <select class="field-select" id="hrfs_emp_type">
+              <option value="">Select...</option>
+              <option value="Full-time">Full-time</option>
+              <option value="Part-time">Part-time</option>
+              <option value="Contract">Contract</option>
+              <option value="Internship">Internship</option>
+            </select></div>
           <div class="field-group"><div class="field-label">Experience</div><input type="text" class="field-input" id="hrfs_experience" placeholder="e.g. 5+ years"/></div>
           <div class="field-group"><div class="field-label">Posted Date <span class="req">*</span></div><input type="date" class="field-date" id="hrfs_posted_date"/></div>
-          <div class="field-group"><div class="field-label">Reports To</div><input type="text" class="field-input" id="hrfs_reports_to"/></div>
-          <div class="field-group"><div class="field-label">Team Size</div><input type="text" class="field-input" id="hrfs_team_size" placeholder="e.g. ~15-20 engineers"/></div>
-          <div class="field-group full"><div class="field-label">Works With</div><input type="text" class="field-input" id="hrfs_works_with"/></div>
-          <div class="field-group full"><div class="field-label">Short Description</div><textarea class="field-textarea" id="hrfs_short_desc" rows="2"></textarea></div>
-          <div class="field-group"><div class="field-label">Major Requirement</div><textarea class="field-textarea" id="hrfs_major_req" rows="3"></textarea></div>
-          <div class="field-group"><div class="field-label">Closing Line</div><input type="text" class="field-input" id="hrfs_closing"/></div>
+          <div class="field-group full"><div class="field-label">Short Description <span style="font-size:11px;color:var(--muted)">(shown on careers list)</span></div><textarea class="field-textarea" id="hrfs_short_desc" rows="2"></textarea></div>
           <div class="field-group" style="display:flex;align-items:center;gap:10px"><div class="field-label" style="margin:0">Show "New" Badge</div><label class="toggle"><input type="checkbox" id="hrfs_new_badge"/><span class="toggle-slider"></span></label></div>
         </div>
       </div>
@@ -853,6 +868,21 @@
       <div class="card card-pad" style="margin-bottom:16px">
         <div class="card-title" style="margin-bottom:12px">Benefits and Culture</div>
         <div class="richtext-wrap"><div class="richtext-toolbar"><button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="bold"><b>B</b></button><button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="italic"><i>I</i></button><button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="insertUnorderedList">List</button><button type="button" class="rt-btn" data-target="hrfs_benefits" data-cmd="removeFormat">Clear</button></div><div class="richtext-editor" id="hrfs_benefits" contenteditable="true"></div></div>
+      </div>
+      <div class="card card-pad" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:4px">Major Requirement</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">The highlighted must-have requirement shown prominently on the job page</div>
+        <div class="richtext-wrap"><div class="richtext-toolbar"><button type="button" class="rt-btn" data-target="hrfs_major_req" data-cmd="bold"><b>B</b></button><button type="button" class="rt-btn" data-target="hrfs_major_req" data-cmd="italic"><i>I</i></button><button type="button" class="rt-btn" data-target="hrfs_major_req" data-cmd="insertUnorderedList">List</button><button type="button" class="rt-btn" data-target="hrfs_major_req" data-cmd="removeFormat">Clear</button></div><div class="richtext-editor" id="hrfs_major_req" contenteditable="true"></div></div>
+      </div>
+      <!-- Extra fields: reports-to, team-size, works-with, closing-line -->
+      <div class="card card-pad" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:16px">Additional Details</div>
+        <div class="field-grid">
+          <div class="field-group"><div class="field-label">Reports To</div><textarea class="field-textarea" id="hrfs_reports_to" rows="2" placeholder="e.g. VP Engineering"></textarea></div>
+          <div class="field-group"><div class="field-label">Team Size</div><textarea class="field-textarea" id="hrfs_team_size" rows="2" placeholder="e.g. ~15-20 engineers"></textarea></div>
+          <div class="field-group full"><div class="field-label">Works With</div><textarea class="field-textarea" id="hrfs_works_with" rows="2"></textarea></div>
+          <div class="field-group full"><div class="field-label">Closing Line</div><input type="text" class="field-input" id="hrfs_closing" placeholder="e.g. We need someone who has built the boxes."/></div>
+        </div>
       </div>
     </div>
     <div style="width:300px;min-width:260px;border-left:2px solid var(--border);overflow-y:auto;padding:20px;background:var(--surface2)">
