@@ -300,7 +300,12 @@
           <div class="page-title">HR Module</div>
           <div class="page-sub">Create and publish job postings directly to Webflow</div>
         </div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="hrDownloadTemplate()">⬇ Excel Template</button>
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0">
+            📥 Bulk Upload
+            <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="hrBulkUploadExcel(this)"/>
+          </label>
           <button class="btn btn-secondary btn-sm" onclick="hrOpenEmailSettings()">📧 Email Settings</button>
           <button class="btn btn-primary btn-sm" onclick="openAddJobPosting()">+ New Job Posting</button>
         </div>
