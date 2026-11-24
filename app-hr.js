@@ -146,21 +146,30 @@ function hrShowBulkPreview(rows) {
 
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
-  overlay.innerHTML = `<div style="background:var(--surface);border-radius:14px;max-width:900px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3)">
-    <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1">
+  overlay.innerHTML = `<div style="background:var(--surface);border-radius:14px;max-width:960px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.3)">
+    <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
       <div>
         <div style="font-size:15px;font-weight:700">Bulk Upload Preview</div>
-        <div style="font-size:12px;color:var(--muted)">${parsed.length} job posting(s) found — review before importing</div>
+        <div style="font-size:12px;color:var(--muted)">${parsed.length} job posting(s) found — select which to import</div>
       </div>
       <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
     </div>
-    <div style="padding:16px 24px;overflow-x:auto">
-      <table>
+    <div style="padding:12px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;font-weight:600">
+        <input type="checkbox" id="hrBulkSelectAll" onchange="document.querySelectorAll('.hr-bulk-chk').forEach(c=>c.checked=this.checked);hrBulkUpdateCount()" checked/>
+        Select All
+      </label>
+      <span style="font-size:12px;color:var(--muted)" id="hrBulkSelectedCount">${parsed.length} of ${parsed.length} selected</span>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:0 24px 8px">
+      <table style="margin-top:8px">
         <thead><tr>
+          <th style="width:36px"><input type="checkbox" checked disabled style="opacity:0.3"/></th>
           <th>#</th><th>Title</th><th>Job ID</th><th>Dept</th><th>Location</th>
-          <th>Work Mode</th><th>Type</th><th>Experience</th>
+          <th>Work Mode</th><th>Type</th>
         </tr></thead>
         <tbody>${parsed.map((r,i) => `<tr>
+          <td><input type="checkbox" class="hr-bulk-chk" data-idx="${i}" checked onchange="hrBulkUpdateCount()"/></td>
           <td class="td-num">${i+1}</td>
           <td style="font-weight:700;max-width:200px">${esc(r.title)}</td>
           <td style="font-size:12px">${esc(r.job_id||'-')}</td>
@@ -168,13 +177,12 @@ function hrShowBulkPreview(rows) {
           <td style="font-size:12px">${esc(r.location||'-')}</td>
           <td style="font-size:12px">${esc(r.work_mode||'-')}</td>
           <td style="font-size:12px">${esc(r.employment_type||'-')}</td>
-          <td style="font-size:12px">${esc(r.experience||'-')}</td>
         </tr>`).join('')}</tbody>
       </table>
     </div>
-    <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:var(--surface)">
+    <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0">
       <button onclick="this.closest('[style*=fixed]').remove()" class="btn btn-secondary">Cancel</button>
-      <button onclick="hrImportBulk(this)" class="btn btn-primary">Import ${parsed.length} Job Posting(s)</button>
+      <button onclick="hrImportBulk(this)" class="btn btn-primary">Import Selected</button>
     </div>
   </div>`;
   overlay._parsedRows = parsed;
@@ -182,10 +190,23 @@ function hrShowBulkPreview(rows) {
   document.body.appendChild(overlay);
 }
 
+function hrBulkUpdateCount() {
+  const all = document.querySelectorAll('.hr-bulk-chk');
+  const checked = document.querySelectorAll('.hr-bulk-chk:checked');
+  const countEl = document.getElementById('hrBulkSelectedCount');
+  if (countEl) countEl.textContent = checked.length + ' of ' + all.length + ' selected';
+  const selectAll = document.getElementById('hrBulkSelectAll');
+  if (selectAll) selectAll.checked = checked.length === all.length;
+}
+
 async function hrImportBulk(btn) {
   const overlay = btn.closest('[style*=fixed]');
-  const rows = overlay._parsedRows;
-  if (!rows?.length) return;
+  const allRows = overlay._parsedRows;
+  if (!allRows?.length) return;
+  // Only import checked rows
+  const checked = Array.from(overlay.querySelectorAll('.hr-bulk-chk:checked')).map(c=>parseInt(c.dataset.idx));
+  const rows = allRows.filter((_,i)=>checked.includes(i));
+  if (!rows.length) { toast('Please select at least one row to import.','error'); return; }
   btn.disabled = true;
   let done = 0, errors = 0;
   btn.textContent = `Importing 0/${rows.length}...`;
@@ -201,6 +222,64 @@ async function hrImportBulk(btn) {
   }
   overlay.remove();
   toast(`${done} job posting(s) imported${errors?' ('+errors+' failed)':''}.`);
+  await loadHR();
+}
+
+
+// ── Table bulk action helpers ─────────────────────────────────────
+function hrUpdateBulkBar() {
+  const checked = document.querySelectorAll('.hr-row-chk:checked');
+  const all = document.querySelectorAll('.hr-row-chk');
+  const bar = document.getElementById('hrBulkBar');
+  const count = document.getElementById('hrBulkCount');
+  const selectAll = document.getElementById('hrSelectAll');
+  if (bar) bar.style.display = checked.length ? 'flex' : 'none';
+  if (count) count.textContent = checked.length + ' selected';
+  if (selectAll) selectAll.checked = checked.length === all.length && all.length > 0;
+}
+
+async function hrBulkPublish(mode) {
+  const checked = Array.from(document.querySelectorAll('.hr-row-chk:checked'));
+  if (!checked.length) return;
+  const ids = checked.map(c => c.dataset.id);
+  const posts = hrPosts.filter(p => ids.includes(String(p.id)));
+  if (!(await cConfirm(`Post <strong>${posts.length}</strong> job posting(s) as <strong>${mode==='live'?'Live':'Draft'}</strong> to Webflow?`, 'Post', '#3B82F6'))) return;
+  let done=0, errors=0;
+  toast(`Posting ${posts.length} job(s)...`);
+  for (const post of posts) {
+    try {
+      hrActive = post;
+      hrPublishMode = mode;
+      await hrPost();
+      done++;
+    } catch(e) {
+      errors++;
+      console.error('Bulk post failed:', post.title, e.message);
+    }
+  }
+  hrActive = null;
+  toast(`${done} posted${errors?' ('+errors+' failed)':''}.`);
+  await loadHR();
+}
+
+async function hrBulkDelete() {
+  const checked = Array.from(document.querySelectorAll('.hr-row-chk:checked'));
+  if (!checked.length) return;
+  const ids = checked.map(c => c.dataset.id);
+  const posts = hrPosts.filter(p => ids.includes(String(p.id)));
+  if (!(await cConfirm(`Delete <strong>${posts.length}</strong> job posting(s)?<br><span style="font-size:12px;color:var(--muted)">This cannot be undone.</span>`, 'Delete', '#DC2626'))) return;
+  let done=0;
+  for (const post of posts) {
+    try {
+      if (post.webflow_item_id) {
+        await fetch(WEBFLOW_EDGE,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+SUPA_KEY,apikey:SUPA_KEY},
+          body:JSON.stringify({action:'delete',item_id:post.webflow_item_id,collection:HR_WEBFLOW_COLLECTION,row:post})}).catch(()=>{});
+      }
+      await sbFetch('hr_posts?id=eq.'+post.id,{method:'DELETE'});
+      done++;
+    } catch(e) { console.error('Bulk delete failed:', e.message); }
+  }
+  toast(done+' job posting(s) deleted.');
   await loadHR();
 }
 
@@ -260,11 +339,24 @@ function renderHRTable() {
     return;
   }
 
-  let h='<table><thead><tr><th>#</th><th>Job Title</th><th>Dept</th><th>Location</th><th>Work Mode</th><th>Type</th><th>Posted</th><th>Status</th><th>Applications</th><th>Actions</th></tr></thead><tbody>';
+  let h=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;font-weight:600">
+      <input type="checkbox" id="hrSelectAll" onchange="document.querySelectorAll('.hr-row-chk').forEach(c=>c.checked=this.checked);hrUpdateBulkBar()"/>
+      Select All
+    </label>
+    <div id="hrBulkBar" style="display:none;align-items:center;gap:8px">
+      <span id="hrBulkCount" style="font-size:12px;color:var(--muted)"></span>
+      <button onclick="hrBulkPublish('draft')" class="btn btn-secondary btn-sm">Post as Draft</button>
+      <button onclick="hrBulkPublish('live')" class="btn btn-primary btn-sm">Publish Live</button>
+      <button onclick="hrBulkDelete()" class="btn btn-sm" style="background:#DC2626;color:#fff">Delete</button>
+    </div>
+  </div>`;
+  h+='<table><thead><tr><th style="width:36px"></th><th>#</th><th>Job Title</th><th>Dept</th><th>Location</th><th>Work Mode</th><th>Type</th><th>Posted</th><th>Status</th><th>Applications</th><th>Actions</th></tr></thead><tbody>';
   rows.forEach((p,i)=>{
     const st=hrGetStatus(p);
     const appCount = hrApplications.filter(a=>a.webflow_item_id===p.webflow_item_id||a.job_title===p.title).length;
     h+=`<tr data-hrid="${p.id}" style="cursor:pointer">
+      <td><input type="checkbox" class="hr-row-chk" data-id="${p.id}" onchange="hrUpdateBulkBar()" onclick="event.stopPropagation()"/></td>
       <td class="td-num">${i+1}</td>
       <td style="font-weight:700">${esc(p.title||'-')}</td>
       <td style="font-size:12px">${esc(p.department||'-')}</td>
@@ -274,7 +366,7 @@ function renderHRTable() {
       <td style="font-size:12px;color:var(--muted)">${formatDate(p.posted_date||p.created_at)}</td>
       <td>${hrStatusBadge(st)}</td>
       <td><button onclick="hrViewApplications('${p.id}',event)" class="btn btn-secondary btn-xs"${appCount?'':' style="color:var(--muted)"'}>
-        ${appCount?`📋 ${appCount} application${appCount!==1?'s':''}` : '0 applications'}
+        ${appCount?'📋 '+appCount+' application'+(appCount!==1?'s':'') : '0 applications'}
       </button></td>
       <td><div style="display:flex;gap:6px">
         <button onclick="openHRModal('${p.id}',event)" class="btn btn-primary btn-xs">Edit & Post</button>
@@ -302,38 +394,39 @@ async function hrViewApplications(jobId, e) {
   const apps = hrApplications.filter(a=>a.job_title===post.title||a.webflow_item_id===post.webflow_item_id);
 
   const overlay = document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
-  overlay.innerHTML=`<div style="background:var(--surface);border-radius:14px;max-width:900px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.25)">
-    <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1">
-      <div>
-        <div style="font-size:15px;font-weight:700">Applications — ${esc(post.title)}</div>
-        <div style="font-size:12px;color:var(--muted)">${apps.length} application(s) received</div>
+  overlay.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:99999;display:flex;flex-direction:column;overflow:hidden';
+  overlay.innerHTML=`<div style="display:flex;flex-direction:column;height:100%">
+    <div style="padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button onclick="this.closest('[style*=fixed]').remove()" class="fs-back">← Back</button>
+        <div>
+          <div style="font-size:15px;font-weight:700">Applications — ${esc(post.title)}</div>
+          <div style="font-size:12px;color:var(--muted)">${apps.length} application(s) received</div>
+        </div>
       </div>
-      <div style="display:flex;gap:8px">
-        <button onclick="hrExportApplications('${esc(post.title)}')" class="btn btn-secondary btn-sm">📊 Export Excel</button>
-        <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
-      </div>
+      <button onclick="hrExportApplications('${esc(post.title)}')" class="btn btn-secondary btn-sm">📊 Export Excel</button>
     </div>
-    <div style="padding:16px 24px">
-    ${!apps.length?'<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No applications yet</div></div>':`
-      <table>
-        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Location</th><th>Notice</th><th>Current CTC</th><th>Expected CTC</th><th>Applied</th><th>Resume</th></tr></thead>
-        <tbody>${apps.map((a,i)=>`<tr>
-          <td class="td-num">${i+1}</td>
-          <td style="font-weight:600">${esc(a.full_name||'-')}</td>
-          <td><a href="mailto:${esc(a.email||'')}" style="color:var(--accent)">${esc(a.email||'-')}</a></td>
-          <td>${esc(a.phone||'-')}</td>
-          <td>${esc(a.location||'-')}</td>
-          <td>${esc(a.notice_period||'-')}</td>
-          <td>${esc(a.current_ctc||'-')}</td>
-          <td>${esc(a.expected_ctc||'-')}</td>
-          <td style="font-size:11px;color:var(--muted)">${formatDate(a.applied_at)}</td>
-          <td>${a.resume_url?`<a href="${esc(a.resume_url)}" target="_blank" class="btn btn-secondary btn-xs">View CV</a>`:'—'}</td>
-        </tr>`).join('')}</tbody>
-      </table>`}
+    <div style="flex:1;overflow-y:auto;padding:20px 24px">
+      ${ (function(){
+        if(!apps.length) return '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No applications yet</div><div class="empty-sub">Applications submitted via the careers page will appear here.</div></div>';
+        return '<table><thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Location</th><th>Notice</th><th>Current CTC</th><th>Expected CTC</th><th>LinkedIn</th><th>Applied</th><th>Resume</th></tr></thead><tbody>'
+          + apps.map((a,i)=>'<tr>'
+            +'<td class="td-num">'+(i+1)+'</td>'
+            +'<td style="font-weight:600">'+esc(a.full_name||'-')+'</td>'
+            +'<td><a href="mailto:'+esc(a.email||'')+'" style="color:var(--accent)">'+esc(a.email||'-')+'</a></td>'
+            +'<td>'+esc(a.phone||'-')+'</td>'
+            +'<td>'+esc(a.location||'-')+'</td>'
+            +'<td>'+esc(a.notice_period||'-')+'</td>'
+            +'<td>'+esc(a.current_ctc||'-')+'</td>'
+            +'<td>'+esc(a.expected_ctc||'-')+'</td>'
+            +'<td>'+(a.linkedin?'<a href="'+esc(a.linkedin)+'" target="_blank" style="color:var(--accent);font-size:12px">LinkedIn</a>':'—')+'</td>'
+            +'<td style="font-size:11px;color:var(--muted)">'+formatDate(a.applied_at)+'</td>'
+            +'<td>'+(a.resume_url?'<a href="'+esc(a.resume_url)+'" target="_blank" class="btn btn-secondary btn-xs">View CV</a>':'—')+'</td>'
+          +'</tr>').join('')
+          +'</tbody></table>';
+      })() }
     </div>
   </div>`;
-  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
   document.body.appendChild(overlay);
 }
 
