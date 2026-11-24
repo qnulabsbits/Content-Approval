@@ -309,7 +309,7 @@ async function hrPost() {
       fields: {
         'name':                hrActive.title,
         'job-id':              hrActive.job_id||'',
-        'department':          hrActive.department||'',
+        // 'department' skipped — Webflow field type must be changed from Reference to Plain Text first
         'location':            hrActive.location||'',
         'work-mode':           hrActive.work_mode||'',
         'employment-type':     hrActive.employment_type||'',
