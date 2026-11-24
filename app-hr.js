@@ -15,6 +15,18 @@ const HR_DEPARTMENTS = ['Engineering','Product','Marketing','Sales','Operations'
 const HR_WORK_MODES  = ['Onsite','Remote','Hybrid'];
 const HR_EMP_TYPES   = ['Full-time','Part-time','Contract','Internship'];
 
+
+// ── Live URL preview ──────────────────────────────────────────────
+function hrUpdateUrlPreview() {
+  const title = $('hrfs_title')?.value || '';
+  const preview = $('hrfsUrlPreview');
+  if (!preview) return;
+  if (!title.trim()) { preview.textContent = 'Fill in job title to preview URL'; return; }
+  const slug = title.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  preview.textContent = HR_CAREERS_URL + slug;
+  preview.style.color = 'var(--accent)';
+}
+
 // ── Load ──────────────────────────────────────────────────────────
 async function loadHR() {
   const c=$('hrTable');
@@ -375,7 +387,7 @@ async function hrUnpublish() {
   try {
     if(hrActive.webflow_item_id) {
       await fetch(WEBFLOW_EDGE,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+SUPA_KEY,apikey:SUPA_KEY},
-        body:JSON.stringify({action:'unpublish',item_id:hrActive.webflow_item_id,row:hrActive})}).catch(()=>{});
+        body:JSON.stringify({action:'unpublish',item_id:hrActive.webflow_item_id,collection:HR_WEBFLOW_COLLECTION,row:hrActive})}).catch(()=>{});
     }
     await dbUpdate('hr_posts',hrActive.id,{posted_to_webflow:false,webflow_status:null});
     hrActive.posted_to_webflow=false; hrActive.webflow_status=null;
