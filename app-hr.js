@@ -175,7 +175,17 @@ async function openHRModal(id, e) {
 
   set('hrfs_title',       post.title);
   set('hrfs_job_id',      post.job_id);
-  set('hrfs_department',  post.department);
+  const stdDepts = ['Engineering','Product','Marketing','Sales','Operations','HR','Finance','Legal','Design','Other',''];
+  if (post.department && !stdDepts.includes(post.department)) {
+    set('hrfs_department', 'Other');
+    set('hrfs_department_other', post.department);
+    const wrap = document.getElementById('hrfs_dept_other_wrap');
+    if (wrap) wrap.style.display = 'block';
+  } else {
+    set('hrfs_department', post.department||'');
+    const wrap = document.getElementById('hrfs_dept_other_wrap');
+    if (wrap) wrap.style.display = 'none';
+  }
   set('hrfs_location',    post.location);
   set('hrfs_work_mode',   post.work_mode);
   set('hrfs_emp_type',    post.employment_type);
@@ -232,7 +242,7 @@ async function hrSaveEdits(quiet) {
   const data = {
     title,
     job_id:          get('hrfs_job_id'),
-    department:      get('hrfs_department'),
+    department:      get('hrfs_department')==='Other' ? get('hrfs_department_other') : get('hrfs_department'),
     location:        get('hrfs_location'),
     work_mode:       get('hrfs_work_mode'),
     employment_type: get('hrfs_emp_type'),
