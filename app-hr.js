@@ -227,6 +227,12 @@ async function hrImportBulk(btn) {
 
 
 // ── Table bulk action helpers ─────────────────────────────────────
+
+function hrToggleMultiSelect() {
+  window._hrMultiSelect = !window._hrMultiSelect;
+  renderHRTable();
+}
+
 function hrUpdateBulkBar() {
   const checked = document.querySelectorAll('.hr-row-chk:checked');
   const all = document.querySelectorAll('.hr-row-chk');
@@ -339,24 +345,29 @@ function renderHRTable() {
     return;
   }
 
+  const multiOn = window._hrMultiSelect === true;
   let h=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+    <button onclick="hrToggleMultiSelect()" class="btn btn-secondary btn-sm" id="hrMultiSelectBtn">
+      ${multiOn ? '✕ Exit Multi-Select' : '☑ Multi Select'}
+    </button>
+    ${multiOn ? `
     <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;font-weight:600">
       <input type="checkbox" id="hrSelectAll" onchange="document.querySelectorAll('.hr-row-chk').forEach(c=>c.checked=this.checked);hrUpdateBulkBar()"/>
       Select All
     </label>
     <div id="hrBulkBar" style="display:none;align-items:center;gap:8px">
       <span id="hrBulkCount" style="font-size:12px;color:var(--muted)"></span>
-      <button onclick="hrBulkPublish('draft')" class="btn btn-secondary btn-sm">Post as Draft</button>
+      <button onclick="hrBulkPublish('draft')" class="btn btn-secondary btn-sm">Save as Draft</button>
       <button onclick="hrBulkPublish('live')" class="btn btn-primary btn-sm">Publish Live</button>
       <button onclick="hrBulkDelete()" class="btn btn-sm" style="background:#DC2626;color:#fff">Delete</button>
-    </div>
+    </div>` : ''}
   </div>`;
-  h+='<table><thead><tr><th style="width:36px"></th><th>#</th><th>Job Title</th><th>Dept</th><th>Location</th><th>Work Mode</th><th>Type</th><th>Posted</th><th>Status</th><th>Applications</th><th>Actions</th></tr></thead><tbody>';
+  h+=`<table><thead><tr>${multiOn?'<th style="width:36px"></th>':''}<th>#</th><th>Job Title</th><th>Dept</th><th>Location</th><th>Work Mode</th><th>Type</th><th>Posted</th><th>Status</th><th>Applications</th><th>Actions</th></tr></thead><tbody>`;
   rows.forEach((p,i)=>{
     const st=hrGetStatus(p);
     const appCount = hrApplications.filter(a=>a.webflow_item_id===p.webflow_item_id||a.job_title===p.title).length;
     h+=`<tr data-hrid="${p.id}" style="cursor:pointer">
-      <td><input type="checkbox" class="hr-row-chk" data-id="${p.id}" onchange="hrUpdateBulkBar()" onclick="event.stopPropagation()"/></td>
+      ${multiOn?`<td><input type="checkbox" class="hr-row-chk" data-id="${p.id}" onchange="hrUpdateBulkBar()" onclick="event.stopPropagation()"/></td>`:''}
       <td class="td-num">${i+1}</td>
       <td style="font-weight:700">${esc(p.title||'-')}</td>
       <td style="font-size:12px">${esc(p.department||'-')}</td>
@@ -763,9 +774,11 @@ async function hrLoadEmailSettings() {
     const get = (key, def='') => hrEmailSettingsData[key]?.setting_value || def;
     if($('hrEsRecipients')) $('hrEsRecipients').value = get('notification_recipients','["careers@qnulabs.com"]').replace(/[\[\]"]/g,'').replace(/,/g,', ');
     if($('hrEsApplicantSubject')) $('hrEsApplicantSubject').value = get('applicant_subject','Thank you for applying to {{job_title}} at QNu Labs');
-    if($('hrEsApplicantBody')) $('hrEsApplicantBody').value = get('applicant_body','');
+    if($('hrEsApplicantBody')) $('hrEsApplicantBody').value = get('applicant_body',
+      '<p>Hi {{full_name}},</p><p>Thank you for applying for <strong>{{job_title}}</strong> at QNu Labs.</p><p>Since we have received a high volume of applications, we will get back to you <strong>only if you are shortlisted</strong> for the next stage of the process.</p><p>We appreciate your interest in QNu Labs and wish you all the best.</p><p>Warm regards,<br/>Team QNu Careers</p>');
     if($('hrEsNotifSubject')) $('hrEsNotifSubject').value = get('notification_subject','New Application: {{job_title}} from {{full_name}}');
-    if($('hrEsNotifBody')) $('hrEsNotifBody').value = get('notification_body','');
+    if($('hrEsNotifBody')) $('hrEsNotifBody').value = get('notification_body',
+      '<p>New application received for <strong>{{job_title}}</strong></p><p>Name: {{full_name}}<br/>Email: {{email}}<br/>Phone: {{phone}}<br/>Location: {{location}}<br/>Notice: {{notice_period}}<br/>Current CTC: {{current_ctc}} LPA<br/>Expected CTC: {{expected_ctc}} LPA<br/>LinkedIn: {{linkedin}}<br/>Resume: {{resume_url}}</p>');
   } catch(e) { console.warn('HR email settings load failed:', e); }
 }
 
