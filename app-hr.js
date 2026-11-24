@@ -322,7 +322,8 @@ async function hrPost() {
       fields: {
         'name':                hrActive.title,
         'job-id':              hrActive.job_id||'',
-        'department':          hrActive.department==='Other' ? (hrActive.department_other||hrActive.department) : (hrActive.department||''),
+        // department field — only send if non-empty to avoid schema errors
+        ...(hrActive.department && hrActive.department !== '' ? { 'department': hrActive.department==='Other' ? (hrActive.department_other||'Other') : hrActive.department } : {}),
         'location':            hrActive.location||'',
         'work-mode':           hrActive.work_mode||'',
         'employment-type':     hrActive.employment_type||'',
