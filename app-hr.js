@@ -194,8 +194,8 @@ async function openHRModal(id, e) {
   set('hrfs_reports_to',  post.reports_to);
   set('hrfs_team_size',   post.team_size);
   set('hrfs_works_with',  post.works_with);
-  set('hrfs_major_req',   post.major_requirement);
   set('hrfs_closing',     post.closing_line);
+  setRich('hrfs_major_req', post.major_requirement||'');
   set('hrfs_posted_date', dateInput(post.posted_date));
   setChk('hrfs_new_badge', post.show_new_badge);
   setRich('hrfs_about',          post.about_the_role||'');
@@ -242,10 +242,11 @@ async function hrSaveEdits(quiet) {
   const data = {
     title,
     job_id:          get('hrfs_job_id'),
-    department:      get('hrfs_department')==='Other' ? get('hrfs_department_other') : get('hrfs_department'),
+    department:      get('hrfs_department')==='Other' ? (get('hrfs_department_other')||'Other') : get('hrfs_department'),
+    department_other: get('hrfs_department_other'),
     location:        get('hrfs_location'),
-    work_mode:       get('hrfs_work_mode'),
-    employment_type: get('hrfs_emp_type'),
+    work_mode:       get('hrfs_work_mode')||'Onsite',
+    employment_type: get('hrfs_emp_type')||'Full-time',
     experience:      get('hrfs_experience'),
     short_description: get('hrfs_short_desc'),
     about_the_role:    getRich('hrfs_about'),
@@ -255,8 +256,8 @@ async function hrSaveEdits(quiet) {
     reports_to:      get('hrfs_reports_to'),
     team_size:       get('hrfs_team_size'),
     works_with:      get('hrfs_works_with'),
-    major_requirement: get('hrfs_major_req'),
     closing_line:    get('hrfs_closing'),
+    major_requirement: getRich('hrfs_major_req'),
     posted_date:     get('hrfs_posted_date')||new Date().toISOString(),
     show_new_badge:  !!$('hrfs_new_badge')?.checked,
     slug:            slugify(title),
@@ -309,7 +310,7 @@ async function hrPost() {
       fields: {
         'name':                hrActive.title,
         'job-id':              hrActive.job_id||'',
-        // 'department' skipped — Webflow field type must be changed from Reference to Plain Text first
+        'department':          hrActive.department==='Other' ? (hrActive.department_other||hrActive.department) : (hrActive.department||''),
         'location':            hrActive.location||'',
         'work-mode':           hrActive.work_mode||'',
         'employment-type':     hrActive.employment_type||'',
@@ -325,8 +326,8 @@ async function hrPost() {
         'reports-to':          hrActive.reports_to||'',
         'team-size':           hrActive.team_size||'',
         'works-with':          hrActive.works_with||'',
-        'major-requirement':   hrActive.major_requirement||'',
         'closing-line':        hrActive.closing_line||'',
+        'major-requirement':   hrActive.major_requirement||'',
       }
     };
 
@@ -404,12 +405,16 @@ function openAddJobPosting() {
   const clearRich = id => { const el=$(id); if(el) el.innerHTML=''; };
   clear('hrfs_title'); clear('hrfs_job_id'); clear('hrfs_location');
   clear('hrfs_experience'); clear('hrfs_short_desc'); clear('hrfs_reports_to');
-  clear('hrfs_team_size'); clear('hrfs_works_with'); clear('hrfs_major_req');
+  clear('hrfs_team_size'); clear('hrfs_works_with');
   clear('hrfs_closing');
+  clearRich('hrfs_major_req');
   // Set defaults
-  clear('hrfs_department','Engineering');
+  clear('hrfs_department','');
   clear('hrfs_work_mode','Onsite');
   clear('hrfs_emp_type','Full-time');
+  // Hide department other box
+  const dw = document.getElementById('hrfs_dept_other_wrap');
+  if (dw) dw.style.display = 'none';
   // Set today's date
   clear('hrfs_posted_date', new Date().toISOString().slice(0,10));
   const chk = $('hrfs_new_badge'); if(chk) chk.checked = true;
