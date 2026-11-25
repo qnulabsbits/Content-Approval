@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════
    CRM DASHBOARD MODULE
-   - Leads from Zoho CRM
-   - Deals from Zoho CRM
+   - Leads from Zoho CRM (required fields + filters)
+   - Deals from Zoho CRM (required fields + filters)
    - Business Card Scanner
    - Whitepaper Download Analytics
 ═══════════════════════════════════════════════════ */
@@ -10,19 +10,56 @@ const ZOHO_CRM_EDGE = SUPA_URL + '/functions/v1/zoho-crm';
 
 let crmLeads = [], crmDeals = [], crmTab = 'leads';
 let crmLeadsPage = 1, crmDealsPage = 1;
-const CRM_PAGE_SIZE = 25;
+let crmLeadsPerPage = 25, crmDealsPerPage = 25;
+let crmLeadsFilters = {}, crmDealsFilters = {};
+let crmLeadsTotal = 0, crmDealsTotal = 0;
 
-// Drag-to-reorder columns state
-let leadsColOrder  = ['First_Name','Last_Name','Company','Email','Phone','Lead_Source','Description','Created_Time'];
-let dealsColOrder  = ['Deal_Name','Stage','Amount','Closing_Date','Account_Name','Owner','Created_Time'];
+// ── Required fields ───────────────────────────────────────────────
+const LEADS_FIELDS = [
+  { key: 'Full_Name',                    label: 'Full Name' },
+  { key: 'Company',                      label: 'Company' },
+  { key: 'Phone',                        label: 'Phone' },
+  { key: 'Phone_2',                      label: 'Phone 2' },
+  { key: 'Email',                        label: 'Email' },
+  { key: 'Lead_Source',                  label: 'Lead Source' },
+  { key: 'SP_Source',                    label: 'SP Source' },
+  { key: 'Customer_Segment',             label: 'Customer Segment' },
+  { key: 'Owner',                        label: 'Lead Owner', render: v => v?.name||'-' },
+  { key: 'Created_By',                   label: 'Lead Generator', render: v => v?.name||'-' },
+  { key: 'Average_Time_Spent_Minutes',   label: 'Avg Time Spent (min)' },
+  { key: 'Description',                  label: 'Description' },
+  { key: 'Message',                      label: 'Message' },
+  { key: 'Created_Time',                 label: 'Created Time', render: v => formatDateTime(v) },
+];
+
+const DEALS_FIELDS = [
+  { key: 'Deal_Name',                    label: 'Deal Name' },
+  { key: 'Stage',                        label: 'Stage' },
+  { key: 'Owner',                        label: 'Deal Owner', render: v => v?.name||'-' },
+  { key: 'Product_Family',               label: 'Product Family' },
+  { key: 'Product_Category',             label: 'Product Category' },
+  { key: 'Product_Specification',        label: 'Product Specification' },
+  { key: 'Amount_In_Crores',             label: 'Amount In Crores' },
+  { key: 'Amount',                       label: 'Amount' },
+  { key: 'Customer_Segment',             label: 'Customer Segment' },
+  { key: 'Confidence',                   label: 'Confidence' },
+  { key: 'Quarter',                      label: 'Quarter' },
+  { key: 'Probability',                  label: 'Probability (%)' },
+  { key: 'Level_of_Stage',               label: 'Level of Stage' },
+  { key: 'Lead_Conversion_Time',         label: 'Lead Conversion Time' },
+  { key: 'Lead_Source',                  label: 'Lead Source' },
+  { key: 'Targeted_Booking_PO_Date',     label: 'Targeted Booking (PO) Date', render: v => v ? formatDate(v) : '-' },
+  { key: 'Targeted_Revenue_Date',        label: 'Targeted Revenue Date', render: v => v ? formatDate(v) : '-' },
+  { key: 'Closing_Date',                 label: 'Closing Date', render: v => v ? formatDate(v) : '-' },
+  { key: 'Modified_Time',                label: 'Modified Time', render: v => formatDateTime(v) },
+  { key: 'Created_Time',                 label: 'Created Time', render: v => formatDateTime(v) },
+];
 
 // ── Load ──────────────────────────────────────────────────────────
 async function loadCRM() {
+  crmTab = 'leads';
   renderCRMPage();
-  if (crmTab === 'leads') await crmFetchLeads();
-  else if (crmTab === 'deals') await crmFetchDeals();
-  else if (crmTab === 'analytics') await crmLoadAnalytics();
-  else if (crmTab === 'cards') await loadBusinessCards();
+  await crmFetchLeads();
 }
 
 async function crmFetchLeads() {
@@ -33,15 +70,14 @@ async function crmFetchLeads() {
     const res = await fetch(ZOHO_CRM_EDGE, {
       method: 'POST',
       headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+token, 'apikey':SUPA_KEY },
-      body: JSON.stringify({ action:'get_leads', page: crmLeadsPage, per_page: CRM_PAGE_SIZE })
+      body: JSON.stringify({ action:'get_leads', page: crmLeadsPage, per_page: crmLeadsPerPage })
     });
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'Failed to fetch leads');
     crmLeads = data.leads || [];
     renderCRMLeadsTable();
   } catch(e) {
-    if (wrap) wrap.innerHTML = `<div class="empty-state"><div class="empty-title">Could not load leads from Zoho CRM</div><div class="empty-sub">${esc(e.message)}</div><div style="margin-top:12px"><button onclick="crmFetchLeads()" class="btn btn-primary btn-sm">Retry</button></div></div>`;
-    console.error('CRM leads error:', e);
+    if (wrap) wrap.innerHTML = `<div class="empty-state"><div class="empty-title">Could not load leads</div><div class="empty-sub">${esc(e.message)}</div><div style="margin-top:12px"><button onclick="crmFetchLeads()" class="btn btn-primary btn-sm">Retry</button></div></div>`;
   }
 }
 
@@ -53,7 +89,7 @@ async function crmFetchDeals() {
     const res = await fetch(ZOHO_CRM_EDGE, {
       method: 'POST',
       headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+token, 'apikey':SUPA_KEY },
-      body: JSON.stringify({ action:'get_deals', page: crmDealsPage, per_page: CRM_PAGE_SIZE })
+      body: JSON.stringify({ action:'get_deals', page: crmDealsPage, per_page: crmDealsPerPage })
     });
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'Failed to fetch deals');
@@ -66,8 +102,7 @@ async function crmFetchDeals() {
 
 // ── Page render ───────────────────────────────────────────────────
 function renderCRMPage() {
-  const tabs = ['leads','deals','analytics','cards'];
-  tabs.forEach(t => {
+  ['leads','deals'].forEach(t => {
     const el = $('crmTab_'+t);
     if (el) el.classList.toggle('active', t === crmTab);
     const pg = $('crmPane_'+t);
@@ -78,159 +113,273 @@ function renderCRMPage() {
 function crmSetTab(tab) {
   crmTab = tab;
   renderCRMPage();
-  if (tab === 'leads' && !crmLeads.length) crmFetchLeads();
-  else if (tab === 'deals' && !crmDeals.length) crmFetchDeals();
-  else if (tab === 'analytics') crmLoadAnalytics();
-  else if (tab === 'cards') loadBusinessCards();
+  if (tab === 'leads') crmFetchLeads();
+  else if (tab === 'deals') crmFetchDeals();
+}
+
+// ── Filter helpers ────────────────────────────────────────────────
+function crmGetFilteredLeads() {
+  return crmLeads.filter(lead => {
+    return Object.entries(crmLeadsFilters).every(([key, val]) => {
+      if (!val || val === '') return true;
+      const field = LEADS_FIELDS.find(f => f.key === key);
+      let cellVal = lead[key];
+      if (typeof cellVal === 'object' && cellVal !== null) cellVal = cellVal.name || '';
+      return String(cellVal||'').toLowerCase().includes(val.toLowerCase());
+    });
+  });
+}
+
+function crmGetFilteredDeals() {
+  return crmDeals.filter(deal => {
+    return Object.entries(crmDealsFilters).every(([key, val]) => {
+      if (!val || val === '') return true;
+      let cellVal = deal[key];
+      if (typeof cellVal === 'object' && cellVal !== null) cellVal = cellVal.name || '';
+      return String(cellVal||'').toLowerCase().includes(val.toLowerCase());
+    });
+  });
+}
+
+function crmSetLeadFilter(key, val) {
+  crmLeadsFilters[key] = val;
+  renderCRMLeadsTable();
+}
+
+function crmSetDealFilter(key, val) {
+  crmDealsFilters[key] = val;
+  renderCRMDealsTable();
+}
+
+function crmClearLeadFilters() {
+  crmLeadsFilters = {};
+  document.querySelectorAll('.crm-lead-filter').forEach(el => el.value = '');
+  renderCRMLeadsTable();
+}
+
+function crmClearDealFilters() {
+  crmDealsFilters = {};
+  document.querySelectorAll('.crm-deal-filter').forEach(el => el.value = '');
+  renderCRMDealsTable();
+}
+
+// ── Per page selector ─────────────────────────────────────────────
+function crmPerPageSelector(current, onchange) {
+  return `<select onchange="${onchange}" class="field-select" style="font-size:12px;width:auto;padding:6px 10px">
+    ${[25,50,75,100].map(n => `<option value="${n}"${current===n?' selected':''}>${n} per page</option>`).join('')}
+  </select>`;
 }
 
 // ── Leads Table ───────────────────────────────────────────────────
 function renderCRMLeadsTable() {
   const wrap = $('crmLeadsTable'); if (!wrap) return;
-  if (!crmLeads.length) {
-    wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-title">No leads found</div></div>';
-    return;
-  }
-  const cols = leadsColOrder.filter(c => crmLeads[0]?.[c] !== undefined || ['First_Name','Last_Name','Company','Email','Phone','Lead_Source','Created_Time'].includes(c));
-  const labels = { First_Name:'First Name', Last_Name:'Last Name', Company:'Company', Email:'Email', Phone:'Phone', Lead_Source:'Source', Description:'Description', Created_Time:'Created', Title:'Designation', Mobile:'Mobile', Website:'Website', City:'City', State:'State', Country:'Country', Industry:'Industry', Annual_Revenue:'Revenue', No_of_Employees:'Employees', Lead_Status:'Lead Status' };
-  let h = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-    <div style="font-size:13px;color:var(--muted)">${crmLeads.length} leads loaded · Page ${crmLeadsPage}</div>
-    <div style="display:flex;gap:8px">
-      <button onclick="crmExportLeadsExcel()" class="btn btn-secondary btn-sm">📊 Export Excel</button>
-      <button onclick="crmLeadsPage=Math.max(1,crmLeadsPage-1);crmFetchLeads()" class="btn btn-secondary btn-sm"${crmLeadsPage===1?' disabled':''}>◀ Prev</button>
-      <button onclick="crmLeadsPage++;crmFetchLeads()" class="btn btn-secondary btn-sm"${crmLeads.length<CRM_PAGE_SIZE?' disabled':''}>Next ▶</button>
+  const filtered = crmGetFilteredLeads();
+  const activeFilters = Object.values(crmLeadsFilters).filter(v=>v&&v!=='').length;
+
+  let h = `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="font-size:13px;color:var(--muted)">${filtered.length} of ${crmLeads.length} leads · Page ${crmLeadsPage}</div>
+      ${activeFilters ? `<button onclick="crmClearLeadFilters()" class="btn btn-secondary btn-sm" style="color:#DC2626">✕ Clear ${activeFilters} filter${activeFilters>1?'s':''}</button>` : ''}
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      ${crmPerPageSelector(crmLeadsPerPage, `crmLeadsPerPage=parseInt(this.value);crmLeadsPage=1;crmFetchLeads()`)}
+      <button onclick="crmExportLeadsExcel()" class="btn btn-secondary btn-sm">📊 Export</button>
+      <button onclick="crmLeadsPage=Math.max(1,crmLeadsPage-1);crmFetchLeads()" class="btn btn-secondary btn-sm"${crmLeadsPage===1?' disabled':''}>◀</button>
+      <button onclick="crmLeadsPage++;crmFetchLeads()" class="btn btn-secondary btn-sm"${crmLeads.length<crmLeadsPerPage?' disabled':''}>▶</button>
     </div>
   </div>
-  <div style="overflow-x:auto"><table id="crmLeadsTbl">
-  <thead><tr>`;
-  cols.forEach((c,i) => {
-    h += `<th draggable="true" ondragstart="crmDragStart(event,'leads',${i})" ondragover="event.preventDefault()" ondrop="crmDrop(event,'leads',${i})" style="cursor:grab;user-select:none" title="Drag to reorder">${labels[c]||c}</th>`;
-  });
-  h += '</tr></thead><tbody>';
-  crmLeads.forEach((lead,i) => {
-    h += `<tr onclick="crmOpenLead('${esc(lead.id||'')}',${i})" style="cursor:pointer">`;
-    cols.forEach(c => {
-      let v = lead[c] || '';
-      if (c === 'Created_Time' && v) v = formatDate(v);
-      if (c === 'Email' && v) v = `<a href="mailto:${esc(v)}" onclick="event.stopPropagation()" style="color:var(--accent)">${esc(v)}</a>`;
-      else v = esc(String(v));
-      h += `<td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v}</td>`;
+  <div style="overflow-x:auto">
+  <table>
+    <thead>
+      <tr>${LEADS_FIELDS.map(f => `<th style="white-space:nowrap">${f.label}</th>`).join('')}</tr>
+      <tr class="filter-row">${LEADS_FIELDS.map(f => `
+        <th style="padding:4px 6px;background:var(--surface2)">
+          <input type="text" class="crm-lead-filter field-input" placeholder="Filter..." 
+            style="font-size:11px;padding:4px 6px;min-width:80px;width:100%"
+            value="${esc(crmLeadsFilters[f.key]||'')}"
+            oninput="crmSetLeadFilter('${f.key}',this.value)"/>
+        </th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>`;
+
+  if (!filtered.length) {
+    h += `<tr><td colspan="${LEADS_FIELDS.length}" style="text-align:center;padding:32px;color:var(--muted)">No leads match the current filters</td></tr>`;
+  } else {
+    filtered.forEach(lead => {
+      h += `<tr style="cursor:pointer" onclick="crmShowLeadDetail(${JSON.stringify(JSON.stringify(lead))})">`;
+      LEADS_FIELDS.forEach(f => {
+        let val = lead[f.key];
+        const display = f.render ? f.render(val) : (val == null ? '-' : esc(String(val)));
+        h += `<td style="white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${typeof display==='string'?display:''}">${display||'-'}</td>`;
+      });
+      h += `</tr>`;
     });
-    h += '</tr>';
-  });
-  h += '</tbody></table></div>';
+  }
+
+  h += `</tbody></table></div>`;
   wrap.innerHTML = h;
 }
 
+// ── Deals Table ───────────────────────────────────────────────────
 function renderCRMDealsTable() {
   const wrap = $('crmDealsTable'); if (!wrap) return;
-  if (!crmDeals.length) {
-    wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">💼</div><div class="empty-title">No deals found</div></div>';
-    return;
-  }
-  const cols = dealsColOrder;
-  const labels = { Deal_Name:'Deal Name', Stage:'Stage', Amount:'Amount', Closing_Date:'Close Date', Account_Name:'Account', Owner:'Owner', Created_Time:'Created', Lead_Source:'Source', Description:'Description', Probability:'Probability %', Pipeline:'Pipeline' };
-  const stageColors = { 'Qualification':'#3B82F6','Value Proposition':'#8B5CF6','Needs Analysis':'#F59E0B','Identify Decision Makers':'#EC4899','Perception Analysis':'#06B6D4','Proposal/Price Quote':'#F97316','Negotiation/Review':'#EF4444','Closed Won':'#10B981','Closed Lost':'#6B7280' };
-  let h = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-    <div style="font-size:13px;color:var(--muted)">${crmDeals.length} deals loaded · Page ${crmDealsPage}</div>
-    <div style="display:flex;gap:8px">
-      <button onclick="crmExportDealsExcel()" class="btn btn-secondary btn-sm">📊 Export Excel</button>
-      <button onclick="crmDealsPage=Math.max(1,crmDealsPage-1);crmFetchDeals()" class="btn btn-secondary btn-sm"${crmDealsPage===1?' disabled':''}>◀ Prev</button>
-      <button onclick="crmDealsPage++;crmFetchDeals()" class="btn btn-secondary btn-sm"${crmDeals.length<CRM_PAGE_SIZE?' disabled':''}>Next ▶</button>
+  const filtered = crmGetFilteredDeals();
+  const activeFilters = Object.values(crmDealsFilters).filter(v=>v&&v!=='').length;
+
+  let h = `
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="font-size:13px;color:var(--muted)">${filtered.length} of ${crmDeals.length} deals · Page ${crmDealsPage}</div>
+      ${activeFilters ? `<button onclick="crmClearDealFilters()" class="btn btn-secondary btn-sm" style="color:#DC2626">✕ Clear ${activeFilters} filter${activeFilters>1?'s':''}</button>` : ''}
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      ${crmPerPageSelector(crmDealsPerPage, `crmDealsPerPage=parseInt(this.value);crmDealsPage=1;crmFetchDeals()`)}
+      <button onclick="crmExportDealsExcel()" class="btn btn-secondary btn-sm">📊 Export</button>
+      <button onclick="crmDealsPage=Math.max(1,crmDealsPage-1);crmFetchDeals()" class="btn btn-secondary btn-sm"${crmDealsPage===1?' disabled':''}>◀</button>
+      <button onclick="crmDealsPage++;crmFetchDeals()" class="btn btn-secondary btn-sm"${crmDeals.length<crmDealsPerPage?' disabled':''}>▶</button>
     </div>
   </div>
-  <div style="overflow-x:auto"><table id="crmDealsTbl"><thead><tr>`;
-  cols.forEach((c,i) => {
-    h += `<th draggable="true" ondragstart="crmDragStart(event,'deals',${i})" ondragover="event.preventDefault()" ondrop="crmDrop(event,'deals',${i})" style="cursor:grab;user-select:none">${labels[c]||c}</th>`;
-  });
-  h += '</tr></thead><tbody>';
-  crmDeals.forEach((deal,i) => {
-    h += `<tr onclick="crmOpenDeal('${esc(deal.id||'')}',${i})" style="cursor:pointer">`;
-    cols.forEach(c => {
-      let v = deal[c] || '';
-      if (c==='Created_Time'||c==='Closing_Date') { if(v) v = formatDate(v); }
-      if (c==='Amount' && v) v = '₹'+Number(v).toLocaleString('en-IN');
-      if (c==='Stage' && v) {
-        const col = stageColors[v] || '#6B7280';
-        v = `<span style="background:${col}22;color:${col};border:1px solid ${col}44;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">${esc(v)}</span>`;
-      } else { v = esc(String(v)); }
-      h += `<td>${v}</td>`;
+  <div style="overflow-x:auto">
+  <table>
+    <thead>
+      <tr>${DEALS_FIELDS.map(f => `<th style="white-space:nowrap">${f.label}</th>`).join('')}</tr>
+      <tr class="filter-row">${DEALS_FIELDS.map(f => `
+        <th style="padding:4px 6px;background:var(--surface2)">
+          <input type="text" class="crm-deal-filter field-input" placeholder="Filter..."
+            style="font-size:11px;padding:4px 6px;min-width:80px;width:100%"
+            value="${esc(crmDealsFilters[f.key]||'')}"
+            oninput="crmSetDealFilter('${f.key}',this.value)"/>
+        </th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>`;
+
+  if (!filtered.length) {
+    h += `<tr><td colspan="${DEALS_FIELDS.length}" style="text-align:center;padding:32px;color:var(--muted)">No deals match the current filters</td></tr>`;
+  } else {
+    filtered.forEach(deal => {
+      h += `<tr style="cursor:pointer" onclick="crmShowDealDetail(${JSON.stringify(JSON.stringify(deal))})">`;
+      DEALS_FIELDS.forEach(f => {
+        let val = deal[f.key];
+        const display = f.render ? f.render(val) : (val == null ? '-' : esc(String(val)));
+        h += `<td style="white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${typeof display==='string'?display:''}">${display||'-'}</td>`;
+      });
+      h += `</tr>`;
     });
-    h += '</tr>';
-  });
-  h += '</tbody></table></div>';
+  }
+
+  h += `</tbody></table></div>`;
   wrap.innerHTML = h;
 }
 
-// ── Drag to reorder columns ───────────────────────────────────────
-let _crmDragIdx = -1;
-function crmDragStart(e, type, idx) { _crmDragIdx = idx; e.dataTransfer.effectAllowed='move'; }
-function crmDrop(e, type, idx) {
-  e.preventDefault();
-  if (_crmDragIdx < 0 || _crmDragIdx === idx) return;
-  const arr = type==='leads' ? leadsColOrder : dealsColOrder;
-  const item = arr.splice(_crmDragIdx, 1)[0];
-  arr.splice(idx, 0, item);
-  _crmDragIdx = -1;
-  if (type==='leads') renderCRMLeadsTable();
-  else renderCRMDealsTable();
-}
-
-// ── Lead / Deal detail panel ──────────────────────────────────────
-function crmOpenLead(id, idx) {
-  const lead = crmLeads[idx]; if (!lead) return;
-  crmShowDetailPanel('Lead', lead);
-}
-function crmOpenDeal(id, idx) {
-  const deal = crmDeals[idx]; if (!deal) return;
-  crmShowDetailPanel('Deal', deal);
-}
-
-function crmShowDetailPanel(type, record) {
+// ── Detail panels ─────────────────────────────────────────────────
+function crmShowLeadDetail(jsonStr) {
+  const lead = JSON.parse(jsonStr);
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
-  const skip = ['id','$currency_symbol'];
-  const rows = Object.entries(record).filter(([k,v])=>!skip.includes(k)&&v!==null&&v!==''&&v!==undefined);
-  overlay.innerHTML = `<div style="background:var(--surface);border-radius:14px;max-width:600px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.25)">
-    <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1">
-      <div style="font-size:16px;font-weight:700">${type}: ${esc(record.Full_Name||record.Deal_Name||record.First_Name+' '+record.Last_Name||'Detail')}</div>
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  let rows = LEADS_FIELDS.map(f => {
+    let val = lead[f.key];
+    const display = f.render ? f.render(val) : (val == null ? '-' : String(val));
+    return `<tr><td style="font-size:12px;font-weight:600;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap;width:200px">${f.label}</td>
+      <td style="font-size:13px;padding:8px 12px;border-bottom:1px solid var(--border)">${display||'-'}</td></tr>`;
+  }).join('');
+  overlay.innerHTML = `<div style="background:var(--surface);border-radius:14px;max-width:680px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.25)">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface)">
+      <div style="font-size:15px;font-weight:700">👤 ${esc(lead.Full_Name||lead.Last_Name||'Lead')}</div>
       <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
     </div>
-    <div style="padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      ${rows.map(([k,v])=>`<div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
-        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:3px">${esc(k.replace(/_/g,' '))}</div>
-        <div style="font-size:13px;color:var(--text);word-break:break-all">${esc(String(v))}</div>
-      </div>`).join('')}
-    </div>
+    <table style="width:100%">${rows}</table>
   </div>`;
   overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
   document.body.appendChild(overlay);
 }
 
-// ── Excel Export ──────────────────────────────────────────────────
-function crmExportLeadsExcel() {
-  if (!crmLeads.length) { toast('No leads to export','error'); return; }
-  const ws = XLSX.utils.json_to_sheet(crmLeads.map(l => {
-    const r = {}; leadsColOrder.forEach(c => r[c.replace(/_/g,' ')] = l[c]||''); return r;
-  }));
-  const _wb = {SheetNames:['Leads'],Sheets:{}}; _wb.Sheets['Leads'] = ws;
-  const _o=XLSX.write(_wb,{bookType:'xlsx',type:'binary'}),_b=new ArrayBuffer(_o.length),_v=new Uint8Array(_b);
-  for(let i=0;i<_o.length;i++) _v[i]=_o.charCodeAt(i)&0xFF;
-  const _a=document.createElement('a'); _a.href=URL.createObjectURL(new Blob([_b],{type:'application/octet-stream'})); _a.download='CRM_Leads_'+new Date().toISOString().slice(0,10)+'.xlsx';
-  document.body.appendChild(_a); _a.click(); document.body.removeChild(_a); setTimeout(()=>URL.revokeObjectURL(_a.href),1500);
-  toast('Leads exported to Excel.');
+function crmShowDealDetail(jsonStr) {
+  const deal = JSON.parse(jsonStr);
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  let rows = DEALS_FIELDS.map(f => {
+    let val = deal[f.key];
+    const display = f.render ? f.render(val) : (val == null ? '-' : String(val));
+    return `<tr><td style="font-size:12px;font-weight:600;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap;width:220px">${f.label}</td>
+      <td style="font-size:13px;padding:8px 12px;border-bottom:1px solid var(--border)">${display||'-'}</td></tr>`;
+  }).join('');
+  overlay.innerHTML = `<div style="background:var(--surface);border-radius:14px;max-width:680px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.25)">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface)">
+      <div style="font-size:15px;font-weight:700">💼 ${esc(deal.Deal_Name||'Deal')}</div>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <table style="width:100%">${rows}</table>
+  </div>`;
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
 }
+
+// ── Export ────────────────────────────────────────────────────────
+function crmExportLeadsExcel() {
+  const filtered = crmGetFilteredLeads();
+  const headers = LEADS_FIELDS.map(f => f.label);
+  const rows = filtered.map(lead =>
+    LEADS_FIELDS.map(f => {
+      let val = lead[f.key];
+      if (typeof val === 'object' && val !== null) val = val.name || '';
+      return val == null ? '' : String(val);
+    })
+  );
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols'] = headers.map(() => ({ wch: 20 }));
+  const wb = { SheetNames:['Leads'], Sheets:{ Leads: ws } };
+  const out = XLSX.write(wb, { bookType:'xlsx', type:'binary' });
+  const buf = new ArrayBuffer(out.length);
+  const view = new Uint8Array(buf);
+  for (let i=0; i<out.length; i++) view[i] = out.charCodeAt(i) & 0xFF;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([buf], { type:'application/octet-stream' }));
+  a.download = 'CRM_Leads_' + new Date().toISOString().slice(0,10) + '.xlsx';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  toast('Leads exported.');
+}
+
 function crmExportDealsExcel() {
-  if (!crmDeals.length) { toast('No deals to export','error'); return; }
-  const ws = XLSX.utils.json_to_sheet(crmDeals.map(d => {
-    const r = {}; dealsColOrder.forEach(c => r[c.replace(/_/g,' ')] = d[c]||''); return r;
-  }));
-  const _wb = {SheetNames:['Deals'],Sheets:{}}; _wb.Sheets['Deals'] = ws;
-  const _o=XLSX.write(_wb,{bookType:'xlsx',type:'binary'}),_b=new ArrayBuffer(_o.length),_v=new Uint8Array(_b);
-  for(let i=0;i<_o.length;i++) _v[i]=_o.charCodeAt(i)&0xFF;
-  const _a=document.createElement('a'); _a.href=URL.createObjectURL(new Blob([_b],{type:'application/octet-stream'})); _a.download='CRM_Deals_'+new Date().toISOString().slice(0,10)+'.xlsx';
-  document.body.appendChild(_a); _a.click(); document.body.removeChild(_a); setTimeout(()=>URL.revokeObjectURL(_a.href),1500);
-  toast('Deals exported to Excel.');
+  const filtered = crmGetFilteredDeals();
+  const headers = DEALS_FIELDS.map(f => f.label);
+  const rows = filtered.map(deal =>
+    DEALS_FIELDS.map(f => {
+      let val = deal[f.key];
+      if (typeof val === 'object' && val !== null) val = val.name || '';
+      return val == null ? '' : String(val);
+    })
+  );
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols'] = headers.map(() => ({ wch: 20 }));
+  const wb = { SheetNames:['Deals'], Sheets:{ Deals: ws } };
+  const out = XLSX.write(wb, { bookType:'xlsx', type:'binary' });
+  const buf = new ArrayBuffer(out.length);
+  const view = new Uint8Array(buf);
+  for (let i=0; i<out.length; i++) view[i] = out.charCodeAt(i) & 0xFF;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([buf], { type:'application/octet-stream' }));
+  a.download = 'CRM_Deals_' + new Date().toISOString().slice(0,10) + '.xlsx';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  toast('Deals exported.');
+}
+
+
+// ── Analytics page loader (called from app-core.js showPage) ──────
+async function loadAnalyticsPage() {
+  const wrap = $('crmAnalyticsPane');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="loading-row"><span class="spinner"></span> Loading analytics...</div>';
+  try {
+    wpDownloads = await sbFetch('whitepaper_downloads?order=downloaded_at.desc&select=*') || [];
+    renderWPAnalytics();
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-title">Could not load</div><div class="empty-sub">${esc(e.message)}</div></div>`;
+  }
 }
 
 // ── Analytics (Whitepaper Downloads) ─────────────────────────────
