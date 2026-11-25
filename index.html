@@ -25,17 +25,26 @@
 </style>
 
 <style>
-/* ── Mobile / PWA Layout ───────────────────────── */
+/* ── Mobile / PWA Layout — only when logged in ─────────────────── */
+/* Login page is NOT affected — all rules scoped to body.app-logged-in */
+
 @media (max-width: 900px) {
 
-  /* Full height layout */
-  html, body {
-    height: 100%;
-    overflow: hidden;
+  /* Login page — center properly, no sidebar interference */
+  #v-login {
+    position: fixed !important;
+    inset: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow-y: auto !important;
+    z-index: 9999 !important;
   }
 
-  /* App shell: topbar row + sidebar+content row */
-  .app-shell {
+  /* App shell only when visible (logged in) */
+  #v-app[style*="block"], #v-app:not([style*="none"]) {
+
+    /* Full height layout */
     display: flex !important;
     flex-direction: column !important;
     height: 100dvh !important;
@@ -44,7 +53,7 @@
   }
 
   /* Topbar — compact, full width */
-  .app-topbar {
+  #v-app .app-topbar {
     flex-shrink: 0 !important;
     padding: 0 10px !important;
     height: 48px !important;
@@ -53,29 +62,17 @@
     align-items: center !important;
   }
 
-  /* Hide verbose topbar items on small screens */
-  .topbar-brand .brand-sub { display: none !important; }
-  .user-name { font-size: 11px !important; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .user-role { display: none !important; }
-  .topbar-btn.danger { font-size: 11px !important; padding: 5px 8px !important; }
-  .topbar-brand { gap: 6px !important; }
-  .topbar-logo { height: 24px !important; }
-  .brand-name { font-size: 13px !important; }
-  .topbar-right { gap: 6px !important; }
+  #v-app .topbar-brand .brand-sub { display: none !important; }
+  #v-app .user-name { font-size: 11px !important; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #v-app .user-role { display: none !important; }
+  #v-app .topbar-btn.danger { font-size: 11px !important; padding: 5px 8px !important; }
+  #v-app .topbar-brand { gap: 6px !important; }
+  #v-app .topbar-logo { height: 24px !important; }
+  #v-app .brand-name { font-size: 13px !important; }
+  #v-app .topbar-right { gap: 6px !important; }
 
-  /* Body row: sidebar + main content side by side */
-  .app-shell > .app-sidebar,
-  .app-shell > .app-main {
-    flex: none;
-  }
-
-  /* Create a flex row for sidebar + main */
-  .app-shell::after {
-    content: none;
-  }
-
-  /* Sidebar — fixed width, always visible, scrollable */
-  .app-sidebar {
+  /* Sidebar — fixed, always visible */
+  #v-app .app-sidebar {
     position: fixed !important;
     top: 48px !important;
     left: 0 !important;
@@ -90,19 +87,14 @@
     border-right: 1px solid var(--border) !important;
   }
 
-  /* Always show sidebar labels */
-  .si-label {
-    display: inline !important;
-    opacity: 1 !important;
-    font-size: 12px !important;
-  }
-  .si-icon { font-size: 14px !important; }
-  .sidebar-item { padding: 10px 12px !important; }
-  .sidebar-toggle-btn { display: none !important; }
-  .sidebar-modules-label { display: block !important; font-size: 10px !important; }
+  #v-app .si-label { display: inline !important; opacity: 1 !important; font-size: 12px !important; }
+  #v-app .si-icon { font-size: 14px !important; }
+  #v-app .sidebar-item { padding: 10px 12px !important; }
+  #v-app .sidebar-toggle-btn { display: none !important; }
+  #v-app .sidebar-modules-label { display: block !important; font-size: 10px !important; }
 
   /* Main content — offset by sidebar width */
-  .app-main {
+  #v-app .app-main {
     position: fixed !important;
     top: 48px !important;
     left: 180px !important;
@@ -113,35 +105,12 @@
     padding: 12px !important;
   }
 
-  /* Prevent body scroll */
-  body { overflow: hidden !important; }
-
-  /* Tables scroll within container */
-  .table-wrap { overflow-x: auto !important; }
-
-  /* Stats row 2 columns */
-  .stats-row { grid-template-columns: 1fr 1fr !important; }
-
-  /* Page header stack */
-  .page-header {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 8px !important;
-  }
-  .page-actions { flex-wrap: wrap !important; gap: 6px !important; }
-
-  /* Full screen overlays cover everything */
-  .fs-overlay {
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 9999 !important;
-  }
-
-  /* Chat FAB position */
-  .chat-fab {
-    bottom: 16px !important;
-    right: 16px !important;
-  }
+  #v-app .table-wrap { overflow-x: auto !important; }
+  #v-app .stats-row { grid-template-columns: 1fr 1fr !important; }
+  #v-app .page-header { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
+  #v-app .page-actions { flex-wrap: wrap !important; gap: 6px !important; }
+  #v-app .fs-overlay { position: fixed !important; inset: 0 !important; z-index: 9999 !important; }
+  #v-app .chat-fab { bottom: 16px !important; right: 16px !important; }
 }
 </style>
 
@@ -1855,38 +1824,38 @@
     lastTap = now;
   }, { passive: false });
 
-  // On mobile — force sidebar always visible, override any JS that hides it
+  // On mobile — force sidebar always visible after login
   function checkMobile() {
     var isMobile = window.innerWidth <= 900;
+    if (!isMobile) return;
+    var app = document.getElementById('v-app');
+    // Only run when app shell is visible (user is logged in)
+    if (!app || app.style.display === 'none' || app.style.display === '') return;
     var sidebar = document.getElementById('appSidebar');
-    var shell = document.querySelector('.app-shell');
-    if (!sidebar || !shell) return;
-    if (isMobile) {
-      // Force sidebar visible — override toggleSidebar JS
-      sidebar.style.cssText = '';
-      sidebar.classList.remove('collapsed');
-      shell.classList.remove('sidebar-collapsed');
-      // Show labels
-      document.querySelectorAll('.si-label').forEach(function(el) {
-        el.style.display = 'inline';
-        el.style.opacity = '1';
-      });
-    }
+    if (!sidebar) return;
+    sidebar.style.transform = 'none';
+    sidebar.classList.remove('collapsed');
+    document.querySelector('.app-shell') && document.querySelector('.app-shell').classList.remove('sidebar-collapsed');
+    document.querySelectorAll('.si-label').forEach(function(el) {
+      el.style.display = 'inline';
+      el.style.opacity = '1';
+    });
   }
 
   window.addEventListener('resize', checkMobile);
-  window.addEventListener('load', checkMobile);
-  document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(checkMobile, 100);
-    setTimeout(checkMobile, 500);
-    setTimeout(checkMobile, 1000);
+  // Override toggleSidebar on mobile
+  window.addEventListener('load', function() {
+    var _origToggle = window.toggleSidebar;
+    window.toggleSidebar = function() {
+      if (window.innerWidth <= 900) return;
+      if (_origToggle) _origToggle();
+    };
   });
 
-  // Override toggleSidebar on mobile
-  var _origToggle = window.toggleSidebar;
-  window.toggleSidebar = function() {
-    if (window.innerWidth <= 900) return; // block on mobile
-    if (_origToggle) _origToggle();
+  // Run after login — expose for app-init.js to call
+  window.mobileInit = function() {
+    setTimeout(checkMobile, 200);
+    setTimeout(checkMobile, 800);
   };
 
   // Register service worker for PWA install
