@@ -319,11 +319,19 @@
     <div class="camera-corner br"></div>
     <div class="camera-scanline"></div>
   </div>
-  <div class="camera-hint">Hold card flat inside the frame</div>
-  <div class="camera-hint-sub">One card at a time — tap 📸 to capture</div>
-  <div class="camera-actions">
-    <button class="btn-cancel-cam" onclick="closeLiveCamera()">Cancel</button>
-    <button class="btn-capture" onclick="captureFromCamera()">📸</button>
+  <div class="camera-hint">Hold card steady inside the frame</div>
+  <div class="camera-hint-sub" id="cameraHintSub">Auto-captures when card is stable...</div>
+  <!-- Auto-capture progress ring -->
+  <div style="position:relative;z-index:2;margin-top:16px;display:flex;align-items:center;gap:14px">
+    <div style="position:relative;width:56px;height:56px">
+      <svg width="56" height="56" style="transform:rotate(-90deg)">
+        <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="4"/>
+        <circle id="captureRing" cx="28" cy="28" r="24" fill="none" stroke="#E8460A" stroke-width="4"
+          stroke-dasharray="150.8" stroke-dashoffset="150.8" style="transition:stroke-dashoffset 0.1s linear"/>
+      </svg>
+      <div id="captureCountdown" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:800"></div>
+    </div>
+    <button class="btn-cancel-cam" onclick="closeLiveCamera()">✕ Cancel</button>
   </div>
 </div>
 
@@ -517,48 +525,75 @@ function updateProgress(pct, label) {
 function parseBusinessCard(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 1);
   const result = { name:'', company:'', designation:'', email:'', phone:'', website:'', linkedin:'' };
+  const used = new Set();
 
-  // Email — most reliable pattern
-  const emailMatch = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
-  if (emailMatch) result.email = emailMatch[0];
+  // ── Email ── most reliable, extract all, pick first
+  const emails = [...text.matchAll(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g)];
+  if (emails.length) { result.email = emails[0][0]; used.add(result.email); }
 
-  // Phone — various formats
-  const phoneMatch = text.match(/(?:\+91[\s\-]?)?(?:\d[\s\-]?){9,13}\d/);
-  if (phoneMatch) result.phone = phoneMatch[0].replace(/\s+/g,' ').trim();
-
-  // Website
-  const webMatch = text.match(/(?:www\.|http)[^\s,]+/i);
-  if (webMatch) result.website = webMatch[0].replace(/^https?:\/\//,'');
-
-  // LinkedIn
-  const liMatch = text.match(/linkedin\.com\/in\/[^\s,]+/i);
-  if (liMatch) result.linkedin = 'https://' + liMatch[0];
-
-  // Name — usually first substantial line, Title Case, no numbers
+  // ── Phone ── handles +352, +91, local formats, T/M/Tel prefixes
+  const phonePatterns = [
+    /(?:Tel|Mobile|M|T|Ph|Phone)?[\s.:]?\(?\+?[\d\s\-().]{7,20}\d/gi
+  ];
+  const phones = [];
   for (const line of lines) {
-    if (/^[A-Z][a-z]+ [A-Z]/.test(line) && !/[@\d\./]/.test(line) && line.length < 50) {
-      result.name = line; break;
+    const m = line.match(/(?:\+\d{1,3}[\s\-]?)?(?:\(?\d{2,4}\)?[\s\-]?){2,5}\d{2,4}/);
+    if (m && m[0].replace(/\D/g,'').length >= 7) {
+      const clean = m[0].trim();
+      if (!phones.includes(clean)) phones.push(clean);
+    }
+  }
+  if (phones.length) { result.phone = phones[0]; used.add(phones[0]); }
+
+  // ── Website ── prefer https/www, skip email domains
+  const webMatches = [...text.matchAll(/(?:https?:\/\/|www\.)[^\s,|]+/gi)];
+  for (const m of webMatches) {
+    const url = m[0].replace(/^https?:\/\//,'');
+    if (!result.email.includes(url.split('/')[0])) {
+      result.website = url; used.add(m[0]); break;
     }
   }
 
-  // Designation keywords
-  const designationKeywords = /\b(CEO|CTO|CFO|COO|VP|Director|Manager|Engineer|Analyst|Executive|Officer|Head|Lead|Founder|Partner|Associate|Consultant|President|Chairman|MD|GM)\b/i;
+  // ── LinkedIn ──
+  const liMatch = text.match(/linkedin\.com\/in\/[^\s,|]+/i);
+  if (liMatch) { result.linkedin = 'https://' + liMatch[0]; used.add(liMatch[0]); }
+
+  // ── Designation — check before name so we can skip it ──
+  const desigKeywords = /\b(CEO|CTO|CFO|COO|CMO|CSO|VP|Vice President|Director|Manager|Engineer|Scientist|Analyst|Executive|Officer|Head|Lead|Founder|Partner|Associate|Consultant|President|Chairman|MD|GM|Advisor|Président|Directeur|Chef|Project Manager|Project Lead|Business Development|Sales|Marketing|Operations)\b/i;
   for (const line of lines) {
-    if (designationKeywords.test(line) && !/[@\d\./]/.test(line)) {
-      result.designation = line; break;
+    if (used.has(line)) continue;
+    if (/[@\d]/.test(line)) continue;
+    if (desigKeywords.test(line) && line.length < 80) {
+      result.designation = line.trim(); used.add(line); break;
     }
   }
 
-  // Company — line that isn't name/designation/email/phone/web
+  // ── Name — Title Case line, 2+ words, no numbers/special chars ──
   for (const line of lines) {
-    if (line === result.name || line === result.designation) continue;
-    if (result.email && line.includes(result.email)) continue;
-    if (/[@\+]/.test(line) || /^www\./i.test(line)) continue;
-    if (line.length > 3 && line.length < 80 && /[A-Za-z]/.test(line) && !result.company) {
-      // Skip if it looks like an address
-      if (!/\d{3,}/.test(line) && !/\b(Road|Street|Nagar|Phase|Floor|Block|No\.|Plot)\b/i.test(line)) {
-        result.company = line;
+    if (used.has(line)) continue;
+    if (line === result.designation) continue;
+    if (/[@\d\/|]/.test(line)) continue;
+    if (line.length < 4 || line.length > 55) continue;
+    // Must have at least 2 words and start with capital
+    const words = line.trim().split(/\s+/);
+    if (words.length >= 2 && /^[A-ZÀ-Ü]/.test(words[0]) && /^[A-ZÀ-Ü]/.test(words[words.length-1])) {
+      // Not an address (no street keywords, no long number)
+      if (!/\b(rue|street|road|boulevard|avenue|nagar|phase|floor|block|suite|apt|L-\d)\b/i.test(line)) {
+        result.name = line.trim(); used.add(line); break;
       }
+    }
+  }
+
+  // ── Company — remaining prominent line, skip address lines ──
+  const addressKeywords = /\b(rue|street|road|boulevard|avenue|nagar|phase|floor|block|suite|No\.|Plot|Luxembourg|L-\d|\d{4,})\b/i;
+  for (const line of lines) {
+    if (used.has(line)) continue;
+    if (line === result.name || line === result.designation) continue;
+    if (/[@]/.test(line)) continue;
+    if (/^(www\.|https?:|T\s|M\s|Tel|Mobile|Fax|\+\d)/i.test(line)) continue;
+    if (addressKeywords.test(line)) continue;
+    if (line.length > 3 && line.length < 80 && /[A-Za-z]{2,}/.test(line)) {
+      result.company = line.trim(); used.add(line); break;
     }
   }
 
@@ -778,66 +813,139 @@ function exportCardsExcel() {
   showToast('Exported.');
 }
 
-// ── Live Camera Scanner ──────────────────────────────────────────
-let cameraStream = null;
+// ── Live Camera Scanner with Auto-Capture ────────────────────────
+let cameraStream     = null;
+let autoCapTimer     = null;
+let stableFrames     = 0;
+let lastFrameData    = null;
+let captureLoopId    = null;
+let captureProgress  = 0;
+const STABLE_NEEDED  = 20;  // ~20 frames stable = auto capture
+const DIFF_THRESHOLD = 18;  // pixel diff sensitivity
+const CAPTURE_SECS   = 2;   // countdown seconds when stable
 
 async function openLiveCamera() {
   const overlay = document.getElementById('cameraOverlay');
   const video   = document.getElementById('cameraVideo');
+  stableFrames  = 0; lastFrameData = null; captureProgress = 0;
+  resetCaptureRing();
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: 'environment', // back camera
-        width:  { ideal: 1920 },
-        height: { ideal: 1080 }
-      },
+      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
       audio: false
     });
     video.srcObject = cameraStream;
     overlay.classList.add('active');
+    video.addEventListener('loadedmetadata', startAutoCapture, { once: true });
   } catch(e) {
-    showToast('Camera not available — please use "Take Photo" instead.');
-    console.warn('Camera error:', e);
+    showToast('Camera not available — use "Take Photo" instead.');
   }
 }
 
 function closeLiveCamera() {
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(t => t.stop());
-    cameraStream = null;
-  }
+  stopAutoCapture();
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
   document.getElementById('cameraOverlay').classList.remove('active');
   document.getElementById('cameraVideo').srcObject = null;
+  resetCaptureRing();
+}
+
+function resetCaptureRing() {
+  stableFrames = 0; captureProgress = 0; lastFrameData = null;
+  const ring = document.getElementById('captureRing');
+  const cnt  = document.getElementById('captureCountdown');
+  const hint = document.getElementById('cameraHintSub');
+  if (ring) ring.style.strokeDashoffset = '150.8';
+  if (cnt)  cnt.textContent = '';
+  if (hint) hint.textContent = 'Auto-captures when card is stable...';
+}
+
+function startAutoCapture() {
+  const video   = document.getElementById('cameraVideo');
+  const sampleCanvas = document.createElement('canvas');
+  // Sample a small version for motion detection (fast)
+  sampleCanvas.width  = 80;
+  sampleCanvas.height = 46;
+  const sctx = sampleCanvas.getContext('2d');
+
+  function detectFrame() {
+    if (!cameraStream) return;
+
+    // Sample center frame region
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const cropW = Math.round(vw * 0.85);
+    const cropH = Math.round(cropW / 1.75);
+    const cropX = Math.round((vw - cropW) / 2);
+    const cropY = Math.round((vh - cropH) / 2);
+
+    sctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, 80, 46);
+    const frameData = sctx.getImageData(0, 0, 80, 46).data;
+
+    if (lastFrameData) {
+      // Calculate average pixel difference
+      let diff = 0;
+      for (let i = 0; i < frameData.length; i += 4) {
+        diff += Math.abs(frameData[i] - lastFrameData[i])
+               + Math.abs(frameData[i+1] - lastFrameData[i+1])
+               + Math.abs(frameData[i+2] - lastFrameData[i+2]);
+      }
+      const avgDiff = diff / (frameData.length / 4 * 3);
+
+      if (avgDiff < DIFF_THRESHOLD) {
+        stableFrames++;
+        // Update progress ring
+        captureProgress = Math.min(1, stableFrames / STABLE_NEEDED);
+        updateCaptureRing(captureProgress);
+        const secsLeft = Math.ceil(CAPTURE_SECS * (1 - captureProgress));
+        const cnt = document.getElementById('captureCountdown');
+        const hint = document.getElementById('cameraHintSub');
+        if (cnt)  cnt.textContent = stableFrames > 5 ? (secsLeft > 0 ? secsLeft : '✓') : '';
+        if (hint) hint.textContent = stableFrames > 5 ? 'Hold still...' : 'Auto-captures when card is stable...';
+
+        if (stableFrames >= STABLE_NEEDED) {
+          stopAutoCapture();
+          captureFromCamera();
+          return;
+        }
+      } else {
+        // Motion detected — reset
+        if (stableFrames > 0) resetCaptureRing();
+      }
+    }
+
+    lastFrameData = new Uint8ClampedArray(frameData);
+    captureLoopId = requestAnimationFrame(detectFrame);
+  }
+
+  captureLoopId = requestAnimationFrame(detectFrame);
+}
+
+function stopAutoCapture() {
+  if (captureLoopId) { cancelAnimationFrame(captureLoopId); captureLoopId = null; }
+}
+
+function updateCaptureRing(progress) {
+  const ring = document.getElementById('captureRing');
+  if (ring) ring.style.strokeDashoffset = (150.8 * (1 - progress)).toFixed(1);
 }
 
 function captureFromCamera() {
   const video  = document.getElementById('cameraVideo');
   const canvas = document.getElementById('captureCanvas');
-
-  // Crop to the card frame area (center 88vw × aspect 1.75)
-  const vw = video.videoWidth;
-  const vh = video.videoHeight;
-
-  // Calculate crop: take center 80% width, proportional height for card ratio
+  const vw = video.videoWidth, vh = video.videoHeight;
   const cropW = Math.round(vw * 0.85);
   const cropH = Math.round(cropW / 1.75);
   const cropX = Math.round((vw - cropW) / 2);
   const cropY = Math.round((vh - cropH) / 2);
-
-  canvas.width  = cropW;
-  canvas.height = cropH;
+  canvas.width = cropW; canvas.height = cropH;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
-  // Flash effect
+  // Flash
   const overlay = document.getElementById('cameraOverlay');
   overlay.style.background = '#fff';
-  setTimeout(() => { overlay.style.background = '#000'; }, 100);
-
+  setTimeout(() => { overlay.style.background = '#000'; }, 120);
   currentImageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
   closeLiveCamera();
-
-  // Run OCR on the cropped image
   setTimeout(() => runOCR(currentImageDataUrl), 200);
 }
 
