@@ -132,7 +132,7 @@ async function sendNotification(userId, title, message, type, module, refId) {
 function setScreen(name) {
   const isLogin = name === 'login';
   $('v-login').style.display = isLogin ? 'flex' : 'none';
-  $('v-app').style.display = isLogin ? 'none' : 'grid';
+  $('v-app').style.display = isLogin ? 'none' : (window.innerWidth <= 900 ? 'flex' : 'grid');
   document.body.style.overflow = '';
   if (!isLogin && SESSION) updateTopbar();
   const fab=$('chatFab'); if(fab) fab.style.display=isLogin?'none':'flex';
