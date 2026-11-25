@@ -143,6 +143,64 @@
     padding: 4px 12px; font-size: 12px; font-weight: 700; margin-bottom: 14px; cursor: pointer; }
 
   input[type="file"] { display: none; }
+
+  /* ── Live Camera Scanner ── */
+  #cameraOverlay {
+    display: none; position: fixed; inset: 0; background: #000; z-index: 9998;
+    flex-direction: column; align-items: center; justify-content: center;
+  }
+  #cameraOverlay.active { display: flex; }
+  #cameraVideo {
+    width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0;
+  }
+  .camera-frame {
+    position: relative; z-index: 2;
+    width: 88vw; max-width: 420px;
+    aspect-ratio: 1.75;
+    border: 3px solid var(--accent);
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.6);
+  }
+  .camera-corner {
+    position: absolute; width: 24px; height: 24px;
+    border-color: #fff; border-style: solid;
+  }
+  .camera-corner.tl { top: -3px; left: -3px; border-width: 3px 0 0 3px; border-radius: 6px 0 0 0; }
+  .camera-corner.tr { top: -3px; right: -3px; border-width: 3px 3px 0 0; border-radius: 0 6px 0 0; }
+  .camera-corner.bl { bottom: -3px; left: -3px; border-width: 0 0 3px 3px; border-radius: 0 0 0 6px; }
+  .camera-corner.br { bottom: -3px; right: -3px; border-width: 0 3px 3px 0; border-radius: 0 0 6px 0; }
+  .camera-scanline {
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: scan 2s linear infinite;
+  }
+  @keyframes scan {
+    0%   { top: 10%; }
+    100% { top: 90%; }
+  }
+  .camera-hint {
+    position: relative; z-index: 2; margin-top: 20px;
+    color: #fff; font-size: 14px; font-weight: 600; text-align: center;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  }
+  .camera-hint-sub {
+    position: relative; z-index: 2; margin-top: 6px;
+    color: rgba(255,255,255,0.7); font-size: 12px; text-align: center;
+  }
+  .camera-actions {
+    position: relative; z-index: 2; display: flex; gap: 12px; margin-top: 24px;
+  }
+  .btn-capture {
+    background: var(--accent); color: #fff; border: none;
+    width: 70px; height: 70px; border-radius: 50%;
+    font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 20px rgba(232,70,10,0.5);
+  }
+  .btn-cancel-cam {
+    background: rgba(255,255,255,0.15); color: #fff; border: 2px solid rgba(255,255,255,0.3);
+    padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
+    font-family: inherit; cursor: pointer; align-self: center;
+  }
 </style>
 </head>
 <body>
@@ -191,15 +249,20 @@
 
     <!-- Scan area -->
     <div id="scanSection">
-      <label class="btn-scan" for="cardCameraInput">
-        📷 Scan Business Card
-        <input type="file" id="cardCameraInput" accept="image/*" capture="environment" onchange="handleCardImage(this)"/>
-      </label>
-      <div style="text-align:center;margin:10px 0;color:var(--muted);font-size:12px">or</div>
-      <label class="btn-secondary" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;cursor:pointer" for="cardGalleryInput">
-        🖼 Choose from Gallery
-        <input type="file" id="cardGalleryInput" accept="image/*" onchange="handleCardImage(this)"/>
-      </label>
+      <button class="btn-scan" onclick="openLiveCamera()">
+        📷 Live Camera Scan
+      </button>
+      <div style="text-align:center;margin:10px 0;color:var(--muted);font-size:12px">or upload a photo</div>
+      <div style="display:flex;gap:10px">
+        <label class="btn-secondary" style="display:flex;align-items:center;justify-content:center;gap:8px;flex:1;cursor:pointer" for="cardCameraInput">
+          📸 Take Photo
+          <input type="file" id="cardCameraInput" accept="image/*" capture="environment" onchange="handleCardImage(this)"/>
+        </label>
+        <label class="btn-secondary" style="display:flex;align-items:center;justify-content:center;gap:8px;flex:1;cursor:pointer" for="cardGalleryInput">
+          🖼 Gallery
+          <input type="file" id="cardGalleryInput" accept="image/*" onchange="handleCardImage(this)"/>
+        </label>
+      </div>
     </div>
 
     <!-- OCR Progress -->
@@ -245,6 +308,26 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Live Camera Scanner Overlay -->
+<div id="cameraOverlay">
+  <video id="cameraVideo" autoplay playsinline muted></video>
+  <div class="camera-frame">
+    <div class="camera-corner tl"></div>
+    <div class="camera-corner tr"></div>
+    <div class="camera-corner bl"></div>
+    <div class="camera-corner br"></div>
+    <div class="camera-scanline"></div>
+  </div>
+  <div class="camera-hint">Hold card flat inside the frame</div>
+  <div class="camera-hint-sub">One card at a time — tap 📸 to capture</div>
+  <div class="camera-actions">
+    <button class="btn-cancel-cam" onclick="closeLiveCamera()">Cancel</button>
+    <button class="btn-capture" onclick="captureFromCamera()">📸</button>
+  </div>
+</div>
+
+<canvas id="captureCanvas" style="display:none"></canvas>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
@@ -693,6 +776,69 @@ function exportCardsExcel() {
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(a.href),1500);
   showToast('Exported.');
+}
+
+// ── Live Camera Scanner ──────────────────────────────────────────
+let cameraStream = null;
+
+async function openLiveCamera() {
+  const overlay = document.getElementById('cameraOverlay');
+  const video   = document.getElementById('cameraVideo');
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'environment', // back camera
+        width:  { ideal: 1920 },
+        height: { ideal: 1080 }
+      },
+      audio: false
+    });
+    video.srcObject = cameraStream;
+    overlay.classList.add('active');
+  } catch(e) {
+    showToast('Camera not available — please use "Take Photo" instead.');
+    console.warn('Camera error:', e);
+  }
+}
+
+function closeLiveCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  document.getElementById('cameraOverlay').classList.remove('active');
+  document.getElementById('cameraVideo').srcObject = null;
+}
+
+function captureFromCamera() {
+  const video  = document.getElementById('cameraVideo');
+  const canvas = document.getElementById('captureCanvas');
+
+  // Crop to the card frame area (center 88vw × aspect 1.75)
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+
+  // Calculate crop: take center 80% width, proportional height for card ratio
+  const cropW = Math.round(vw * 0.85);
+  const cropH = Math.round(cropW / 1.75);
+  const cropX = Math.round((vw - cropW) / 2);
+  const cropY = Math.round((vh - cropH) / 2);
+
+  canvas.width  = cropW;
+  canvas.height = cropH;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+  // Flash effect
+  const overlay = document.getElementById('cameraOverlay');
+  overlay.style.background = '#fff';
+  setTimeout(() => { overlay.style.background = '#000'; }, 100);
+
+  currentImageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+  closeLiveCamera();
+
+  // Run OCR on the cropped image
+  setTimeout(() => runOCR(currentImageDataUrl), 200);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
