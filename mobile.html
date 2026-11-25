@@ -9,7 +9,6 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="theme-color" content="#0A0A0A"/>
 <title>QNu — Card Scanner</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
 <style>
   :root {
     --bg: #0A0A0A; --surface: #161616; --surface2: #1E1E1E;
@@ -413,41 +412,11 @@ function updateEventTag() {
   if (topEl) topEl.textContent = currentEvent || 'QNu Labs Events';
 }
 
-// ── Image preprocessing for better OCR ───────────────────────────
-function preprocessImage(imgEl) {
-  const canvas = document.createElement('canvas');
-  const scale = Math.min(2000 / imgEl.naturalWidth, 2000 / imgEl.naturalHeight, 2);
-  canvas.width  = imgEl.naturalWidth  * scale;
-  canvas.height = imgEl.naturalHeight * scale;
-  const ctx = canvas.getContext('2d');
-
-  // Draw original
-  ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
-
-  // Get pixel data
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
-
-  // Apply: increase contrast + desaturate (grayscale helps Tesseract)
-  for (let i = 0; i < data.length; i += 4) {
-    // Grayscale
-    const gray = data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
-    // High contrast: push toward black or white
-    const contrast = 1.8;
-    const factor = (259 * (contrast * 255 + 255)) / (255 * (259 - contrast * 255));
-    const val = Math.min(255, Math.max(0, factor * (gray - 128) + 128));
-    data[i] = data[i+1] = data[i+2] = val;
-  }
-  ctx.putImageData(imageData, 0, 0);
-  return canvas;
-}
-
 // ── Handle card image ─────────────────────────────────────────────
 function handleCardImage(input) {
   const file = input.files[0];
   if (!file) return;
   input.value = '';
-
   const reader = new FileReader();
   reader.onload = function(e) {
     currentImageDataUrl = e.target.result;
@@ -457,58 +426,68 @@ function handleCardImage(input) {
 }
 
 async function runOCR(dataUrl) {
-  document.getElementById('scanSection').style.display   = 'none';
-  document.getElementById('reviewPanel').style.display   = 'none';
-  document.getElementById('ocrProgress').style.display   = 'block';
-  updateProgress(0, 'Loading image...');
+  document.getElementById('scanSection').style.display = 'none';
+  document.getElementById('reviewPanel').style.display = 'none';
+  document.getElementById('ocrProgress').style.display = 'block';
+  updateProgress(10, 'Sending to OCR engine...');
 
   try {
-    // Preprocess image for better OCR
-    const img = new Image();
-    img.onload = async function() {
-      const canvas = preprocessImage(img);
-      updateProgress(20, 'Preprocessing image...');
+    // Convert dataUrl to blob
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const formData = new FormData();
+    formData.append('file', blob, 'card.jpg');
+    formData.append('apikey', 'K8529935454492788957');
+    formData.append('language', 'eng');
+    formData.append('isOverlayRequired', 'false');
+    formData.append('detectOrientation', 'true');
+    formData.append('scale', 'true');
+    formData.append('OCREngine', '2'); // Engine 2 is better for printed text/business cards
+    formData.append('isTable', 'false');
 
-      const result = await Tesseract.recognize(canvas, 'eng', {
-        logger: m => {
-          if (m.status === 'recognizing text') {
-            updateProgress(20 + Math.round(m.progress * 70), 'Reading text...');
-          }
-        },
-        tessedit_pageseg_mode: '6',      // Uniform block of text
-        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@._+- ,/:()&',
-      });
+    updateProgress(30, 'Reading card...');
 
-      updateProgress(95, 'Parsing details...');
-      const text = result.data.text;
-      const parsed = parseBusinessCard(text);
+    const ocrRes = await fetch('https://api.ocr.space/parse/image', {
+      method: 'POST',
+      body: formData
+    });
 
-      // Show preview
-      document.getElementById('previewImg').src = currentImageDataUrl;
+    const ocrData = await ocrRes.json();
+    updateProgress(80, 'Parsing details...');
 
-      // Fill review form
-      document.getElementById('rv_name').value        = parsed.name        || '';
-      document.getElementById('rv_company').value     = parsed.company     || '';
-      document.getElementById('rv_designation').value = parsed.designation || '';
-      document.getElementById('rv_email').value       = parsed.email       || '';
-      document.getElementById('rv_phone').value       = parsed.phone       || '';
-      document.getElementById('rv_website').value     = parsed.website     || '';
-      document.getElementById('rv_linkedin').value    = parsed.linkedin    || '';
+    let text = '';
+    if (ocrData.ParsedResults && ocrData.ParsedResults.length > 0) {
+      text = ocrData.ParsedResults[0].ParsedText || '';
+    }
 
-      updateProgress(100, 'Done!');
-      setTimeout(() => {
-        document.getElementById('ocrProgress').style.display = 'none';
-        document.getElementById('reviewPanel').style.display = 'block';
-        document.getElementById('reviewPanel').scrollIntoView({ behavior: 'smooth' });
-      }, 400);
-    };
-    img.src = dataUrl;
+    if (!text.trim()) {
+      throw new Error('Could not read text from card — please ensure good lighting and try again.');
+    }
+
+    const parsed = parseBusinessCard(text);
+
+    // Show preview and fill form
+    document.getElementById('previewImg').src = currentImageDataUrl;
+    document.getElementById('rv_name').value        = parsed.name        || '';
+    document.getElementById('rv_company').value     = parsed.company     || '';
+    document.getElementById('rv_designation').value = parsed.designation || '';
+    document.getElementById('rv_email').value       = parsed.email       || '';
+    document.getElementById('rv_phone').value       = parsed.phone       || '';
+    document.getElementById('rv_website').value     = parsed.website     || '';
+    document.getElementById('rv_linkedin').value    = parsed.linkedin    || '';
+
+    updateProgress(100, 'Done!');
+    setTimeout(() => {
+      document.getElementById('ocrProgress').style.display = 'none';
+      document.getElementById('reviewPanel').style.display = 'block';
+      document.getElementById('reviewPanel').scrollIntoView({ behavior: 'smooth' });
+    }, 400);
 
   } catch(e) {
     document.getElementById('ocrProgress').style.display = 'none';
     document.getElementById('scanSection').style.display = 'block';
-    showToast('OCR failed — please try again or fill manually.');
-    // Still show review form with empty fields
+    showToast(e.message || 'OCR failed — please try again.');
+    // Still show review form for manual entry
     document.getElementById('previewImg').src = currentImageDataUrl;
     document.getElementById('reviewPanel').style.display = 'block';
   }
