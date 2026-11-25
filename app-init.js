@@ -7,7 +7,7 @@ async function init() {
     const ok=await refreshToken();
     if(!ok){SESSION=null;try{localStorage.removeItem('mo_session');}catch(_){}}
   }
-  if(SESSION){buildSidebar();setScreen('app');goHome();}
+  if(SESSION){buildSidebar();setScreen('app');goHome();if(typeof window.mobileInit==='function')window.mobileInit();}
   else setScreen('login');
   ['loginEmail','loginPw'].forEach(id=>{
     const el=$(id); if(el) el.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
