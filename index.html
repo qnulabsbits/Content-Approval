@@ -2,13 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="One View"/>
-<meta name="mobile-web-app-capable" content="yes"/>
-<meta name="theme-color" content="#000000"/>
-<link rel="manifest" href="manifest.json"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>One View - QNu Labs</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -24,92 +18,7 @@
 .excel-menu-item:hover{background:var(--surface2);}
 </style>
 
-<style>
-/* ── Mobile / PWA Layout — only when logged in ─────────────────── */
-/* Login page is NOT affected — all rules scoped to body.app-logged-in */
 
-@media (max-width: 900px) {
-
-  /* Login page — full screen centered, no sidebar interference */
-  #v-login {
-    width: 100% !important;
-    min-height: 100vh !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    overflow-y: auto !important;
-  }
-
-  /* App shell — when display:grid is set by setScreen() */
-  #v-app[style*="grid"] {
-    display: flex !important;
-    flex-direction: column !important;
-    height: 100dvh !important;
-    height: 100vh !important;
-    overflow: hidden !important;
-  }
-
-  /* Topbar — compact, full width */
-  #v-app .app-topbar {
-    flex-shrink: 0 !important;
-    padding: 0 10px !important;
-    height: 48px !important;
-    min-height: 48px !important;
-    display: flex !important;
-    align-items: center !important;
-  }
-
-  #v-app .topbar-brand .brand-sub { display: none !important; }
-  #v-app .user-name { font-size: 11px !important; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #v-app .user-role { display: none !important; }
-  #v-app .topbar-btn.danger { font-size: 11px !important; padding: 5px 8px !important; }
-  #v-app .topbar-brand { gap: 6px !important; }
-  #v-app .topbar-logo { height: 24px !important; }
-  #v-app .brand-name { font-size: 13px !important; }
-  #v-app .topbar-right { gap: 6px !important; }
-
-  /* Sidebar — fixed, always visible */
-  #v-app .app-sidebar {
-    position: fixed !important;
-    top: 48px !important;
-    left: 0 !important;
-    width: 180px !important;
-    min-width: 180px !important;
-    height: calc(100dvh - 48px) !important;
-    height: calc(100vh - 48px) !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    transform: none !important;
-    z-index: 100 !important;
-    border-right: 1px solid var(--border) !important;
-  }
-
-  #v-app .si-label { display: inline !important; opacity: 1 !important; font-size: 12px !important; }
-  #v-app .si-icon { font-size: 14px !important; }
-  #v-app .sidebar-item { padding: 10px 12px !important; }
-  #v-app .sidebar-toggle-btn { display: none !important; }
-  #v-app .sidebar-modules-label { display: block !important; font-size: 10px !important; }
-
-  /* Main content — offset by sidebar width */
-  #v-app .app-main {
-    position: fixed !important;
-    top: 48px !important;
-    left: 180px !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    padding: 12px !important;
-  }
-
-  #v-app .table-wrap { overflow-x: auto !important; }
-  #v-app .stats-row { grid-template-columns: 1fr 1fr !important; }
-  #v-app .page-header { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
-  #v-app .page-actions { flex-wrap: wrap !important; gap: 6px !important; }
-  #v-app .fs-overlay { position: fixed !important; inset: 0 !important; z-index: 9999 !important; }
-  #v-app .chat-fab { bottom: 16px !important; right: 16px !important; }
-}
-</style>
 
 <style>
 .cr-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:12px;transition:box-shadow 0.15s;}
@@ -1801,68 +1710,7 @@
 
 
 
-<script>
-// ── PWA / Mobile helpers ──────────────────────────────────────
-(function() {
-  // Prevent pinch zoom via touch events
-  document.addEventListener('touchstart', function(e) {
-    if (e.touches.length > 1) e.preventDefault();
-  }, { passive: false });
 
-  document.addEventListener('gesturestart', function(e) {
-    e.preventDefault();
-  }, { passive: false });
-
-  // Prevent double-tap zoom
-  var lastTap = 0;
-  document.addEventListener('touchend', function(e) {
-    var now = Date.now();
-    if (now - lastTap < 300) e.preventDefault();
-    lastTap = now;
-  }, { passive: false });
-
-  // On mobile — force sidebar always visible after login
-  function checkMobile() {
-    var isMobile = window.innerWidth <= 900;
-    if (!isMobile) return;
-    var app = document.getElementById('v-app');
-    // Only run when app shell is visible (user is logged in)
-    if (!app || app.style.display === 'none' || app.style.display === '') return;
-    var sidebar = document.getElementById('appSidebar');
-    if (!sidebar) return;
-    sidebar.style.transform = 'none';
-    sidebar.classList.remove('collapsed');
-    document.querySelector('.app-shell') && document.querySelector('.app-shell').classList.remove('sidebar-collapsed');
-    document.querySelectorAll('.si-label').forEach(function(el) {
-      el.style.display = 'inline';
-      el.style.opacity = '1';
-    });
-  }
-
-  window.addEventListener('resize', checkMobile);
-  // Override toggleSidebar on mobile
-  window.addEventListener('load', function() {
-    var _origToggle = window.toggleSidebar;
-    window.toggleSidebar = function() {
-      if (window.innerWidth <= 900) return;
-      if (_origToggle) _origToggle();
-    };
-  });
-
-  // Run after login — expose for app-init.js to call
-  window.mobileInit = function() {
-    setTimeout(checkMobile, 200);
-    setTimeout(checkMobile, 800);
-  };
-
-  // Register service worker for PWA install
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('/sw.js').catch(function() {});
-    });
-  }
-})();
-</script>
 <script src="app-core.js"></script>
 <script src="app-content.js"></script>
 <script src="app-projects.js"></script>
