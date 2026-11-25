@@ -2,7 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="One View"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#000000"/>
+<link rel="manifest" href="manifest.json"/>
 <title>One View - QNu Labs</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -16,6 +22,68 @@
 <style>
 .excel-menu-item{display:block;width:100%;text-align:left;padding:9px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-family:Inter,sans-serif;color:var(--text);}
 .excel-menu-item:hover{background:var(--surface2);}
+</style>
+
+<style>
+/* ── Mobile / PWA Layout ───────────────────────── */
+@media (max-width: 768px) {
+  .app-shell {
+    display: grid !important;
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 220px 1fr;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .app-topbar {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .app-sidebar {
+    grid-column: 1;
+    grid-row: 2;
+    position: relative !important;
+    width: 220px !important;
+    min-width: 220px !important;
+    transform: none !important;
+    display: flex !important;
+    flex-direction: column;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+    height: 100%;
+  }
+  .app-main {
+    grid-column: 2;
+    grid-row: 2;
+    overflow-y: auto;
+    height: 100%;
+    padding: 12px !important;
+  }
+  .sidebar-toggle-btn { display: none !important; }
+  .sidebar-modules-label { display: block !important; }
+  .si-label { display: block !important; opacity: 1 !important; }
+  .topbar-brand .brand-name,
+  .topbar-brand .brand-sub { display: block !important; }
+  /* Prevent horizontal scroll */
+  body { overflow-x: hidden; }
+  /* Compact topbar on mobile */
+  .app-topbar { padding: 8px 12px !important; }
+  .topbar-btn.danger { font-size: 11px !important; padding: 4px 10px !important; }
+  .user-name, .user-role { font-size: 11px !important; }
+  /* Tables scroll horizontally within container */
+  .table-wrap, [style*="overflow-x:auto"] { overflow-x: auto; }
+  /* Cards full width */
+  .stats-row { grid-template-columns: repeat(2, 1fr) !important; }
+  /* Full screen overlays */
+  .fs-overlay { position: fixed !important; inset: 0 !important; }
+}
+
+@media (max-width: 480px) {
+  .app-sidebar { width: 180px !important; min-width: 180px !important; }
+  .app-main { padding: 8px !important; }
+  .stats-row { grid-template-columns: 1fr 1fr !important; }
+  .page-header { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
+  .page-actions { flex-wrap: wrap !important; }
+}
 </style>
 
 <style>
@@ -1708,6 +1776,57 @@
 
 
 
+<script>
+// ── PWA / Mobile helpers ──────────────────────────────────────
+(function() {
+  // Prevent pinch zoom via touch events
+  document.addEventListener('touchstart', function(e) {
+    if (e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+
+  document.addEventListener('gesturestart', function(e) {
+    e.preventDefault();
+  }, { passive: false });
+
+  // Prevent double-tap zoom
+  var lastTap = 0;
+  document.addEventListener('touchend', function(e) {
+    var now = Date.now();
+    if (now - lastTap < 300) e.preventDefault();
+    lastTap = now;
+  }, { passive: false });
+
+  // On mobile PWA — force sidebar always visible
+  function checkMobile() {
+    var isMobile = window.innerWidth <= 768;
+    var sidebar = document.getElementById('appSidebar');
+    var shell = document.querySelector('.app-shell');
+    if (!sidebar || !shell) return;
+    if (isMobile) {
+      sidebar.style.transform = 'none';
+      sidebar.style.position = 'relative';
+      sidebar.classList.remove('collapsed');
+      shell.classList.remove('sidebar-collapsed');
+      // Ensure sidebar items are always visible
+      document.querySelectorAll('.si-label').forEach(function(el) {
+        el.style.display = 'block';
+        el.style.opacity = '1';
+      });
+    }
+  }
+
+  window.addEventListener('resize', checkMobile);
+  window.addEventListener('load', checkMobile);
+  document.addEventListener('DOMContentLoaded', checkMobile);
+
+  // Register service worker for PWA install
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/sw.js').catch(function() {});
+    });
+  }
+})();
+</script>
 <script src="app-core.js"></script>
 <script src="app-content.js"></script>
 <script src="app-projects.js"></script>
