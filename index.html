@@ -30,21 +30,18 @@
 
 @media (max-width: 900px) {
 
-  /* Login page — center properly, no sidebar interference */
+  /* Login page — full screen centered, no sidebar interference */
   #v-login {
-    position: fixed !important;
-    inset: 0 !important;
+    width: 100% !important;
+    min-height: 100vh !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     overflow-y: auto !important;
-    z-index: 9999 !important;
   }
 
-  /* App shell only when visible (logged in) */
-  #v-app[style*="block"], #v-app:not([style*="none"]) {
-
-    /* Full height layout */
+  /* App shell — when display:grid is set by setScreen() */
+  #v-app[style*="grid"] {
     display: flex !important;
     flex-direction: column !important;
     height: 100dvh !important;
