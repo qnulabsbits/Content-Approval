@@ -432,37 +432,27 @@ async function runOCR(dataUrl) {
   updateProgress(10, 'Sending to OCR engine...');
 
   try {
-    // Convert dataUrl to blob
-    const res = await fetch(dataUrl);
-    const blob = await res.blob();
-    const formData = new FormData();
-    formData.append('file', blob, 'card.jpg');
-    formData.append('apikey', 'K8529935454492788957');
-    formData.append('language', 'eng');
-    formData.append('isOverlayRequired', 'false');
-    formData.append('detectOrientation', 'true');
-    formData.append('scale', 'true');
-    formData.append('OCREngine', '2'); // Engine 2 is better for printed text/business cards
-    formData.append('isTable', 'false');
-
     updateProgress(30, 'Reading card...');
 
-    const ocrRes = await fetch('https://api.ocr.space/parse/image', {
+    // Send through Supabase edge function to avoid CORS
+    const ocrRes = await fetch(SUPA_URL + '/functions/v1/ocr-card', {
       method: 'POST',
-      body: formData
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + (SESSION?.token || SUPA_KEY)
+      },
+      body: JSON.stringify({ image: dataUrl })
     });
 
     const ocrData = await ocrRes.json();
     updateProgress(80, 'Parsing details...');
 
-    let text = '';
-    if (ocrData.ParsedResults && ocrData.ParsedResults.length > 0) {
-      text = ocrData.ParsedResults[0].ParsedText || '';
+    if (!ocrData.success || !ocrData.text?.trim()) {
+      throw new Error('Could not read text from card — try better lighting or fill manually.');
     }
 
-    if (!text.trim()) {
-      throw new Error('Could not read text from card — please ensure good lighting and try again.');
-    }
+    const text = ocrData.text;
 
     const parsed = parseBusinessCard(text);
 
