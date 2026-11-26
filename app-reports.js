@@ -214,12 +214,79 @@ function buildRptSummary() {
 
 // ── TAB: EVENTS ───────────────────────────────────────────────────
 function buildRptEvents() {
+  // Count leads per event from real data
+  const novWebsite = RPT_NOV_WEBSITE_LEADS.length;
+  const thaiTotal = RPT_THAILAND_LEADS.length;
+  const londonTotal = RPT_LONDON_LEADS.length;
+  const cannesTotal = RPT_CANNES_LEADS.length;
+  const luxembourgHot = 2;
+
+  // Geo breakdown
+  const novIndia = RPT_NOV_WEBSITE_LEADS.filter(l=>!l.geo||l.geo.toLowerCase().includes('india')||l.geo==='India').length;
+  const novIntl  = RPT_NOV_WEBSITE_LEADS.filter(l=>(l.geo||'').toLowerCase().includes('int')).length;
+  // Thailand + London + Cannes + Luxembourg = international events
+  const eventIntl = thaiTotal + londonTotal + cannesTotal + luxembourgHot;
+  const totalIndia = novIndia;
+  const totalIntl  = novIntl + eventIntl;
+  const grandTotal = totalIndia + totalIntl;
+
   return `
   <div class="rpt-slide-title">
     <div class="rpt-eyebrow">Slide 3</div>
     <div class="rpt-h1">Events & leads</div>
   </div>
 
+  <!-- PIE CHARTS ROW -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px">
+
+    <!-- Geo Split Pie -->
+    <div class="rpt-card" style="text-align:center">
+      <div class="rpt-card-label">India vs International</div>
+      <div style="position:relative;height:180px"><canvas id="rptGeoChart"></canvas></div>
+      <div style="display:flex;justify-content:center;gap:16px;margin-top:8px">
+        <div style="cursor:pointer" onclick="rptOpenModal('all_leads_india')">
+          <div style="font-size:18px;font-weight:800;color:#10B981">\${totalIndia}</div>
+          <div style="font-size:11px;color:var(--muted)">India ↗</div>
+        </div>
+        <div style="cursor:pointer" onclick="rptOpenModal('all_leads_intl')">
+          <div style="font-size:18px;font-weight:800;color:#3B82F6">\${totalIntl}</div>
+          <div style="font-size:11px;color:var(--muted)">International ↗</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Temperature Pie -->
+    <div class="rpt-card" style="text-align:center">
+      <div class="rpt-card-label">Lead Temperature (Nov)</div>
+      <div style="position:relative;height:180px"><canvas id="rptTempChart"></canvas></div>
+      <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:8px">
+        <div style="cursor:pointer" onclick="rptOpenModal('temp_detail')">
+          <div style="font-size:16px;font-weight:800;color:#EF4444">15 ↗</div>
+          <div style="font-size:10px;color:var(--muted)">Hot</div>
+        </div>
+        <div style="cursor:pointer" onclick="rptOpenModal('temp_detail')">
+          <div style="font-size:16px;font-weight:800;color:#F59E0B">4 ↗</div>
+          <div style="font-size:10px;color:var(--muted)">Warm</div>
+        </div>
+        <div>
+          <div style="font-size:16px;font-weight:800;color:#9CA3AF">2</div>
+          <div style="font-size:10px;color:var(--muted)">Cold</div>
+        </div>
+        <div>
+          <div style="font-size:16px;font-weight:800;color:#D1D5DB">59</div>
+          <div style="font-size:10px;color:var(--muted)">Uncl.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leads by Event Bar (horizontal) -->
+    <div class="rpt-card">
+      <div class="rpt-card-label">Leads by Event</div>
+      <div style="position:relative;height:180px"><canvas id="rptEventChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- EVENTS + LEAD COUNTS -->
   <div class="rpt-two-col">
     <div>
       <div class="rpt-section-label">NOVEMBER EVENTS</div>
@@ -227,95 +294,122 @@ function buildRptEvents() {
       <div class="rpt-event-row" onclick="rptOpenModal('cannes')">
         <div class="rpt-event-left">
           <div class="rpt-event-title">World Quantum Cannes Festival</div>
-          <div class="rpt-event-meta">17–18 Nov · 7 hot leads · Schneider Electric, TotalEnergies, Jefferies, Intesa Sanpaolo, UBS</div>
+          <div class="rpt-event-meta">17–18 Nov · Schneider Electric, TotalEnergies, Jefferies, Intesa Sanpaolo, UBS</div>
         </div>
-        <div class="rpt-event-right">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           <span class="rpt-event-badge">₹35 Cr ↗</span>
+          <span style="font-size:11px;color:var(--muted)">7 hot leads</span>
         </div>
       </div>
 
       <div class="rpt-event-row" onclick="rptOpenModal('luxembourg')">
         <div class="rpt-event-left">
-          <div class="rpt-event-title">Luxembourg 1:1 meetings</div>
-          <div class="rpt-event-meta">6–7 Nov · 8 cards, 2 hot leads · Owner: Sudiptaa Paul</div>
+          <div class="rpt-event-title">Luxembourg 1:1 Meetings</div>
+          <div class="rpt-event-meta">6–7 Nov · 8 business cards · 2 hot leads · Owner: Sudiptaa Paul</div>
         </div>
-        <div class="rpt-event-right">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           <span class="rpt-event-badge">₹4 Cr ↗</span>
+          <span style="font-size:11px;color:var(--muted)">\${luxembourgHot} hot leads</span>
         </div>
       </div>
 
       <div class="rpt-event-row" onclick="rptOpenModal('london')">
         <div class="rpt-event-left">
           <div class="rpt-event-title">Quantum + AI Tech Show London</div>
-          <div class="rpt-event-meta">4 Nov · 10 leads · JETRO (Japan entry), Innovate UK, Q-CTRL</div>
+          <div class="rpt-event-meta">4 Nov · JETRO (Japan entry), Innovate UK, Q-CTRL</div>
         </div>
-        <div class="rpt-event-right">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           <span class="rpt-event-badge rpt-event-badge-blue">Brand + PR ↗</span>
+          <span style="font-size:11px;color:var(--muted)">\${londonTotal} leads</span>
         </div>
       </div>
 
       <div class="rpt-event-row" onclick="rptOpenModal('thailand')">
         <div class="rpt-event-left">
           <div class="rpt-event-title">Thailand Enterprise Roundtable</div>
-          <div class="rpt-event-meta">1 Nov · 26 leads · KBank, Bangkok Bank, Bank of Thailand, NECTEC</div>
+          <div class="rpt-event-meta">1 Nov · KBank, Bangkok Bank, Bank of Thailand, NECTEC</div>
         </div>
-        <div class="rpt-event-right">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           <span class="rpt-event-badge rpt-event-badge-green">SEA entry ↗</span>
+          <span style="font-size:11px;color:var(--muted)">\${thaiTotal} leads</span>
+        </div>
+      </div>
+
+      <div class="rpt-event-row" onclick="rptOpenModal('ciso6')" style="background:#F9FAFB">
+        <div class="rpt-event-left">
+          <div class="rpt-event-title">CISO6 Mumbai (October)</div>
+          <div class="rpt-event-meta">15 Oct · India BFSI + Tech Enterprise CISOs</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <span class="rpt-event-badge rpt-event-badge-green">India pipeline ↗</span>
+          <span style="font-size:11px;color:var(--muted)">239 leads</span>
         </div>
       </div>
     </div>
 
     <div>
-      <div class="rpt-mini-kpi-grid">
+      <!-- Lead count grid — every number clickable -->
+      <div class="rpt-section-label">CRM LEAD COUNTS — CLICK ANY NUMBER</div>
+      <div class="rpt-mini-kpi-grid" style="margin-bottom:12px">
         <div class="rpt-mini-kpi" onclick="rptOpenModal('all_leads_oct')">
           <div class="rpt-mini-num">345</div>
-          <div class="rpt-mini-label">October leads</div>
-          <div class="rpt-mini-sub">CISO6 Mumbai: 239</div>
+          <div class="rpt-mini-label">October leads ↗</div>
+          <div class="rpt-mini-sub">CISO6: 239 · Other: 106</div>
         </div>
         <div class="rpt-mini-kpi rpt-mini-fill" onclick="rptOpenModal('all_leads_nov')">
           <div class="rpt-mini-num">80</div>
-          <div class="rpt-mini-label">November leads</div>
+          <div class="rpt-mini-label">November leads ↗</div>
+          <div class="rpt-mini-sub">Events + organic</div>
         </div>
-        <div class="rpt-mini-kpi" onclick="rptOpenModal('temp_detail')">
+        <div class="rpt-mini-kpi" onclick="rptOpenModal('all_leads_india')" style="border-color:#10B981">
+          <div class="rpt-mini-num" style="color:#10B981">\${totalIndia}</div>
+          <div class="rpt-mini-label">India leads ↗</div>
+          <div class="rpt-mini-sub">Nov organic</div>
+        </div>
+        <div class="rpt-mini-kpi" onclick="rptOpenModal('all_leads_intl')" style="border-color:#3B82F6">
+          <div class="rpt-mini-num" style="color:#3B82F6">\${totalIntl}</div>
+          <div class="rpt-mini-label">International leads ↗</div>
+          <div class="rpt-mini-sub">Cannes + Luxembourg + Thailand + London</div>
+        </div>
+        <div class="rpt-mini-kpi" onclick="rptOpenModal('temp_detail')" style="border-color:#EF4444">
           <div class="rpt-mini-num rpt-red">15</div>
-          <div class="rpt-mini-label">Hot</div>
+          <div class="rpt-mini-label">Hot leads ↗</div>
         </div>
-        <div class="rpt-mini-kpi" onclick="rptOpenModal('temp_detail')">
+        <div class="rpt-mini-kpi" onclick="rptOpenModal('temp_detail')" style="border-color:#F59E0B">
           <div class="rpt-mini-num rpt-orange">4</div>
-          <div class="rpt-mini-label">Warm</div>
+          <div class="rpt-mini-label">Warm leads ↗</div>
         </div>
-        <div class="rpt-mini-kpi" onclick="rptOpenModal('temp_detail')">
-          <div class="rpt-mini-num">2</div>
-          <div class="rpt-mini-label">Cold / spam</div>
+        <div class="rpt-mini-kpi" onclick="rptOpenModal('cannes')">
+          <div class="rpt-mini-num">7</div>
+          <div class="rpt-mini-label">Cannes hot leads ↗</div>
         </div>
-        <div class="rpt-mini-kpi" onclick="rptOpenModal('temp_detail')">
-          <div class="rpt-mini-num">59</div>
-          <div class="rpt-mini-label">Unclassified</div>
+        <div class="rpt-mini-kpi" onclick="rptOpenModal('thailand')">
+          <div class="rpt-mini-num">\${thaiTotal}</div>
+          <div class="rpt-mini-label">Thailand leads ↗</div>
+        </div>
+        <div class="rpt-mini-kpi" onclick="rptOpenModal('london')">
+          <div class="rpt-mini-num">\${londonTotal}</div>
+          <div class="rpt-mini-label">London leads ↗</div>
+        </div>
+        <div class="rpt-mini-kpi" onclick="rptOpenModal('ciso6')">
+          <div class="rpt-mini-num">239</div>
+          <div class="rpt-mini-label">CISO6 leads ↗</div>
         </div>
       </div>
-      <div class="rpt-so-what" style="margin-top:12px">
+      <div class="rpt-so-what">
         <p style="font-weight:600">Nov shifted to international quality: Thailand, London, Luxembourg delivering high-value global accounts.</p>
       </div>
     </div>
   </div>
 
-  <div class="rpt-event-row rpt-event-row-cta" onclick="rptOpenModal('ciso6')" style="margin-top:12px">
+  <div class="rpt-event-row rpt-event-row-cta" onclick="rptOpenModal('all_leads_nov')">
     <div class="rpt-event-left">
-      <div class="rpt-event-title">🇮🇳 CISO6 Mumbai — 239 India enterprise leads (October)</div>
-      <div class="rpt-event-meta">India BFSI + Tech Enterprise CISOs</div>
-    </div>
-    <div class="rpt-event-right"><span class="rpt-event-badge rpt-event-badge-green">India pipeline ↗</span></div>
-  </div>
-
-  <div class="rpt-event-row rpt-event-row-cta" onclick="rptOpenModal('all_leads_nov')" style="margin-top:8px">
-    <div class="rpt-event-left">
-      <div class="rpt-event-title">📋 Full CRM database — all November leads</div>
-      <div class="rpt-event-meta">Search · Filter · Export</div>
+      <div class="rpt-event-title">Full CRM database — all November leads</div>
+      <div class="rpt-event-meta">Search · Filter by temp / geo · Export</div>
     </div>
     <div class="rpt-event-right"><span class="rpt-event-badge">Open CRM ↗</span></div>
   </div>`;
 }
-
 // ── TAB: DIGITAL ──────────────────────────────────────────────────
 function buildRptDigital() {
   return `
@@ -482,12 +576,65 @@ function rptShowTab(id, btn) {
     nextsteps: buildRptNextSteps,
   };
   c.innerHTML = (builders[id] || buildRptSummary)();
-  setTimeout(() => renderRptCharts(id), 100);
+  setTimeout(() => renderRptCharts(id), 150);
 }
 
 // ── Chart rendering ───────────────────────────────────────────────
 function renderRptCharts(tab) {
   if (typeof Chart === 'undefined') return;
+  if (tab === 'events') {
+    setTimeout(() => {
+      _renderRptDoughnut('rptGeoChart',
+        ['India', 'International'],
+        [RPT_NOV_WEBSITE_LEADS.filter(l=>!l.geo||l.geo==='India').length,
+         RPT_NOV_WEBSITE_LEADS.filter(l=>(l.geo||'').toLowerCase().includes('int')).length + RPT_THAILAND_LEADS.length + RPT_LONDON_LEADS.length + RPT_CANNES_LEADS.length + 2],
+        ['#10B981','#3B82F6']
+      );
+      _renderRptDoughnut('rptTempChart',
+        ['Hot','Warm','Cold','Unclassified'],
+        [15,4,2,59],
+        ['#EF4444','#F59E0B','#9CA3AF','#D1D5DB']
+      );
+      _renderRptBar('rptEventChart',
+        ['Website/Organic','CISO6 Mumbai','Thailand R/T','Cannes','London','Luxembourg','Goa Conclave','Pragati'],
+        [93,239,26,7,10,2,35,13]
+      );
+    }, 50);
+  }
+}
+
+function _renderRptDoughnut(id, labels, data, colors) {
+  const ctx = document.getElementById(id); if(!ctx) return;
+  if(ctx._ch) ctx._ch.destroy();
+  ctx._ch = new Chart(ctx, {
+    type:'doughnut',
+    data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:2,borderColor:'#fff'}]},
+    options:{plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8,boxWidth:10}}},cutout:'65%',maintainAspectRatio:false,
+      onClick:(e,el) => {
+        if(!el.length) return;
+        const idx=el[0].index;
+        if(id==='rptGeoChart') rptOpenModal(idx===0?'all_leads_india':'all_leads_intl');
+        else if(id==='rptTempChart') rptOpenModal('temp_detail');
+      }
+    }
+  });
+}
+
+function _renderRptBar(id, labels, data) {
+  const ctx = document.getElementById(id); if(!ctx) return;
+  if(ctx._ch) ctx._ch.destroy();
+  ctx._ch = new Chart(ctx, {
+    type:'bar',
+    data:{labels,datasets:[{label:'Leads',data,backgroundColor:'#E8460A',borderRadius:3}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}},maintainAspectRatio:false,
+      onClick:(e,el) => {
+        if(!el.length) return;
+        const idx=el[0].index;
+        const map=['all_leads_nov','ciso6','thailand','cannes','london','luxembourg','all_leads_nov','all_leads_nov'];
+        rptOpenModal(map[idx]||'all_leads_nov');
+      }
+    }
+  });
 }
 
 // ── Modal system ──────────────────────────────────────────────────
@@ -625,6 +772,18 @@ function rptOpenModal(type) {
     <span style="font-size:12px;padding:4px 11px;border-radius:20px;background:#FFF3EE;color:var(--accent);font-weight:500;border:1px solid #FCD9CC">+ 202 more India enterprise CISOs</span>
     </div>
     <p style="font-size:12px;color:var(--muted)">Full list of all 239 names available in Zoho CRM — filter by Lead Generator = "CISO6 Mumbai".</p>`;
+  }
+
+  else if (type === 'all_leads_india') {
+    title = 'India Leads — November + Events';
+    sub = 'All domestic leads from website/organic and India events';
+    html = rptBuildCRMView('india');
+  }
+
+  else if (type === 'all_leads_intl') {
+    title = 'International Leads — Cannes + Luxembourg + Thailand + London';
+    sub = 'All international pipeline leads · November 2026';
+    html = rptBuildCRMView('intl');
   }
 
   else if (type === 'all_leads_nov' || type === 'all_leads_oct') {
@@ -828,8 +987,8 @@ function rptOpenModal(type) {
   overlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 
-  if (type === 'all_leads_nov' || type === 'all_leads_oct') {
-    setTimeout(() => rptInitCRM(type === 'all_leads_nov'), 50);
+  if (['all_leads_nov','all_leads_oct','all_leads_india','all_leads_intl'].includes(type)) {
+    setTimeout(() => rptInitCRM(type), 50);
   }
 }
 
@@ -840,7 +999,8 @@ function rptCloseModal() {
 }
 
 // ── CRM View inside modal ─────────────────────────────────────────
-function rptBuildCRMView(isNov) {
+function rptBuildCRMView(mode) {
+  const isNov = mode === true || mode === 'nov';
   window._rptFilters = {temp:'All',geo:'All',q:''};
   window._rptLeadSrc = isNov ? 'nov' : 'all';
   return `
@@ -870,8 +1030,17 @@ function rptBuildCRMView(isNov) {
   </table></div>`;
 }
 
-function rptInitCRM(isNov) {
-  const src = isNov ? RPT_NOV_WEBSITE_LEADS : [...RPT_NOV_WEBSITE_LEADS,...RPT_THAILAND_LEADS.map(l=>({name:l.name,company:l.company,phone:'—',owner:l.owner,temp:l.signal,date:l.date,msg:l.note,event:'Thailand Roundtable 2026',geo:'International'})),...RPT_LONDON_LEADS.map(l=>({name:l.name,company:l.company,phone:l.phone,owner:'Sudiptaa Paul Choudhury',temp:l.signal,date:'4 Nov',msg:l.note,event:'Quantum + AI Tech Show London',geo:'International'}))];
+function rptInitCRM(mode) {
+  const allIntl = [
+    ...RPT_CANNES_LEADS.map(c=>({name:c.company,company:c.company,phone:'—',owner:'Vikas B / Sudiptaa Paul',temp:'Hot',date:'17-18 Nov',msg:c.signal+' · Est. '+c.pipeline,event:'Cannes Festival',geo:'International'})),
+    ...RPT_THAILAND_LEADS.map(l=>({name:l.name,company:l.company,phone:'—',owner:l.owner,temp:l.signal,date:l.date,msg:l.note,event:'Thailand Roundtable 2026',geo:'International'})),
+    ...RPT_LONDON_LEADS.map(l=>({name:l.name,company:l.company,phone:l.phone,owner:'Sudiptaa Paul Choudhury',temp:l.signal,date:'4 Nov',msg:l.note,event:'Quantum + AI Tech Show London',geo:'International'})),
+    {name:'Hot Lead 1',company:'Luxembourg bilateral meeting',phone:'—',owner:'Sudiptaa Paul Choudhury',temp:'Hot',date:'6-7 Nov',msg:'High-value bilateral meeting',event:'Luxembourg 1:1 Meetings',geo:'International'},
+    {name:'Hot Lead 2',company:'Luxembourg bilateral meeting',phone:'—',owner:'Sudiptaa Paul Choudhury',temp:'Hot',date:'6-7 Nov',msg:'High-value bilateral meeting',event:'Luxembourg 1:1 Meetings',geo:'International'},
+  ];
+  const allIndia = RPT_NOV_WEBSITE_LEADS.filter(l=>!l.geo||l.geo==='India'||l.geo.toLowerCase()==='india');
+  const allNov   = [...RPT_NOV_WEBSITE_LEADS,...allIntl];
+  const src = mode==='india' ? allIndia : mode==='intl' ? allIntl : mode==='all_leads_nov' ? allNov : allNov;
   window._rptCrmSrc = src;
   window._rptFilters = {temp:'All',geo:'All',q:''};
   const tot=src.length, hot=src.filter(l=>l.temp==='Hot').length, warm=src.filter(l=>l.temp==='Warm').length;
