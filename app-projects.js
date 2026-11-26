@@ -695,7 +695,7 @@ function downloadSampleProjectExcel() {
   var rows=[
     ['Theme / Project','Item','Status','Priority','Primary Owner','Individual KPI','Team KPI','Shared KPI','Detailed Comments and Notes','Source'],
     ['Q1 Brand Campaign','Design social media kit','inprogress','high','Aditya Vastrad','Brand Awareness & Visibility','','','All formats needed by 15 Mar','Confluence'],
-    ['Q1 Brand Campaign','Write blog post','todo','medium','Md Bilal','Content Production & Quality','','','SEO-optimised 1200 words','Confluence'],
+    ['Q1 Brand Campaign','Write blog post','todo','medium','','Content Production & Quality','','','SEO-optimised 1200 words','Confluence'],
     ['Partner Summit 2025','Design event banners','todo','high','Designer Name','Event Reach & Engagement','','','3 sizes: 3x6ft 2x4ft 1x2ft','Briefing doc'],
     ['Partner Summit 2025','Create invite emailer','todo','high','Content Name','','Integrated Marketing & Campaign Effectiveness','','HTML emailer 600px wide','Briefing doc'],
   ];
