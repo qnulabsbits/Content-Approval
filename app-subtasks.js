@@ -250,8 +250,10 @@ function initAutoLogout() {
 
 /* ── Name normalisation — treat short aliases as full names ── */
 const NAME_ALIASES = {
-  'bilal': 'Md Bilal',
-  'md bilal': 'Md Bilal'
+  'bilal': 'Bilal',
+  'md bilal': 'Bilal',
+  'mohammed bilal': 'Bilal',
+  'md. bilal': 'Bilal'
 };
 function normaliseName(name) {
   if(!name) return name;
