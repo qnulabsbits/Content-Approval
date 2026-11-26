@@ -451,17 +451,52 @@ async function markProjectComplete(){
   if(!activeProject) return;
   const isDone=activeProject.status==='done';
   const target=isDone?'inprogress':'done';
-  if(!confirm(isDone?'Reopen "'+activeProject.title+'" as In Progress?':'Mark "'+activeProject.title+'" as Completed?')) return;
+
+  // Owner check — only primary owner or admin can complete
+  if(target==='done'){
+    const isOwner = (activeProject.owner_name && normaliseName(activeProject.owner_name)?.toLowerCase()===normaliseName(SESSION?.full_name||'')?.toLowerCase())
+      || activeProject.owner_id===SESSION?.user_id
+      || SESSION?.role==='admin' || SESSION?.role==='cmo';
+    if(!isOwner){
+      toast('Only the primary owner ('+(activeProject.owner_name||'unknown')+') or Admin can complete this project.','error');
+      return;
+    }
+  }
+
+  const confirmMsg = isDone
+    ? 'Reopen "'+activeProject.title+'" as In Progress?'
+    : 'Mark "'+activeProject.title+'" as Completed?\n\nAll pending tasks will also be marked as Done.';
+  if(!confirm(confirmMsg)) return;
+
   try{
-    await dbUpdate('projects',activeProject.id,{status:target});
+    await dbUpdate('projects',activeProject.id,{status:target,completed_at:target==='done'?new Date().toISOString():null});
     activeProject.status=target;
     const p=projects.find(x=>String(x.id)===String(activeProject.id));
     if(p) p.status=target;
+
+    // Cascade: mark all pending tasks as done when project is completed
+    if(target==='done'){
+      try{
+        const tasksRes=await sbFetch('project_tasks?project_id=eq.'+activeProject.id+'&status=neq.done&select=id');
+        const pendingTasks=await tasksRes.json();
+        for(const t of (pendingTasks||[])){
+          await dbUpdate('project_tasks',t.id,{
+            status:'done',
+            notes_append:'[Marked done by project owner '+normaliseName(SESSION?.full_name||'')+' on '+new Date().toLocaleDateString('en-IN')+']'
+          }).catch(()=>{});
+        }
+        if(pendingTasks?.length) toast('Project completed — '+pendingTasks.length+' pending task(s) also marked done.');
+        else toast('Project marked Completed.');
+      } catch(e){ toast('Project marked Completed (tasks update failed).'); }
+    } else {
+      toast('Project reopened.');
+    }
+
     const btn=$('pmCompleteBtn');
     if(btn){btn.textContent=target==='done'?'Reopen':'Mark Complete';btn.style.background=target==='done'?'var(--muted)':'var(--green)';}
-    toast(target==='done'?'Project marked Completed ✅':'Project reopened.');
     renderProjectStats();
-    if(projectView==='table') renderProjectTable(); else renderKanban();
+    if(typeof renderProjectTable==='function') renderProjectTable();
+    if(typeof renderKanban==='function' && projectView==='kanban') renderKanban();
   }catch(e){toast('Error: '+e.message,'error');}
 }
 
