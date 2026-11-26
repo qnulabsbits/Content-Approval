@@ -11,8 +11,8 @@
 <title>QNu — Card Scanner</title>
 <style>
   :root {
-    --bg: #0A0A0A; --surface: #161616; --surface2: #1E1E1E;
-    --border: #2A2A2A; --text: #F5F5F5; --muted: #888;
+    --bg: #F3F4F6; --surface: #FFFFFF; --surface2: #F9FAFB;
+    --border: #E5E7EB; --text: #111827; --muted: #6B7280;
     --accent: #E8460A; --green: #10B981; --blue: #3B82F6;
     --radius: 12px;
   }
@@ -23,7 +23,7 @@
   .topbar {
     display: flex; align-items: center; justify-content: space-between;
     padding: env(safe-area-inset-top, 12px) 16px 12px;
-    background: var(--surface); border-bottom: 1px solid var(--border);
+    background: #fff; border-bottom: 1px solid var(--border); box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     min-height: 56px;
   }
   .topbar-logo { display: flex; align-items: center; gap: 10px; }
@@ -56,7 +56,7 @@
   .login-title { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 4px; }
   .login-sub { font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 24px; }
   .field-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-  .field-input { width: 100%; background: var(--surface2); border: 1.5px solid var(--border); 
+  .field-input { width: 100%; background: #fff; border: 1.5px solid var(--border); 
     color: var(--text); padding: 12px 14px; border-radius: 8px; font-size: 14px; font-family: inherit;
     outline: none; transition: border-color 0.2s; margin-bottom: 14px; }
   .field-input:focus { border-color: var(--accent); }
@@ -103,7 +103,7 @@
   .preview-img { width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px;
     background: #000; margin-bottom: 14px; }
   .review-field { margin-bottom: 12px; }
-  .review-input { width: 100%; background: var(--surface2); border: 1.5px solid var(--border);
+  .review-input { width: 100%; background: #fff; border: 1.5px solid var(--border);
     color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 14px;
     font-family: inherit; outline: none; }
   .review-input:focus { border-color: var(--accent); }
@@ -131,9 +131,9 @@
 
   /* ── Toast ── */
   .toast { position: fixed; bottom: calc(env(safe-area-inset-bottom,0px) + 20px); left: 50%;
-    transform: translateX(-50%); background: #1F2937; color: #fff; padding: 10px 20px;
+    transform: translateX(-50%); background: #111827; color: #fff; padding: 10px 20px;
     border-radius: 100px; font-size: 13px; font-weight: 600; white-space: nowrap;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4); z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
   .toast.show { opacity: 1; }
 
   /* ── Event tag ── */
@@ -243,22 +243,19 @@
 
     <!-- Event tag -->
     <div class="event-tag" id="eventTagBtn" onclick="changeEvent()">
-      📍 <span id="eventTagLabel">Tap to set event name</span> ✎
+      <span id="eventTagLabel">Tap to set event name</span> ✎
     </div>
 
     <!-- Scan area -->
     <div id="scanSection">
-      <button class="btn-scan" onclick="openLiveCamera()">
-        📷 Live Camera Scan
-      </button>
-      <div style="text-align:center;margin:10px 0;color:var(--muted);font-size:12px">or upload a photo</div>
-      <div style="display:flex;gap:10px">
-        <label class="btn-secondary" style="display:flex;align-items:center;justify-content:center;gap:8px;flex:1;cursor:pointer" for="cardCameraInput">
-          📸 Take Photo
+      <button class="btn-scan" onclick="openLiveCamera()">Live Camera Scan</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+        <label class="btn-secondary" style="display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;text-align:center" for="cardCameraInput">
+          Take Photo
           <input type="file" id="cardCameraInput" accept="image/*" capture="environment" onchange="handleCardImage(this)"/>
         </label>
-        <label class="btn-secondary" style="display:flex;align-items:center;justify-content:center;gap:8px;flex:1;cursor:pointer" for="cardGalleryInput">
-          🖼 Gallery
+        <label class="btn-secondary" style="display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;text-align:center" for="cardGalleryInput">
+          From Gallery
           <input type="file" id="cardGalleryInput" accept="image/*" onchange="handleCardImage(this)"/>
         </label>
       </div>
@@ -266,7 +263,7 @@
 
     <!-- OCR Progress -->
     <div id="ocrProgress">
-      <div style="font-size:15px;font-weight:700;margin-bottom:8px">🔍 Reading card...</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:8px">Reading card...</div>
       <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
       <div class="progress-label" id="progressLabel">Initializing...</div>
     </div>
@@ -275,7 +272,7 @@
     <div id="reviewPanel">
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <div class="card-title" style="margin:0">✅ Review & Correct</div>
+          <div class="card-title" style="margin:0">Review & Correct Details</div>
           <div id="cardQueueIndicator" style="font-size:12px;color:var(--muted)"></div>
         </div>
         <img id="previewImg" class="preview-img" src="" alt="Card"/>
@@ -287,9 +284,22 @@
         <div class="review-field"><div class="field-label">Website</div><input class="review-input" id="rv_website" placeholder="www.company.com"/></div>
         <div class="review-field"><div class="field-label">LinkedIn</div><input class="review-input" id="rv_linkedin" placeholder="linkedin.com/in/..."/></div>
         <div class="review-field"><div class="field-label">Notes</div><input class="review-input" id="rv_notes" placeholder="Any notes (optional)"/></div>
-        <div class="review-actions">
-          <button class="btn-secondary" onclick="discardCard()">Discard</button>
-          <button class="btn-primary" id="saveCardBtn" onclick="saveCard()">💾 Save & Add to CRM</button>
+        <!-- Save options -->
+        <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Save Options</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <button id="saveCardBtn" onclick="saveCard('crm')"
+              style="background:var(--accent);color:#fff;border:none;padding:12px;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;line-height:1.3">
+              Add to CRM
+            </button>
+            <button onclick="saveCard('excel')"
+              style="background:#fff;color:var(--text);border:1.5px solid var(--border);padding:12px;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;line-height:1.3">
+              Save to Excel List
+            </button>
+          </div>
+          <button onclick="discardCard()" style="width:100%;background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:8px;font-family:inherit">
+            Discard this card
+          </button>
         </div>
       </div>
     </div>
@@ -299,8 +309,8 @@
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div class="card-title" style="margin:0">Scanned Cards</div>
         <div style="display:flex;gap:8px">
-          <button class="btn-secondary btn-sm" onclick="syncAllPending()">↑ Sync All</button>
-          <button class="btn-secondary btn-sm" onclick="exportCardsExcel()">📊 Export</button>
+          <button class="btn-secondary btn-sm" onclick="syncAllPending()">Sync All to CRM</button>
+          <button class="btn-secondary btn-sm" onclick="exportCardsExcel()">Export Excel</button>
         </div>
       </div>
       <div id="cardsList"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">No cards scanned yet</div></div>
@@ -324,8 +334,8 @@
   <div class="camera-hint">Position ONE card inside the frame</div>
   <div class="camera-hint-sub" id="cameraHintSub">Tap the button below to scan</div>
   <div style="position:relative;z-index:2;margin-top:20px;display:flex;align-items:center;gap:16px">
-    <button class="btn-cancel-cam" onclick="closeLiveCamera()">✕ Cancel</button>
-    <button class="btn-capture" onclick="captureFromCamera()">📸 Scan</button>
+    <button class="btn-cancel-cam" onclick="closeLiveCamera()">Cancel</button>
+    <button class="btn-capture" onclick="captureFromCamera()">Capture</button>
   </div>
 </div>
 
@@ -570,7 +580,7 @@ function parseBusinessCard(text) {
 }
 
 // ── Save card ─────────────────────────────────────────────────────
-async function saveCard() {
+async function saveCard(mode) { mode = mode || 'crm';
   const card = {
     id:          Date.now(),
     full_name:   document.getElementById('rv_name').value.trim(),
@@ -620,11 +630,18 @@ async function saveCard() {
     });
   } catch(e) { console.warn('DB save failed:', e); }
 
-  // Try sync to Zoho CRM immediately
-  await syncCardToCRM(card);
+  // Sync to CRM immediately if mode is 'crm', otherwise save as excel-only
+  card.save_mode = mode;
+  if (mode === 'crm') {
+    await syncCardToCRM(card);
+  }
 
   await loadCards();
-  showToast('Card saved' + (card.status === 'synced' ? ' & synced to CRM ✓' : ' — will sync later'));
+  if (mode === 'excel') {
+    showToast('Saved to Excel list.');
+  } else {
+    showToast('Card saved' + (card.status === 'synced' ? ' & added to CRM' : ' — sync pending'));
+  }
   // Go to next card in queue
   discardCard();
 }
@@ -674,7 +691,7 @@ function showCardFromQueue(idx) {
   const btn = document.getElementById('saveCardBtn');
   if (btn) {
     const remaining = cardQueue.length - idx - 1;
-    btn.textContent = remaining > 0 ? '💾 Save & Next Card →' : '💾 Save & Add to CRM';
+    btn.textContent = remaining > 0 ? 'Save & Next Card' : 'Save & Add to CRM';
   }
   document.getElementById('reviewPanel').scrollIntoView({ behavior: 'smooth' });
 }
@@ -771,11 +788,11 @@ function renderCards() {
         <div class="card-name">${esc(c.full_name || '(No name)')}</div>
         <div class="card-company">${esc(c.company || '')} ${c.designation ? '· ' + esc(c.designation) : ''}</div>
         <div class="card-email">${esc(c.email || c.phone || '')}</div>
-        ${c.event_name ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">📍 ${esc(c.event_name)}</div>` : ''}
+        ${c.event_name ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(c.event_name)}</div>` : ''}
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-        <span class="card-status s-${c.status}">${c.status}</span>
-        ${c.status === 'pending' ? `<button onclick="syncOne(${c.db_id})" style="background:var(--accent);color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit">Sync</button>` : ''}
+        <span class="card-status s-${c.status}">${c.status === 'synced' ? 'In CRM' : c.status === 'pending' ? 'Pending' : c.status}</span>
+        ${c.status === 'pending' || c.status === 'excel' ? `<button onclick="syncOne(${c.db_id})" style="background:var(--accent);color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit">Add to CRM</button>` : ''}
       </div>
     </div>
   `).join('');
@@ -799,10 +816,16 @@ async function syncOne(dbId) {
 }
 
 // ── Export ────────────────────────────────────────────────────────
-function exportCardsExcel() {
-  if (!cards.length) { showToast('No cards to export.'); return; }
+function exportStagedCards() {
+  // Export only cards saved to excel list (not yet in CRM)
+  const staged = cards.filter(c => c.save_mode === 'excel' || c.status === 'pending');
+  if (!staged.length) { showToast('No cards in Excel list.'); return; }
+  exportToExcel(staged, 'Staged_Cards_' + new Date().toISOString().slice(0,10));
+}
+
+function exportToExcel(data, filename) {
   const headers = ['Name','Company','Designation','Email','Phone','Website','LinkedIn','Event','Status','Scanned At'];
-  const rows = cards.map(c => [c.full_name,c.company,c.designation,c.email,c.phone,c.website,c.linkedin,c.event_name,c.status,c.scanned_at]);
+  const rows = data.map(c => [c.full_name,c.company,c.designation,c.email,c.phone,c.website,c.linkedin,c.event_name,c.status,c.scanned_at]);
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   ws['!cols'] = headers.map(() => ({ wch: 20 }));
   const wb = { SheetNames:['Business Cards'], Sheets:{'Business Cards':ws} };
@@ -812,10 +835,15 @@ function exportCardsExcel() {
   for (let i=0;i<out.length;i++) view[i]=out.charCodeAt(i)&0xFF;
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([buf],{type:'application/octet-stream'}));
-  a.download = 'Business_Cards_' + new Date().toISOString().slice(0,10) + '.xlsx';
+  a.download = filename + '.xlsx';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(a.href),1500);
   showToast('Exported.');
+}
+
+function exportCardsExcel() {
+  if (!cards.length) { showToast('No cards to export.'); return; }
+  exportToExcel(cards, 'Business_Cards_' + new Date().toISOString().slice(0,10));
 }
 
 // ── Live Camera Scanner with Auto-Capture ────────────────────────
@@ -868,7 +896,7 @@ function resetCaptureRing() {
 function startAutoCapture() {
   // Manual only — no auto-capture
   const hint = document.getElementById('cameraHintSub');
-  if (hint) hint.textContent = 'Position card in frame, then tap 📸';
+  if (hint) hint.textContent = 'Position card in frame, then tap Capture';
 }
 
 function stopAutoCapture() {
