@@ -12,6 +12,7 @@ let crmLeads = [], crmDeals = [], crmTab = 'leads';
 let crmLeadsPage = 1, crmDealsPage = 1;
 let crmLeadsPerPage = 25, crmDealsPerPage = 25;
 let crmLeadsFilters = {}, crmDealsFilters = {};
+let crmLeadsSearch = '', crmDealsSearch = '';
 let crmLeadsTotal = 0, crmDealsTotal = 0;
 
 // ── Required fields ───────────────────────────────────────────────
@@ -118,11 +119,24 @@ function crmSetTab(tab) {
 }
 
 // ── Filter helpers ────────────────────────────────────────────────
+function crmSetLeadSearch(val) { crmLeadsSearch = val; renderCRMLeadsTable(); }
+function crmSetDealSearch(val) { crmDealsSearch = val; renderCRMDealsTable(); }
+
 function crmGetFilteredLeads() {
   return crmLeads.filter(lead => {
+    // Global search
+    if (crmLeadsSearch) {
+      const q = crmLeadsSearch.toLowerCase();
+      const searchable = LEADS_FIELDS.map(f => {
+        let v = lead[f.key];
+        if (typeof v === 'object' && v !== null) v = v.name || '';
+        return String(v||'');
+      }).join(' ').toLowerCase();
+      if (!searchable.includes(q)) return false;
+    }
+    // Column filters
     return Object.entries(crmLeadsFilters).every(([key, val]) => {
       if (!val || val === '') return true;
-      const field = LEADS_FIELDS.find(f => f.key === key);
       let cellVal = lead[key];
       if (typeof cellVal === 'object' && cellVal !== null) cellVal = cellVal.name || '';
       return String(cellVal||'').toLowerCase().includes(val.toLowerCase());
@@ -132,6 +146,15 @@ function crmGetFilteredLeads() {
 
 function crmGetFilteredDeals() {
   return crmDeals.filter(deal => {
+    if (crmDealsSearch) {
+      const q = crmDealsSearch.toLowerCase();
+      const searchable = DEALS_FIELDS.map(f => {
+        let v = deal[f.key];
+        if (typeof v === 'object' && v !== null) v = v.name || '';
+        return String(v||'');
+      }).join(' ').toLowerCase();
+      if (!searchable.includes(q)) return false;
+    }
     return Object.entries(crmDealsFilters).every(([key, val]) => {
       if (!val || val === '') return true;
       let cellVal = deal[key];
@@ -178,8 +201,11 @@ function renderCRMLeadsTable() {
 
   let h = `
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <div style="font-size:13px;color:var(--muted)">${filtered.length} of ${crmLeads.length} leads · Page ${crmLeadsPage}</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <input type="text" class="field-input" placeholder="Search leads..." value="${esc(crmLeadsSearch)}"
+        oninput="crmSetLeadSearch(this.value)"
+        style="font-size:13px;padding:7px 12px;width:220px;border-radius:8px"/>
+      <div style="font-size:12px;color:var(--muted)">${filtered.length} of ${crmLeads.length} leads</div>
       ${activeFilters ? `<button onclick="crmClearLeadFilters()" class="btn btn-secondary btn-sm" style="color:#DC2626">✕ Clear ${activeFilters} filter${activeFilters>1?'s':''}</button>` : ''}
     </div>
     <div style="display:flex;gap:8px;align-items:center">
@@ -230,8 +256,11 @@ function renderCRMDealsTable() {
 
   let h = `
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <div style="font-size:13px;color:var(--muted)">${filtered.length} of ${crmDeals.length} deals · Page ${crmDealsPage}</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <input type="text" class="field-input" placeholder="Search deals..." value="${esc(crmDealsSearch)}"
+        oninput="crmSetDealSearch(this.value)"
+        style="font-size:13px;padding:7px 12px;width:220px;border-radius:8px"/>
+      <div style="font-size:12px;color:var(--muted)">${filtered.length} of ${crmDeals.length} deals</div>
       ${activeFilters ? `<button onclick="crmClearDealFilters()" class="btn btn-secondary btn-sm" style="color:#DC2626">✕ Clear ${activeFilters} filter${activeFilters>1?'s':''}</button>` : ''}
     </div>
     <div style="display:flex;gap:8px;align-items:center">
@@ -275,8 +304,8 @@ function renderCRMDealsTable() {
 }
 
 // ── Detail panels ─────────────────────────────────────────────────
-function crmShowLeadDetail(jsonStr) {
-  const lead = JSON.parse(jsonStr);
+function crmShowLeadDetail(id) {
+  const lead = window['_crm_'+id]; if(!lead) return;
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
   let rows = LEADS_FIELDS.map(f => {
@@ -296,8 +325,8 @@ function crmShowLeadDetail(jsonStr) {
   document.body.appendChild(overlay);
 }
 
-function crmShowDealDetail(jsonStr) {
-  const deal = JSON.parse(jsonStr);
+function crmShowDealDetail(id) {
+  const deal = window['_crm_'+id]; if(!deal) return;
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
   let rows = DEALS_FIELDS.map(f => {
