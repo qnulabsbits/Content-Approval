@@ -318,19 +318,11 @@
     <div class="camera-corner br"></div>
     <div class="camera-scanline"></div>
   </div>
-  <div class="camera-hint">Hold card steady inside the frame</div>
-  <div class="camera-hint-sub" id="cameraHintSub">Auto-captures when card is stable...</div>
-  <!-- Auto-capture progress ring -->
-  <div style="position:relative;z-index:2;margin-top:16px;display:flex;align-items:center;gap:14px">
-    <div style="position:relative;width:56px;height:56px">
-      <svg width="56" height="56" style="transform:rotate(-90deg)">
-        <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="4"/>
-        <circle id="captureRing" cx="28" cy="28" r="24" fill="none" stroke="#E8460A" stroke-width="4"
-          stroke-dasharray="150.8" stroke-dashoffset="150.8" style="transition:stroke-dashoffset 0.1s linear"/>
-      </svg>
-      <div id="captureCountdown" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:800"></div>
-    </div>
+  <div class="camera-hint">Position ONE card inside the frame</div>
+  <div class="camera-hint-sub" id="cameraHintSub">Tap the button below to scan</div>
+  <div style="position:relative;z-index:2;margin-top:20px;display:flex;align-items:center;gap:16px">
     <button class="btn-cancel-cam" onclick="closeLiveCamera()">✕ Cancel</button>
+    <button class="btn-capture" onclick="captureFromCamera()">📸 Scan</button>
   </div>
 </div>
 
@@ -449,7 +441,13 @@ async function runOCR(dataUrl) {
     updateProgress(80, 'Parsing details...');
 
     if (!ocrData.success || !ocrData.text?.trim()) {
-      throw new Error('Could not read text from card — try better lighting or fill manually.');
+      console.error('OCR failed:', ocrData);
+      // Still show review form for manual entry
+      document.getElementById('ocrProgress').style.display = 'none';
+      document.getElementById('previewImg').src = currentImageDataUrl;
+      document.getElementById('reviewPanel').style.display = 'block';
+      showToast('Could not read card — please fill in manually.');
+      return;
     }
 
     const text = ocrData.text;
@@ -830,63 +828,9 @@ function resetCaptureRing() {
 }
 
 function startAutoCapture() {
-  const video   = document.getElementById('cameraVideo');
-  const sampleCanvas = document.createElement('canvas');
-  // Sample a small version for motion detection (fast)
-  sampleCanvas.width  = 80;
-  sampleCanvas.height = 46;
-  const sctx = sampleCanvas.getContext('2d');
-
-  function detectFrame() {
-    if (!cameraStream) return;
-
-    // Sample center frame region
-    const vw = video.videoWidth, vh = video.videoHeight;
-    const cropW = Math.round(vw * 0.85);
-    const cropH = Math.round(cropW / 1.75);
-    const cropX = Math.round((vw - cropW) / 2);
-    const cropY = Math.round((vh - cropH) / 2);
-
-    sctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, 80, 46);
-    const frameData = sctx.getImageData(0, 0, 80, 46).data;
-
-    if (lastFrameData) {
-      // Calculate average pixel difference
-      let diff = 0;
-      for (let i = 0; i < frameData.length; i += 4) {
-        diff += Math.abs(frameData[i] - lastFrameData[i])
-               + Math.abs(frameData[i+1] - lastFrameData[i+1])
-               + Math.abs(frameData[i+2] - lastFrameData[i+2]);
-      }
-      const avgDiff = diff / (frameData.length / 4 * 3);
-
-      if (avgDiff < DIFF_THRESHOLD) {
-        stableFrames++;
-        // Update progress ring
-        captureProgress = Math.min(1, stableFrames / STABLE_NEEDED);
-        updateCaptureRing(captureProgress);
-        const secsLeft = Math.ceil(CAPTURE_SECS * (1 - captureProgress));
-        const cnt = document.getElementById('captureCountdown');
-        const hint = document.getElementById('cameraHintSub');
-        if (cnt)  cnt.textContent = stableFrames > 5 ? (secsLeft > 0 ? secsLeft : '✓') : '';
-        if (hint) hint.textContent = stableFrames > 5 ? 'Hold still...' : 'Auto-captures when card is stable...';
-
-        if (stableFrames >= STABLE_NEEDED) {
-          stopAutoCapture();
-          captureFromCamera();
-          return;
-        }
-      } else {
-        // Motion detected — reset
-        if (stableFrames > 0) resetCaptureRing();
-      }
-    }
-
-    lastFrameData = new Uint8ClampedArray(frameData);
-    captureLoopId = requestAnimationFrame(detectFrame);
-  }
-
-  captureLoopId = requestAnimationFrame(detectFrame);
+  // Manual only — no auto-capture
+  const hint = document.getElementById('cameraHintSub');
+  if (hint) hint.textContent = 'Position card in frame, then tap 📸';
 }
 
 function stopAutoCapture() {
