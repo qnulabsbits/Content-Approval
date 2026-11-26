@@ -252,11 +252,11 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
         <label class="btn-secondary" style="display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;text-align:center" for="cardCameraInput">
           Take Photo
-          <input type="file" id="cardCameraInput" accept="image/*" capture="environment" onchange="handleCardImage(this)"/>
+          <input type="file" id="cardCameraInput" accept="image/*" capture="environment" multiple onchange="handleMultipleImages(this)"/>
         </label>
         <label class="btn-secondary" style="display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;text-align:center" for="cardGalleryInput">
-          From Gallery
-          <input type="file" id="cardGalleryInput" accept="image/*" onchange="handleCardImage(this)"/>
+          From Gallery (multi)
+          <input type="file" id="cardGalleryInput" accept="image/*" multiple onchange="handleMultipleImages(this)"/>
         </label>
       </div>
     </div>
@@ -419,14 +419,36 @@ function updateEventTag() {
   if (topEl) topEl.textContent = currentEvent || 'QNu Labs Events';
 }
 
-// ── Handle card image ─────────────────────────────────────────────
+// ── Handle card image(s) ─────────────────────────────────────────
+let imageQueue = [];
+let imageQueueIdx = 0;
+
 function handleCardImage(input) {
-  const file = input.files[0];
-  if (!file) return;
+  handleMultipleImages(input);
+}
+
+function handleMultipleImages(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
   input.value = '';
+  imageQueue = files;
+  imageQueueIdx = 0;
+  if (files.length > 1) showToast(files.length + ' images selected — processing one by one');
+  processNextImage();
+}
+
+function processNextImage() {
+  if (imageQueueIdx >= imageQueue.length) return;
+  const file = imageQueue[imageQueueIdx];
   const reader = new FileReader();
   reader.onload = function(e) {
     currentImageDataUrl = e.target.result;
+    // Update progress label for multi-image
+    if (imageQueue.length > 1) {
+      const prog = document.getElementById('ocrProgress');
+      const lbl  = document.getElementById('progressLabel');
+      if (lbl) lbl.textContent = 'Image ' + (imageQueueIdx+1) + ' of ' + imageQueue.length + '...';
+    }
     runOCR(currentImageDataUrl);
   };
   reader.readAsDataURL(file);
@@ -463,25 +485,44 @@ async function runOCR(dataUrl) {
       return;
     }
 
-    // Queue all detected cards
+    // If only 1 card detected but image may have 2 side by side — try splitting
+    if (ocrData.cards.length === 1) {
+      const img = new Image();
+      img.onload = async function() {
+        // If image is taller than wide — cards likely stacked vertically, try splitting
+        if (img.naturalHeight > img.naturalWidth * 0.8) {
+          updateProgress(85, 'Checking for multiple cards...');
+          const splitCards = await trySplitImage(dataUrl, img);
+          if (splitCards.length > 1) {
+            cardQueue = splitCards;
+            cardQueueIndex = 0;
+            showToast(cardQueue.length + ' cards detected');
+          } else {
+            cardQueue = ocrData.cards;
+            cardQueueIndex = 0;
+          }
+          finishOCR(ocrData);
+        } else {
+          cardQueue = ocrData.cards;
+          cardQueueIndex = 0;
+          finishOCR(ocrData);
+        }
+      };
+      img.src = dataUrl;
+      return; // wait for image load
+    }
+
+    // Multiple cards detected directly
     cardQueue = ocrData.cards;
     cardQueueIndex = 0;
-
-    if (cardQueue.length > 1) {
-      showToast(cardQueue.length + ' cards detected — reviewing one by one');
-    }
+    if (cardQueue.length > 1) showToast(cardQueue.length + ' cards detected');
 
     const text = cardQueue[0];
 
     const parsed = parseBusinessCard(text);
 
-    document.getElementById('previewImg').src = currentImageDataUrl;
-    updateProgress(100, cardQueue.length > 1 ? cardQueue.length + ' cards found!' : 'Done!');
-    setTimeout(() => {
-      document.getElementById('ocrProgress').style.display = 'none';
-      document.getElementById('reviewPanel').style.display = 'block';
-      showCardFromQueue(0);
-    }, 400);
+    // For multi-card path that didn't do image split
+    finishOCR(ocrData);
 
   } catch(e) {
     document.getElementById('ocrProgress').style.display = 'none';
@@ -498,6 +539,52 @@ function updateProgress(pct, label) {
   const lbl = document.getElementById('progressLabel');
   if (bar) bar.style.width = pct + '%';
   if (lbl) lbl.textContent = label;
+}
+
+// ── Split image into top/bottom halves for stacked card detection ──
+async function trySplitImage(dataUrl, img) {
+  const results = [];
+  const halves = [
+    { sy: 0, sh: Math.floor(img.naturalHeight / 2) },
+    { sy: Math.floor(img.naturalHeight / 2), sh: img.naturalHeight - Math.floor(img.naturalHeight / 2) }
+  ];
+  for (const half of halves) {
+    const canvas = document.createElement('canvas');
+    canvas.width  = img.naturalWidth;
+    canvas.height = half.sh;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, half.sy, img.naturalWidth, half.sh, 0, 0, img.naturalWidth, half.sh);
+    const halfDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    try {
+      const res = await fetch(SUPA_URL + '/functions/v1/ocr-card', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'apikey':SUPA_KEY, 'Authorization':'Bearer '+(SESSION?.token||SUPA_KEY) },
+        body: JSON.stringify({ image: halfDataUrl })
+      });
+      const d = await res.json();
+      if (d.success && d.cards?.length) results.push(...d.cards);
+    } catch(e) {}
+  }
+  return results.length >= 2 ? results : [];
+}
+
+function finishOCR(ocrData) {
+  const text = cardQueue[0];
+  const parsed = parseBusinessCard(text);
+  document.getElementById('previewImg').src = currentImageDataUrl;
+  document.getElementById('rv_name').value        = parsed.name        || '';
+  document.getElementById('rv_company').value     = parsed.company     || '';
+  document.getElementById('rv_designation').value = parsed.designation || '';
+  document.getElementById('rv_email').value       = parsed.email       || '';
+  document.getElementById('rv_phone').value       = parsed.phone       || '';
+  document.getElementById('rv_website').value     = parsed.website     || '';
+  document.getElementById('rv_linkedin').value    = parsed.linkedin    || '';
+  updateProgress(100, cardQueue.length > 1 ? cardQueue.length + ' cards found!' : 'Done!');
+  setTimeout(() => {
+    document.getElementById('ocrProgress').style.display = 'none';
+    document.getElementById('reviewPanel').style.display = 'block';
+    showCardFromQueue(0);
+  }, 400);
 }
 
 // ── Parse OCR text into fields ────────────────────────────────────
@@ -652,13 +739,23 @@ function discardCard() {
     // Next card in queue
     showCardFromQueue(cardQueueIndex);
   } else {
-    // All done
+    // All cards in this image done
     cardQueue = []; cardQueueIndex = 0;
-    document.getElementById('reviewPanel').style.display  = 'none';
-    document.getElementById('ocrProgress').style.display  = 'none';
-    document.getElementById('scanSection').style.display  = 'block';
-    currentImageDataUrl = '';
     clearReviewForm();
+    // Check if more images in queue
+    imageQueueIdx++;
+    if (imageQueueIdx < imageQueue.length) {
+      showToast('Next image — ' + (imageQueue.length - imageQueueIdx) + ' remaining');
+      setTimeout(processNextImage, 500);
+    } else {
+      // All images done
+      imageQueue = []; imageQueueIdx = 0;
+      document.getElementById('reviewPanel').style.display = 'none';
+      document.getElementById('ocrProgress').style.display = 'none';
+      document.getElementById('scanSection').style.display = 'block';
+      currentImageDataUrl = '';
+      showToast('All cards processed.');
+    }
   }
 }
 
