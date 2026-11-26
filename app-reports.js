@@ -245,11 +245,11 @@ function buildRptEvents() {
       <div style="position:relative;height:180px"><canvas id="rptGeoChart"></canvas></div>
       <div style="display:flex;justify-content:center;gap:16px;margin-top:8px">
         <div style="cursor:pointer" onclick="rptOpenModal('all_leads_india')">
-          <div style="font-size:18px;font-weight:800;color:#10B981">\${totalIndia}</div>
+          <div style="font-size:18px;font-weight:800;color:#10B981">${totalIndia}</div>
           <div style="font-size:11px;color:var(--muted)">India ↗</div>
         </div>
         <div style="cursor:pointer" onclick="rptOpenModal('all_leads_intl')">
-          <div style="font-size:18px;font-weight:800;color:#3B82F6">\${totalIntl}</div>
+          <div style="font-size:18px;font-weight:800;color:#3B82F6">${totalIntl}</div>
           <div style="font-size:11px;color:var(--muted)">International ↗</div>
         </div>
       </div>
@@ -309,7 +309,7 @@ function buildRptEvents() {
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           <span class="rpt-event-badge">₹4 Cr ↗</span>
-          <span style="font-size:11px;color:var(--muted)">\${luxembourgHot} hot leads</span>
+          <span style="font-size:11px;color:var(--muted)">${luxembourgHot} hot leads</span>
         </div>
       </div>
 
@@ -320,7 +320,7 @@ function buildRptEvents() {
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           <span class="rpt-event-badge rpt-event-badge-blue">Brand + PR ↗</span>
-          <span style="font-size:11px;color:var(--muted)">\${londonTotal} leads</span>
+          <span style="font-size:11px;color:var(--muted)">${londonTotal} leads</span>
         </div>
       </div>
 
@@ -331,7 +331,7 @@ function buildRptEvents() {
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           <span class="rpt-event-badge rpt-event-badge-green">SEA entry ↗</span>
-          <span style="font-size:11px;color:var(--muted)">\${thaiTotal} leads</span>
+          <span style="font-size:11px;color:var(--muted)">${thaiTotal} leads</span>
         </div>
       </div>
 
@@ -362,12 +362,12 @@ function buildRptEvents() {
           <div class="rpt-mini-sub">Events + organic</div>
         </div>
         <div class="rpt-mini-kpi" onclick="rptOpenModal('all_leads_india')" style="border-color:#10B981">
-          <div class="rpt-mini-num" style="color:#10B981">\${totalIndia}</div>
+          <div class="rpt-mini-num" style="color:#10B981">${totalIndia}</div>
           <div class="rpt-mini-label">India leads ↗</div>
           <div class="rpt-mini-sub">Nov organic</div>
         </div>
         <div class="rpt-mini-kpi" onclick="rptOpenModal('all_leads_intl')" style="border-color:#3B82F6">
-          <div class="rpt-mini-num" style="color:#3B82F6">\${totalIntl}</div>
+          <div class="rpt-mini-num" style="color:#3B82F6">${totalIntl}</div>
           <div class="rpt-mini-label">International leads ↗</div>
           <div class="rpt-mini-sub">Cannes + Luxembourg + Thailand + London</div>
         </div>
@@ -384,11 +384,11 @@ function buildRptEvents() {
           <div class="rpt-mini-label">Cannes hot leads ↗</div>
         </div>
         <div class="rpt-mini-kpi" onclick="rptOpenModal('thailand')">
-          <div class="rpt-mini-num">\${thaiTotal}</div>
+          <div class="rpt-mini-num">${thaiTotal}</div>
           <div class="rpt-mini-label">Thailand leads ↗</div>
         </div>
         <div class="rpt-mini-kpi" onclick="rptOpenModal('london')">
-          <div class="rpt-mini-num">\${londonTotal}</div>
+          <div class="rpt-mini-num">${londonTotal}</div>
           <div class="rpt-mini-label">London leads ↗</div>
         </div>
         <div class="rpt-mini-kpi" onclick="rptOpenModal('ciso6')">
