@@ -165,7 +165,8 @@ function showPage(pageId) {
     leaves:   ()=>{ if(typeof loadLeaves==='function'){ loadLeaves(); setTimeout(()=>{ if(typeof renderLeavesCalendar==='function') renderLeavesCalendar(); },300); } },
     crm:      ()=>{ if(typeof loadCRM==='function') loadCRM(); },
     'upload-leads': ()=>{ if(typeof loadUploadLeads==='function') loadUploadLeads(); },
-    analytics:()=>{ if(typeof loadAnalyticsPage==='function') loadAnalyticsPage(); }
+    analytics:()=>{ if(typeof loadAnalyticsPage==='function') loadAnalyticsPage(); },
+    reports:  ()=>{ if(typeof loadReports==='function') loadReports(); }
   };
   if (loaders[pageId]) loaders[pageId]();
 }
