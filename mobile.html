@@ -274,7 +274,10 @@
     <!-- Review Panel -->
     <div id="reviewPanel">
       <div class="card">
-        <div class="card-title">✅ Review & Correct</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="card-title" style="margin:0">✅ Review & Correct</div>
+          <div id="cardQueueIndicator" style="font-size:12px;color:var(--muted)"></div>
+        </div>
         <img id="previewImg" class="preview-img" src="" alt="Card"/>
         <div class="review-field"><div class="field-label">Full Name</div><input class="review-input" id="rv_name" placeholder="Full name"/></div>
         <div class="review-field"><div class="field-label">Company</div><input class="review-input" id="rv_company" placeholder="Company name"/></div>
@@ -286,7 +289,7 @@
         <div class="review-field"><div class="field-label">Notes</div><input class="review-input" id="rv_notes" placeholder="Any notes (optional)"/></div>
         <div class="review-actions">
           <button class="btn-secondary" onclick="discardCard()">Discard</button>
-          <button class="btn-primary" onclick="saveCard()">💾 Save & Add to CRM</button>
+          <button class="btn-primary" id="saveCardBtn" onclick="saveCard()">💾 Save & Add to CRM</button>
         </div>
       </div>
     </div>
@@ -339,6 +342,8 @@ let SESSION = null;
 let cards = [];
 let currentEvent = '';
 let currentImageDataUrl = '';
+let cardQueue = []; // queue for multiple cards in one image
+let cardQueueIndex = 0;
 
 // ── Auth ──────────────────────────────────────────────────────────
 async function doMobileLogin() {
@@ -424,9 +429,8 @@ async function runOCR(dataUrl) {
   updateProgress(10, 'Sending to OCR engine...');
 
   try {
-    updateProgress(30, 'Reading card...');
+    updateProgress(30, 'Reading card(s)...');
 
-    // Send through Supabase edge function to avoid CORS
     const ocrRes = await fetch(SUPA_URL + '/functions/v1/ocr-card', {
       method: 'POST',
       headers: {
@@ -440,9 +444,8 @@ async function runOCR(dataUrl) {
     const ocrData = await ocrRes.json();
     updateProgress(80, 'Parsing details...');
 
-    if (!ocrData.success || !ocrData.text?.trim()) {
+    if (!ocrData.success || !ocrData.cards?.length) {
       console.error('OCR failed:', ocrData);
-      // Still show review form for manual entry
       document.getElementById('ocrProgress').style.display = 'none';
       document.getElementById('previewImg').src = currentImageDataUrl;
       document.getElementById('reviewPanel').style.display = 'block';
@@ -450,25 +453,24 @@ async function runOCR(dataUrl) {
       return;
     }
 
-    const text = ocrData.text;
+    // Queue all detected cards
+    cardQueue = ocrData.cards;
+    cardQueueIndex = 0;
+
+    if (cardQueue.length > 1) {
+      showToast(cardQueue.length + ' cards detected — reviewing one by one');
+    }
+
+    const text = cardQueue[0];
 
     const parsed = parseBusinessCard(text);
 
-    // Show preview and fill form
     document.getElementById('previewImg').src = currentImageDataUrl;
-    document.getElementById('rv_name').value        = parsed.name        || '';
-    document.getElementById('rv_company').value     = parsed.company     || '';
-    document.getElementById('rv_designation').value = parsed.designation || '';
-    document.getElementById('rv_email').value       = parsed.email       || '';
-    document.getElementById('rv_phone').value       = parsed.phone       || '';
-    document.getElementById('rv_website').value     = parsed.website     || '';
-    document.getElementById('rv_linkedin').value    = parsed.linkedin    || '';
-
-    updateProgress(100, 'Done!');
+    updateProgress(100, cardQueue.length > 1 ? cardQueue.length + ' cards found!' : 'Done!');
     setTimeout(() => {
       document.getElementById('ocrProgress').style.display = 'none';
       document.getElementById('reviewPanel').style.display = 'block';
-      document.getElementById('reviewPanel').scrollIntoView({ behavior: 'smooth' });
+      showCardFromQueue(0);
     }, 400);
 
   } catch(e) {
@@ -621,16 +623,29 @@ async function saveCard() {
   // Try sync to Zoho CRM immediately
   await syncCardToCRM(card);
 
-  discardCard();
   await loadCards();
   showToast('Card saved' + (card.status === 'synced' ? ' & synced to CRM ✓' : ' — will sync later'));
+  // Go to next card in queue
+  discardCard();
 }
 
 function discardCard() {
-  document.getElementById('reviewPanel').style.display  = 'none';
-  document.getElementById('ocrProgress').style.display  = 'none';
-  document.getElementById('scanSection').style.display  = 'block';
-  currentImageDataUrl = '';
+  cardQueueIndex++;
+  if (cardQueueIndex < cardQueue.length) {
+    // Next card in queue
+    showCardFromQueue(cardQueueIndex);
+  } else {
+    // All done
+    cardQueue = []; cardQueueIndex = 0;
+    document.getElementById('reviewPanel').style.display  = 'none';
+    document.getElementById('ocrProgress').style.display  = 'none';
+    document.getElementById('scanSection').style.display  = 'block';
+    currentImageDataUrl = '';
+    clearReviewForm();
+  }
+}
+
+function clearReviewForm() {
   document.getElementById('rv_name').value = '';
   document.getElementById('rv_company').value = '';
   document.getElementById('rv_designation').value = '';
@@ -639,6 +654,29 @@ function discardCard() {
   document.getElementById('rv_website').value = '';
   document.getElementById('rv_linkedin').value = '';
   document.getElementById('rv_notes').value = '';
+}
+
+function showCardFromQueue(idx) {
+  const text = cardQueue[idx];
+  const parsed = parseBusinessCard(text);
+  document.getElementById('rv_name').value        = parsed.name        || '';
+  document.getElementById('rv_company').value     = parsed.company     || '';
+  document.getElementById('rv_designation').value = parsed.designation || '';
+  document.getElementById('rv_email').value       = parsed.email       || '';
+  document.getElementById('rv_phone').value       = parsed.phone       || '';
+  document.getElementById('rv_website').value     = parsed.website     || '';
+  document.getElementById('rv_linkedin').value    = parsed.linkedin    || '';
+  document.getElementById('rv_notes').value       = '';
+  // Update queue indicator
+  const ind = document.getElementById('cardQueueIndicator');
+  if (ind && cardQueue.length > 1) ind.textContent = 'Card ' + (idx+1) + ' of ' + cardQueue.length;
+  // Update save button
+  const btn = document.getElementById('saveCardBtn');
+  if (btn) {
+    const remaining = cardQueue.length - idx - 1;
+    btn.textContent = remaining > 0 ? '💾 Save & Next Card →' : '💾 Save & Add to CRM';
+  }
+  document.getElementById('reviewPanel').scrollIntoView({ behavior: 'smooth' });
 }
 
 // ── Sync to Zoho CRM ──────────────────────────────────────────────
