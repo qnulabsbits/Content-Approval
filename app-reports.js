@@ -1,652 +1,782 @@
 /* ═══════════════════════════════════════════════════════════
-   MONTHLY REPORTS MODULE — app-reports.js
-   Based on QNu Labs Nov 2026 Marketing PPT + Full Backend Data
+   REPORTS MODULE — app-reports.js
+   CEO Reports / CMO Reports / Weekly Marketing Team Reports
 ═══════════════════════════════════════════════════════════ */
 
-// ── Full data from backend docx ───────────────────────────────────
-const RPT_CANNES_LEADS = [
-  {no:1,company:"Schneider Electric",sector:"Energy / Industrial",country:"France",pipeline:"₹5 Cr",signal:"Critical infrastructure — post-quantum encryption urgency"},
-  {no:2,company:"TotalEnergies",sector:"Energy",country:"France",pipeline:"₹5 Cr",signal:"Quantum security for OT/IT convergence"},
-  {no:3,company:"Jefferies",sector:"Investment Banking",country:"USA/UK",pipeline:"₹7 Cr",signal:"BFSI — financial data protection regulatory driver"},
-  {no:4,company:"Intesa Sanpaolo",sector:"Banking",country:"Italy",pipeline:"₹6 Cr",signal:"Major EU bank — PQC migration mandate"},
-  {no:5,company:"UBS",sector:"Banking / Wealth Mgmt",country:"Switzerland",pipeline:"₹6 Cr",signal:"Global bank — NIST PQC standard adoption"},
-  {no:6,company:"Capgemini",sector:"IT Services",country:"France",pipeline:"₹4 Cr",signal:"System integrator — QKD deployment for clients"},
-  {no:7,company:"France Quantum Institute",sector:"Research / Government",country:"France",pipeline:"₹2 Cr",signal:"Strategic research partnership potential"},
-];
+// ── Supabase tables needed: ───────────────────────────────────────
+// reports_library  : id, type (ceo/cmo), month, year, title, files(json), html_content, created_at, created_by
+// weekly_submissions: id, user_email, user_name, week_start, work_done, status, kpi_impact, plans_next_week, submitted_at
+// weekly_team_members: id, name, email, role, active (admin-managed)
 
-const RPT_THAILAND_LEADS = [
-  {no:1,name:"Thanakorn Bamrungkitjaroen",company:"Orbix Technology (KBank Subsidiary)",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Warm",note:"KBank subsidiary"},
-  {no:2,name:"Monchai Lertsutthiwong",company:"KASIKORN Business-Technology Group",owner:"Sudiptaa Paul Choudhury",date:"3 Nov",signal:"Hot",note:"Major Thai bank"},
-  {no:3,name:"Apiwat Chantawibul",company:"NECTEC",owner:"Hermaan Kohli",date:"5 Nov",signal:"Warm",note:"Interested in CBOM open test bed"},
-  {no:4,name:"Chirawut (Jude) Kanogart",company:"MHESRI of Thailand / Siam Quantum Valley",owner:"Hermaan Kohli",date:"5 Nov",signal:"Warm",note:""},
-  {no:5,name:"Thani Ratanapridakul",company:"Spacetime Co",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Unclassified",note:""},
-  {no:6,name:"Kasemsook Booncharoen",company:"Upbit Exchange",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Unclassified",note:""},
-  {no:7,name:"Skunpoj (Kim) Thanarojsophon",company:"Bank of Thailand",owner:"Hermaan Kohli",date:"5 Nov",signal:"Hot",note:"Central bank"},
-  {no:8,name:"Archit Nunvititpong",company:"Yong Yuseng Chemethai 2005",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Unclassified",note:""},
-  {no:9,name:"Denchai Tantipatanasakul",company:"Srisakul Engineering ltd",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Unclassified",note:""},
-  {no:10,name:"Ian Gillard",company:"Bangkok Bank",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Hot",note:"Major Thai bank"},
-  {no:11,name:"Soontorn Sirapaisan",company:"National Cyber Security Agency (Thailand)",owner:"Hermaan Kohli",date:"5 Nov",signal:"Warm",note:""},
-  {no:12,name:"Tosapole Stitsuwongkul",company:"B.GRIMM",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Unclassified",note:""},
-  {no:13,name:"Jitsatha Thatavakorn",company:"Electricity Generating Authority of Thailand (EGAT)",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Unclassified",note:""},
-  {no:14,name:"Pongsak Pongsitthichai",company:"Stream I.T.",owner:"Hermaan Kohli",date:"5 Nov",signal:"Unclassified",note:""},
-  {no:15,name:"Jarinya Junpan",company:"ACIS Professional Center",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Unclassified",note:""},
-  {no:16,name:"Pokai Sriratanobhas",company:"Chulalongkorn University",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Unclassified",note:""},
-  {no:17,name:"Surasak Tarawatanatham",company:"United Overseas Bank",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Unclassified",note:""},
-  {no:18,name:"Somjat Maksomboon",company:"Novaris",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Unclassified",note:""},
-  {no:19,name:"Pasd Putthapipat",company:"Panyapiwat Institution of Management",owner:"Hermaan Kohli",date:"5 Nov",signal:"Unclassified",note:""},
-  {no:20,name:"Natdanai Srisupornwattana",company:"Krungsri Bank (Nimble)",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Unclassified",note:""},
-  {no:21,name:"Orawan Wannadee",company:"RMA Group",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Unclassified",note:""},
-  {no:22,name:"Mongkol Chutpathumthong",company:"Bitkub",owner:"Sudiptaa Paul Choudhury",date:"5 Nov",signal:"Warm",note:"Crypto exchange"},
-  {no:23,name:"Thanusrapee Sa-Nguansup",company:"Siam Commercial Bank X",owner:"Hermaan Kohli",date:"5 Nov",signal:"Warm",note:"SCB digital arm"},
-  {no:24,name:"Wanrob Boontham",company:"Token X",owner:"Sudiptaa Paul Choudhury",date:"3 Nov",signal:"Unclassified",note:""},
-  {no:25,name:"Piyawan Ruengprateep",company:"Jaymart Insurance",owner:"Sudiptaa Paul Choudhury",date:"3 Nov",signal:"Unclassified",note:""},
-  {no:26,name:"Brian C.",company:"SITG",owner:"Sudiptaa Paul Choudhury",date:"3 Nov",signal:"Unclassified",note:""},
-];
+const REPORTS_STORAGE_BUCKET = 'reports-files';
 
-const RPT_LONDON_LEADS = [
-  {no:1,name:"Matthew Jones",company:"Innovate UK Business Connect",phone:"—",country:"UK",signal:"Unclassified",note:"UK Govt innovation agency — PR value"},
-  {no:2,name:"Dr Aidong Xu",company:"QC82",phone:"+44 7780 494001",country:"UK",signal:"Unclassified",note:"SPDs (single-photon detectors). Need to understand their SPDs."},
-  {no:3,name:"Phil Lindsay-Crisp",company:"SeQure AG",phone:"+44 7703 322360",country:"UK/CH",signal:"Warm",note:"Could partner with SeQure AG as they only have CBOM"},
-  {no:4,name:"Risa Miyazaki",company:"JETRO London (Japan External Trade Org)",phone:"+44 (0)20 7421 8335",country:"UK/Japan",signal:"Warm",note:"KEY — Japan market entry. Invest Japan. J-Bridge could be useful."},
-  {no:5,name:"Dr Aravind Venugopalan",company:"Singular Photonics",phone:"+44 7405 984166",country:"UK",signal:"Unclassified",note:"Photonics company"},
-  {no:6,name:"Shahida Imani",company:"Singular Photonics",phone:"+44 7944 231537",country:"UK",signal:"Unclassified",note:""},
-  {no:7,name:"Dr Matthew Proctor",company:"Aquark Technologies",phone:"—",country:"UK",signal:"Unclassified",note:"UK quantum startup"},
-  {no:8,name:"Niall Moroney",company:"Q-CTRL",phone:"—",country:"UK",signal:"Unclassified",note:"Q-CTRL makes Ironstone Opal. Card has QR code."},
-  {no:9,name:"Claire Pink",company:"Quantum Australia",phone:"+61 407 486 516",country:"Australia",signal:"Warm",note:"Handwritten on card: Helen Bethell"},
-  {no:10,name:"James Bain",company:"Quantrologee",phone:"—",country:"UK",signal:"Unclassified",note:""},
-];
-
-const RPT_NOV_WEBSITE_LEADS = [
-  {name:"Yogesh M R",company:"Ampcus Cyber",phone:"+91 8147255897",owner:"Sagar Pandey",temp:"Hot",date:"23 Nov",msg:"Looking for banking use cases + has clients looking for Quantum security"},
-  {name:"Makara",company:"PSCYBER",phone:"+855 10654046",owner:"Sagar Pandey",temp:"Hot",date:"20 Nov",msg:"Would like to explore Quantum Security with QNULABS. Reach via mmakara@pscyber.asia"},
-  {name:"Srinivasan V D",company:"Virtusa Consulting",phone:"+91 9000153642",owner:"Sagar Pandey",temp:"Hot",date:"20 Nov",msg:"Evaluating PQC migration and adoption strategy. Interested in QNu capabilities."},
-  {name:"D Christinal Mary",company:"MJC Global Tech",phone:"+91 9886018764",owner:"Sagar Pandey",temp:"Hot",date:"16 Nov",msg:"Looking to connect with telecom companies. Exploring partnerships across telecom solutions."},
-  {name:"Muhammad Anas",company:"enord",phone:"+91 9818447424",owner:"Marketing Team",temp:"Hot",date:"16 Nov",msg:"need to see quantum in action."},
-  {name:"Puja",company:"AegisQX",phone:"+91 9546826854",owner:"Sagar Pandey",temp:"Hot",date:"12 Nov",msg:"I want your quotation for all the prices"},
-  {name:"Ricky Dewan",company:"Suffescom Solutions Inc",phone:"+1 6186880472",owner:"Sagar Pandey",temp:"Hot",date:"14 Nov",msg:"BDH at Suffescom exploring strategic partnerships with cybersecurity and quantum technology companies."},
-  {name:"Senthilnathan Thirumaran",company:"Mpac Group plc",phone:"+91 8754142844",owner:"Sagar Pandey",temp:"Hot",date:"3 Nov",msg:"Would like to understand partner opportunities and explore quantum infusion in robotics."},
-  {name:"Shine Anthony",company:"S Vyasa University",phone:"+91 9895403578",owner:"Sudiptaa Paul Choudhury",temp:"Hot",date:"17 Nov",msg:"Lead from Arul. Meeting completed 16 Nov. Sales deck shared. Following up for 2nd level in-person meeting."},
-  {name:"Aaron Keith",company:"SIGMA Equipment Inc",phone:"+1 8123038338",owner:"Sagar Pandey",temp:"Warm",date:"12 Nov",msg:"Reaching out to explore strategic collaboration on upcoming project."},
-  {name:"Ritesh Kumar Dwivedi",company:"NIC, MeitY",phone:"+91 8527659815",owner:"Ravi Bhatnagar",temp:"Unclassified",date:"11 Nov",msg:"Requesting meeting regarding Quantum implementations in our organization."},
-  {name:"Matt Cashia",company:"Morgan Stanley",phone:"+1 9177482913",owner:"Marketing Team",temp:"Unclassified",date:"1 Nov",msg:"I run coverage of quantum computing for Morgan Stanley investment banking. Active advising quantum companies on M&A and capital raises since 2020."},
-];
-
-const RPT_CISO6_COMPANIES = [
-  "Jio Platforms","HSBC Technology India","Barclays","Deutsche Bank","TCS","Deloitte","Persistent Systems","L&T","KPMG",
-  "Mastercard","Capgemini","Axis Bank","ICICI Bank","Yes Bank","Reliance Industries","HCLTech","WNS Global Services",
-  "Cognizant","BNP Paribas India","Standard Chartered","Citibank India","Kotak Mahindra Bank","HDFC Bank","NABARD",
-  "JP Morgan Chase","Synechron","Avaya","Force Motors","Bajaj Financial Securities","Mphasis","Accenture","Genpact",
-  "Ness Digital Engineering","Nayara Energy","ISC2","Sutherland Global Services","MIT ADT University"
-];
-
-const RPT_SEO_PAGES = [
-  {url:"/blog/quantum-101-qubit",impressions:1138},
-  {url:"/blog/quantum-key-distribution-qkd-complete-guide",impressions:1066},
-  {url:"/glossary/india-national-quantum-mission-nqm",impressions:1013},
-  {url:"/news/qnu-labs-200-crore-round",impressions:865},
-  {url:"/ (Homepage)",impressions:832},
-  {url:"/blog/quantum-key-distribution-vs-post-quantum-cryptography",impressions:497},
-  {url:"/quantum-security-platform",impressions:483},
-  {url:"/blog/pqc-certificate",impressions:482},
-  {url:"/blog/guide-to-pqc-migration",impressions:468},
-  {url:"/glossary/qubit-quantum-bit",impressions:453},
-];
-
-const RPT_AI_PLATFORMS = [
-  {platform:"ChatGPT",sessions:177,pct:"72.84%",engaged:104,rate:"58.76%",duration:"6m 06s"},
-  {platform:"Gemini",sessions:49,pct:"20.16%",engaged:19,rate:"38.78%",duration:"4m 29s"},
-  {platform:"Perplexity",sessions:8,pct:"3.29%",engaged:4,rate:"50%",duration:"6m 37s"},
-  {platform:"Claude.ai",sessions:7,pct:"2.88%",engaged:1,rate:"14.29%",duration:"4m 06s"},
-  {platform:"Copilot",sessions:1,pct:"0.41%",engaged:1,rate:"100%",duration:"1m 47s"},
-];
-
-// ── Helpers ───────────────────────────────────────────────────────
-function rptEsc(s) {
-  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function rptBadge(type, text) {
-  const cls = {hot:'rpt-hot',warm:'rpt-warm',cold:'rpt-cold',unclassified:'rpt-unc',india:'rpt-india',intl:'rpt-intl',live:'rpt-live',ongoing:'rpt-ongoing',done:'rpt-done'}[type.toLowerCase()] || 'rpt-unc';
-  return `<span class="${cls}">${rptEsc(text||type)}</span>`;
-}
-
-// ── Load page ─────────────────────────────────────────────────────
+// ── Main loader ───────────────────────────────────────────────────
 function loadReports() {
   const c = $('pg-reports');
   if (!c) return;
   c.innerHTML = `
-    <div class="rpt-wrap">
-      ${buildRptHeader()}
-      ${buildRptNav()}
-      <div id="rptContent">${buildRptSummary()}</div>
+    <div class="page-header">
+      <div>
+        <div class="page-title">Reports</div>
+        <div class="page-sub">CEO · CMO · Weekly Marketing Team</div>
+      </div>
     </div>
+    <div class="rpt-landing">
+      <div class="rpt-landing-card" onclick="loadReportType('ceo')">
+        <div class="rpt-landing-icon">👔</div>
+        <div class="rpt-landing-title">CEO Reports</div>
+        <div class="rpt-landing-sub">Monthly marketing reports for CEO. Upload PPT, Word, PDF. View full HTML report by month.</div>
+      </div>
+      <div class="rpt-landing-card" onclick="loadReportType('cmo')">
+        <div class="rpt-landing-icon">📊</div>
+        <div class="rpt-landing-title">CMO Reports</div>
+        <div class="rpt-landing-sub">Monthly CMO dashboard. Upload reports. View compiled weekly team PPTs.</div>
+      </div>
+      <div class="rpt-landing-card" onclick="loadWeeklyReports()">
+        <div class="rpt-landing-icon">📝</div>
+        <div class="rpt-landing-title">Weekly Marketing Reports</div>
+        <div class="rpt-landing-sub">Team members submit weekly updates. Compiled into a 4-slide PPT every Tuesday 10 AM for CMO.</div>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// CEO / CMO REPORTS
+// ═══════════════════════════════════════════════════════════
+let currentReportType = 'ceo';
+
+async function loadReportType(type) {
+  currentReportType = type;
+  const c = $('pg-reports');
+  if (!c) return;
+  c.innerHTML = `
+    <div class="page-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button onclick="loadReports()" class="btn btn-secondary btn-sm">← Back</button>
+        <div>
+          <div class="page-title">${type === 'ceo' ? 'CEO' : 'CMO'} Reports</div>
+          <div class="page-sub">Monthly reports · Click a month to view · Download PPT / Word / PDF</div>
+        </div>
+      </div>
+      <div class="page-actions">
+        <button onclick="rptUploadDialog('${type}')" class="btn btn-primary btn-sm">+ Upload Report</button>
+      </div>
+    </div>
+    <div id="rptLibraryContent"><div class="loading-row"><span class="spinner"></span> Loading reports...</div></div>
     ${buildRptModal()}
   `;
-  setTimeout(() => { renderRptCharts('summary'); }, 100);
+  await rptLoadLibrary(type);
 }
 
-function buildRptHeader() {
-  return `
-  <div class="rpt-topbar">
-    <div style="display:flex;align-items:center;gap:14px">
-      <img src="logo.png" class="rpt-logo" alt="QNu Labs" onerror="this.style.display='none'"/>
-      <div>
-        <div class="rpt-topbar-title">Monthly Marketing Report — November 2026</div>
-        <div class="rpt-topbar-sub">Strictly Private & Confidential · qnulabs.com</div>
-      </div>
-    </div>
-    <button onclick="rptDownload()" class="btn btn-secondary btn-sm">⬇ Download HTML</button>
-  </div>`;
-}
+async function rptLoadLibrary(type) {
+  const c = $('rptLibraryContent');
+  try {
+    const token = await getToken();
+    const res = await sbFetch(`reports_library?type=eq.${type}&order=year.desc,month.desc&select=*`);
+    const rows = await res.json();
 
-function buildRptNav() {
-  const tabs = [
-    {id:'summary',label:'Summary'},
-    {id:'events',label:'Events & Leads'},
-    {id:'digital',label:'Digital & AI Search'},
-    {id:'content',label:'Content & Product'},
-    {id:'nextsteps',label:'Next Steps'},
-  ];
-  return `
-  <div class="rpt-nav">
-    ${tabs.map((t,i) => `<button class="rpt-nav-btn${i===0?' active':''}" onclick="rptShowTab('${t.id}',this)">${t.label}</button>`).join('')}
-  </div>`;
-}
+    // Add November 2026 default if no records yet
+    const months = rows && rows.length > 0 ? rows : [{
+      id: 'nov2026-default', type, month: 'November', year: 2026,
+      title: 'Monthly Marketing Report — November 2026',
+      files: [], has_html: true, created_at: new Date().toISOString()
+    }];
 
-// ── TAB: SUMMARY ─────────────────────────────────────────────────
-function buildRptSummary() {
-  return `
-  <div class="rpt-slide-title">
-    <div class="rpt-eyebrow">Slide 2</div>
-    <div class="rpt-h1"><span class="rpt-accent">₹39 Cr</span> International pipeline built</div>
-  </div>
+    const grouped = {};
+    months.forEach(r => {
+      const yr = r.year || 2026;
+      if (!grouped[yr]) grouped[yr] = [];
+      grouped[yr].push(r);
+    });
 
-  <div class="rpt-kpi-grid">
-    <div class="rpt-kpi rpt-kpi-fill" onclick="rptOpenModal('pipeline')">
-      <div class="rpt-kpi-num">₹39 Cr</div>
-      <div class="rpt-kpi-label">International pipeline</div>
-      <div class="rpt-kpi-sub">Cannes ₹35 Cr + Luxembourg ₹4 Cr</div>
-      <div class="rpt-kpi-hint">↗ Click for all lead details</div>
-    </div>
-    <div class="rpt-kpi" onclick="rptOpenModal('hotaccs')">
-      <div class="rpt-kpi-num">9</div>
-      <div class="rpt-kpi-label">Hot enterprise accounts</div>
-      <div class="rpt-kpi-sub">From events this month</div>
-      <div class="rpt-kpi-hint">↗ Click to see all 9 names</div>
-    </div>
-    <div class="rpt-kpi" onclick="rptOpenModal('linkedin_metrics')">
-      <div class="rpt-kpi-num">96,813</div>
-      <div class="rpt-kpi-label">LinkedIn impressions</div>
-      <div class="rpt-kpi-sub">▲ 26.8% QoQ</div>
-      <div class="rpt-kpi-hint">↗ Click for all metrics</div>
-    </div>
-    <div class="rpt-kpi" onclick="rptOpenModal('all_leads_nov')">
-      <div class="rpt-kpi-num">80</div>
-      <div class="rpt-kpi-label">Leads generated</div>
-      <div class="rpt-kpi-sub">Event & digital combined</div>
-      <div class="rpt-kpi-hint">↗ Click for full CRM data</div>
-    </div>
-  </div>
-
-  <div class="rpt-so-what">
-    <div class="rpt-so-what-label">SO, WHAT</div>
-    <p>₹39 Cr international pipeline is new and not yet in the sales deck. Marketing is now reaching the same three segments that drive pipeline: BFSI (international banks), Academy (UAE, Maharashtra) and Telecom (India GTM approved). Japan market entry now live via JETRO.</p>
-  </div>
-
-  <div class="rpt-seg-grid">
-    <div class="rpt-seg-card" onclick="rptOpenModal('bfsi')">
-      <div class="rpt-seg-label">BFSI</div>
-      <div class="rpt-seg-title">International banks</div>
-      <div class="rpt-seg-sub">Cannes leads + newsletter: BNP Paribas, ABN AMRO, OCBC, Optus…<br>↗ Click for accounts</div>
-    </div>
-    <div class="rpt-seg-card" onclick="rptOpenModal('academy')">
-      <div class="rpt-seg-label">ACADEMY</div>
-      <div class="rpt-seg-title">UAE, Maharashtra</div>
-      <div class="rpt-seg-sub">UAE campaign + Maharashtra Higher Ed Summit 2–3 Dec<br>↗ Click for accounts</div>
-    </div>
-    <div class="rpt-seg-card" onclick="rptOpenModal('telecom')">
-      <div class="rpt-seg-label">TELECOM</div>
-      <div class="rpt-seg-title">India GTM approved</div>
-      <div class="rpt-seg-sub">Jio, Airtel, Vi, BSNL — outreach live<br>↗ Click for GTM plan</div>
-    </div>
-  </div>`;
-}
-
-// ── TAB: EVENTS ───────────────────────────────────────────────────
-function buildRptEvents() {
-  // Count leads per event from real data
-  const novWebsite = RPT_NOV_WEBSITE_LEADS.length;
-  const thaiTotal = RPT_THAILAND_LEADS.length;
-  const londonTotal = RPT_LONDON_LEADS.length;
-  const cannesTotal = RPT_CANNES_LEADS.length;
-  const luxembourgHot = 2;
-
-  // Geo breakdown
-  const novIndia = RPT_NOV_WEBSITE_LEADS.filter(l=>!l.geo||l.geo.toLowerCase().includes('india')||l.geo==='India').length;
-  const novIntl  = RPT_NOV_WEBSITE_LEADS.filter(l=>(l.geo||'').toLowerCase().includes('int')).length;
-  // Thailand + London + Cannes + Luxembourg = international events
-  const eventIntl = thaiTotal + londonTotal + cannesTotal + luxembourgHot;
-  const totalIndia = novIndia;
-  const totalIntl  = novIntl + eventIntl;
-  const grandTotal = totalIndia + totalIntl;
-
-  return `
-  <div class="rpt-slide-title">
-    <div class="rpt-eyebrow">Slide 3</div>
-    <div class="rpt-h1">Events & leads</div>
-  </div>
-
-  <!-- PIE CHARTS ROW -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px">
-
-    <!-- Geo Split Pie -->
-    <div class="rpt-card" style="text-align:center">
-      <div class="rpt-card-label">India vs International</div>
-      <div style="position:relative;height:180px"><canvas id="rptGeoChart"></canvas></div>
-      <div style="display:flex;justify-content:center;gap:16px;margin-top:8px">
-        <div style="cursor:pointer" onclick="rptOpenModal('all_leads_india')">
-          <div style="font-size:18px;font-weight:800;color:#10B981">${totalIndia}</div>
-          <div style="font-size:11px;color:var(--muted)">India ↗</div>
-        </div>
-        <div style="cursor:pointer" onclick="rptOpenModal('all_leads_intl')">
-          <div style="font-size:18px;font-weight:800;color:#3B82F6">${totalIntl}</div>
-          <div style="font-size:11px;color:var(--muted)">International ↗</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Temperature Pie -->
-    <div class="rpt-card" style="text-align:center">
-      <div class="rpt-card-label">Lead Temperature (Nov)</div>
-      <div style="position:relative;height:180px"><canvas id="rptTempChart"></canvas></div>
-      <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:8px">
-        <div style="cursor:pointer" onclick="rptOpenModal('temp_detail')">
-          <div style="font-size:16px;font-weight:800;color:#EF4444">15 ↗</div>
-          <div style="font-size:10px;color:var(--muted)">Hot</div>
-        </div>
-        <div style="cursor:pointer" onclick="rptOpenModal('temp_detail')">
-          <div style="font-size:16px;font-weight:800;color:#F59E0B">4 ↗</div>
-          <div style="font-size:10px;color:var(--muted)">Warm</div>
-        </div>
-        <div>
-          <div style="font-size:16px;font-weight:800;color:#9CA3AF">2</div>
-          <div style="font-size:10px;color:var(--muted)">Cold</div>
-        </div>
-        <div>
-          <div style="font-size:16px;font-weight:800;color:#D1D5DB">59</div>
-          <div style="font-size:10px;color:var(--muted)">Uncl.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Leads by Event Bar (horizontal) -->
-    <div class="rpt-card">
-      <div class="rpt-card-label">Leads by Event</div>
-      <div style="position:relative;height:180px"><canvas id="rptEventChart"></canvas></div>
-    </div>
-  </div>
-
-  <!-- EVENTS + LEAD COUNTS -->
-  <div class="rpt-two-col">
-    <div>
-      <div class="rpt-section-label">NOVEMBER EVENTS</div>
-
-      <div class="rpt-event-row" onclick="rptOpenModal('cannes')">
-        <div class="rpt-event-left">
-          <div class="rpt-event-title">World Quantum Cannes Festival</div>
-          <div class="rpt-event-meta">17–18 Nov · Schneider Electric, TotalEnergies, Jefferies, Intesa Sanpaolo, UBS</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-          <span class="rpt-event-badge">₹35 Cr ↗</span>
-          <span style="font-size:11px;color:var(--muted)">7 hot leads</span>
-        </div>
-      </div>
-
-      <div class="rpt-event-row" onclick="rptOpenModal('luxembourg')">
-        <div class="rpt-event-left">
-          <div class="rpt-event-title">Luxembourg 1:1 Meetings</div>
-          <div class="rpt-event-meta">6–7 Nov · 8 business cards · 2 hot leads · Owner: Sudiptaa Paul</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-          <span class="rpt-event-badge">₹4 Cr ↗</span>
-          <span style="font-size:11px;color:var(--muted)">${luxembourgHot} hot leads</span>
-        </div>
-      </div>
-
-      <div class="rpt-event-row" onclick="rptOpenModal('london')">
-        <div class="rpt-event-left">
-          <div class="rpt-event-title">Quantum + AI Tech Show London</div>
-          <div class="rpt-event-meta">4 Nov · JETRO (Japan entry), Innovate UK, Q-CTRL</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-          <span class="rpt-event-badge rpt-event-badge-blue">Brand + PR ↗</span>
-          <span style="font-size:11px;color:var(--muted)">${londonTotal} leads</span>
-        </div>
-      </div>
-
-      <div class="rpt-event-row" onclick="rptOpenModal('thailand')">
-        <div class="rpt-event-left">
-          <div class="rpt-event-title">Thailand Enterprise Roundtable</div>
-          <div class="rpt-event-meta">1 Nov · KBank, Bangkok Bank, Bank of Thailand, NECTEC</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-          <span class="rpt-event-badge rpt-event-badge-green">SEA entry ↗</span>
-          <span style="font-size:11px;color:var(--muted)">${thaiTotal} leads</span>
-        </div>
-      </div>
-
-      <div class="rpt-event-row" onclick="rptOpenModal('ciso6')" style="background:#F9FAFB">
-        <div class="rpt-event-left">
-          <div class="rpt-event-title">CISO6 Mumbai (October)</div>
-          <div class="rpt-event-meta">15 Oct · India BFSI + Tech Enterprise CISOs</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-          <span class="rpt-event-badge rpt-event-badge-green">India pipeline ↗</span>
-          <span style="font-size:11px;color:var(--muted)">239 leads</span>
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <!-- Lead count grid — every number clickable -->
-      <div class="rpt-section-label">CRM LEAD COUNTS — CLICK ANY NUMBER</div>
-      <div class="rpt-mini-kpi-grid" style="margin-bottom:12px">
-        <div class="rpt-mini-kpi" onclick="rptOpenModal('all_leads_oct')">
-          <div class="rpt-mini-num">345</div>
-          <div class="rpt-mini-label">October leads ↗</div>
-          <div class="rpt-mini-sub">CISO6: 239 · Other: 106</div>
-        </div>
-        <div class="rpt-mini-kpi rpt-mini-fill" onclick="rptOpenModal('all_leads_nov')">
-          <div class="rpt-mini-num">80</div>
-          <div class="rpt-mini-label">November leads ↗</div>
-          <div class="rpt-mini-sub">Events + organic</div>
-        </div>
-        <div class="rpt-mini-kpi" onclick="rptOpenModal('all_leads_india')" style="border-color:#10B981">
-          <div class="rpt-mini-num" style="color:#10B981">${totalIndia}</div>
-          <div class="rpt-mini-label">India leads ↗</div>
-          <div class="rpt-mini-sub">Nov organic</div>
-        </div>
-        <div class="rpt-mini-kpi" onclick="rptOpenModal('all_leads_intl')" style="border-color:#3B82F6">
-          <div class="rpt-mini-num" style="color:#3B82F6">${totalIntl}</div>
-          <div class="rpt-mini-label">International leads ↗</div>
-          <div class="rpt-mini-sub">Cannes + Luxembourg + Thailand + London</div>
-        </div>
-        <div class="rpt-mini-kpi" onclick="rptOpenModal('temp_detail')" style="border-color:#EF4444">
-          <div class="rpt-mini-num rpt-red">15</div>
-          <div class="rpt-mini-label">Hot leads ↗</div>
-        </div>
-        <div class="rpt-mini-kpi" onclick="rptOpenModal('temp_detail')" style="border-color:#F59E0B">
-          <div class="rpt-mini-num rpt-orange">4</div>
-          <div class="rpt-mini-label">Warm leads ↗</div>
-        </div>
-        <div class="rpt-mini-kpi" onclick="rptOpenModal('cannes')">
-          <div class="rpt-mini-num">7</div>
-          <div class="rpt-mini-label">Cannes hot leads ↗</div>
-        </div>
-        <div class="rpt-mini-kpi" onclick="rptOpenModal('thailand')">
-          <div class="rpt-mini-num">${thaiTotal}</div>
-          <div class="rpt-mini-label">Thailand leads ↗</div>
-        </div>
-        <div class="rpt-mini-kpi" onclick="rptOpenModal('london')">
-          <div class="rpt-mini-num">${londonTotal}</div>
-          <div class="rpt-mini-label">London leads ↗</div>
-        </div>
-        <div class="rpt-mini-kpi" onclick="rptOpenModal('ciso6')">
-          <div class="rpt-mini-num">239</div>
-          <div class="rpt-mini-label">CISO6 leads ↗</div>
-        </div>
-      </div>
-      <div class="rpt-so-what">
-        <p style="font-weight:600">Nov shifted to international quality: Thailand, London, Luxembourg delivering high-value global accounts.</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="rpt-event-row rpt-event-row-cta" onclick="rptOpenModal('all_leads_nov')">
-    <div class="rpt-event-left">
-      <div class="rpt-event-title">Full CRM database — all November leads</div>
-      <div class="rpt-event-meta">Search · Filter by temp / geo · Export</div>
-    </div>
-    <div class="rpt-event-right"><span class="rpt-event-badge">Open CRM ↗</span></div>
-  </div>`;
-}
-// ── TAB: DIGITAL ──────────────────────────────────────────────────
-function buildRptDigital() {
-  return `
-  <div class="rpt-slide-title">
-    <div class="rpt-eyebrow">Slide 4</div>
-    <div class="rpt-h1">Engagement and AI visibility <span class="rpt-accent">up</span></div>
-  </div>
-
-  <div class="rpt-two-col">
-    <div class="rpt-card">
-      <div class="rpt-card-label">DIGITAL MARKETING AND PARTNERS</div>
-      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:14px">
-        <span style="font-size:40px;font-weight:800;color:var(--accent);line-height:1">22</span>
-        <span style="font-size:14px;font-weight:600;color:var(--navy)">companies clicked through to Contact Us</span>
-      </div>
-      <ul class="rpt-bullets">
-        <li>Partner outreach: 9 companies, 39 clicks (Netpoleon, Westcon-Comstor, True Corporation)</li>
-        <li>29 partner CXOs named for 1:1 CMO outreach</li>
-        <li>October newsletter: 8 enterprises (BNP Paribas, ABN AMRO, OCBC, Optus…)</li>
-        <li>Academy UAE: 5 companies (Quadcode, TAQA…)</li>
-        <li>India Telecom GTM approved: Jio, Airtel, Vi, BSNL</li>
-      </ul>
-      <button onclick="rptOpenModal('digital_detail')" class="btn btn-primary btn-sm" style="margin-top:14px">↗ Full campaign breakdown</button>
-    </div>
-
-    <div class="rpt-card rpt-card-dark">
-      <div class="rpt-card-label" style="color:rgba(255,255,255,0.65)">AEO / SEO / GEO</div>
-      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:14px">
-        <span style="font-size:40px;font-weight:800;color:#fff;line-height:1">+17%</span>
-        <span style="font-size:14px;font-weight:600;color:#fff">AI impressions, 24K → 28K</span>
-      </div>
-      <ul class="rpt-bullets" style="color:rgba(255,255,255,0.88)">
-        <li>AI visibility score: 27/100</li>
-        <li>ChatGPT drives 72.8% of AI-referred sessions (177 of 243)</li>
-        <li>QNu in US Google AI Overview alongside AWS, Thales, NXP, IDQ</li>
-        <li>17 blogs published (Oct–Nov); 15 keyword briefs delivered</li>
-        <li>144 toxic domains disavowed</li>
-      </ul>
-      <button onclick="rptOpenModal('seo_detail')" class="btn btn-sm" style="margin-top:14px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);font-family:inherit">↗ Full SEO & AI data</button>
-    </div>
-  </div>`;
-}
-
-// ── TAB: CONTENT ──────────────────────────────────────────────────
-function buildRptContent() {
-  return `
-  <div class="rpt-slide-title">
-    <div class="rpt-eyebrow">Slide 5</div>
-    <div class="rpt-h1">Content and product delivered <span class="rpt-accent">on time</span></div>
-  </div>
-
-  <div class="rpt-kpi-grid">
-    <div class="rpt-kpi rpt-kpi-fill" onclick="rptOpenModal('linkedin_metrics')">
-      <div class="rpt-kpi-num">96,813</div>
-      <div class="rpt-kpi-label">LinkedIn impressions (+26.8%)</div>
-      <div class="rpt-kpi-hint">↗ All content metrics</div>
-    </div>
-    <div class="rpt-kpi" onclick="rptOpenModal('linkedin_metrics')">
-      <div class="rpt-kpi-num">+194.8%</div>
-      <div class="rpt-kpi-label">Reactions, zero paid</div>
-      <div class="rpt-kpi-hint">↗ CEO positioning detail</div>
-    </div>
-    <div class="rpt-kpi" onclick="rptOpenModal('linkedin_metrics')">
-      <div class="rpt-kpi-num">+355.6%</div>
-      <div class="rpt-kpi-label">Comments</div>
-      <div class="rpt-kpi-hint">↗ Blog pipeline</div>
-    </div>
-    <div class="rpt-kpi" onclick="rptOpenModal('design_detail')">
-      <div class="rpt-kpi-num">12 pages</div>
-      <div class="rpt-kpi-label">Enterprise website pages live</div>
-      <div class="rpt-kpi-hint">↗ All 17 design items</div>
-    </div>
-  </div>
-
-  <div class="rpt-seg-grid">
-    <div class="rpt-seg-card" onclick="rptOpenModal('ceo_positioning')">
-      <div class="rpt-seg-label">CEO POSITIONING</div>
-      <ul class="rpt-bullets" style="margin-top:6px">
-        <li>2 CEO carousels ready to publish</li>
-        <li>Dark October 6-slide carousel (CERT-In, Verizon, IBM verified)</li>
-        <li>17 blogs published</li>
-        <li>Moving toward 20K organic followers</li>
-      </ul>
-      <div class="rpt-kpi-hint" style="margin-top:8px">↗ Full detail</div>
-    </div>
-    <div class="rpt-seg-card" onclick="rptOpenModal('design_detail')">
-      <div class="rpt-seg-label">PRODUCT & DESIGN</div>
-      <ul class="rpt-bullets" style="margin-top:6px">
-        <li>12 website pages, Cannes + 3 event collaterals</li>
-        <li>Datasheets and Academy brochure</li>
-        <li>Claude → Framer + Webflow MCP cut design turnaround &gt;50%</li>
-      </ul>
-      <div class="rpt-kpi-hint" style="margin-top:8px">↗ All 17 deliverables</div>
-    </div>
-    <div class="rpt-seg-card" onclick="rptOpenModal('automation_detail')">
-      <div class="rpt-seg-label">AUTOMATION & STRATEGY</div>
-      <ul class="rpt-bullets" style="margin-top:6px">
-        <li>One View Module 1 live</li>
-        <li>₹200 Cr demand gen roadmap (Gartner)</li>
-        <li>Modules 2 & 3 in progress</li>
-      </ul>
-      <div class="rpt-kpi-hint" style="margin-top:8px">↗ Full detail</div>
-    </div>
-  </div>`;
-}
-
-// ── TAB: NEXT STEPS ───────────────────────────────────────────────
-function buildRptNextSteps() {
-  return `
-  <div class="rpt-slide-title">
-    <div class="rpt-eyebrow">Slide 6</div>
-    <div class="rpt-h1">Next: <span class="rpt-accent">routing the Cannes leads</span></div>
-  </div>
-
-  <div class="rpt-key-ask">
-    <div class="rpt-key-ask-label">KEY ASK</div>
-    <div class="rpt-key-ask-text">Route Cannes 7 hot leads to BU International immediately. Telecom GTM approved: coordinate with BU India on Jio, Airtel, Vi, BSNL outreach.</div>
-  </div>
-
-  <div class="rpt-seg-grid">
-    <div class="rpt-seg-card">
-      <div class="rpt-seg-label">EVENTS</div>
-      <ul class="rpt-bullets" style="margin-top:8px">
-        <li>Telecom MSME Conclave, 24 Nov</li>
-        <li>Maharashtra Higher Ed Summit, 2–3 Dec</li>
-        <li>EQTC Dublin, PKI Consortium Amsterdam, Black Hat MEA Riyadh (Dec)</li>
-      </ul>
-    </div>
-    <div class="rpt-seg-card">
-      <div class="rpt-seg-label">MARKETING</div>
-      <ul class="rpt-bullets" style="margin-top:8px">
-        <li>1:1 CMO outreach to 29 partner CXOs this week</li>
-        <li>Newsletter Vol 2 (Dec); Japan outreach live via JETRO</li>
-        <li>Publish 2 CEO carousels; 4 video scripts to production</li>
-      </ul>
-    </div>
-    <div class="rpt-seg-card">
-      <div class="rpt-seg-label">PRODUCT & AUTOMATION</div>
-      <ul class="rpt-bullets" style="margin-top:8px">
-        <li>Partners Portal and Design Taxonomy</li>
-        <li>One View Module 2 (HR + CRM); event card CRM go-live</li>
-        <li>One View Module – Events CRM leads addition automation</li>
-      </ul>
-    </div>
-  </div>
-
-  <div style="text-align:center;margin-top:32px;padding:24px;background:var(--navy);border-radius:var(--r);color:#fff">
-    <div style="font-size:28px;font-weight:800;margin-bottom:6px">Thank you</div>
-    <div style="font-size:12px;color:rgba(255,255,255,0.5)">Monthly Marketing Report · November 2026 · Strictly Private & Confidential · qnulabs.com</div>
-  </div>`;
-}
-
-// ── Tab switching ─────────────────────────────────────────────────
-function rptShowTab(id, btn) {
-  document.querySelectorAll('.rpt-nav-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  const c = document.getElementById('rptContent');
-  if (!c) return;
-  const builders = {
-    summary:   buildRptSummary,
-    events:    buildRptEvents,
-    digital:   buildRptDigital,
-    content:   buildRptContent,
-    nextsteps: buildRptNextSteps,
-  };
-  c.innerHTML = (builders[id] || buildRptSummary)();
-  setTimeout(() => renderRptCharts(id), 150);
-}
-
-// ── Chart rendering ───────────────────────────────────────────────
-function renderRptCharts(tab) {
-  if (typeof Chart === 'undefined') return;
-  if (tab === 'events') {
-    setTimeout(() => {
-      _renderRptDoughnut('rptGeoChart',
-        ['India', 'International'],
-        [RPT_NOV_WEBSITE_LEADS.filter(l=>!l.geo||l.geo==='India').length,
-         RPT_NOV_WEBSITE_LEADS.filter(l=>(l.geo||'').toLowerCase().includes('int')).length + RPT_THAILAND_LEADS.length + RPT_LONDON_LEADS.length + RPT_CANNES_LEADS.length + 2],
-        ['#10B981','#3B82F6']
-      );
-      _renderRptDoughnut('rptTempChart',
-        ['Hot','Warm','Cold','Unclassified'],
-        [15,4,2,59],
-        ['#EF4444','#F59E0B','#9CA3AF','#D1D5DB']
-      );
-      _renderRptBar('rptEventChart',
-        ['Website/Organic','CISO6 Mumbai','Thailand R/T','Cannes','London','Luxembourg','Goa Conclave','Pragati'],
-        [93,239,26,7,10,2,35,13]
-      );
-    }, 50);
+    let html = '';
+    Object.keys(grouped).sort((a,b) => b-a).forEach(yr => {
+      html += `<div class="rpt-year-label">${yr}</div>
+      <table class="table">
+        <thead><tr>
+          <th>Month</th><th>Report Title</th><th>Files</th><th>Actions</th>
+        </tr></thead>
+        <tbody>`;
+      grouped[yr].forEach(r => {
+        const files = Array.isArray(r.files) ? r.files : (r.files ? JSON.parse(r.files) : []);
+        const hasHtml = r.has_html || r.id === 'nov2026-default';
+        html += `<tr>
+          <td style="font-weight:700;white-space:nowrap">${r.month} ${r.year}</td>
+          <td>${esc(r.title || 'Monthly Report')}</td>
+          <td>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              ${files.map(f => `<a href="${esc(f.url)}" target="_blank" class="btn btn-secondary btn-xs" style="text-decoration:none" download>
+                ${f.type === 'pptx' ? '📊' : f.type === 'docx' ? '📄' : f.type === 'pdf' ? '📋' : '📁'} ${f.type?.toUpperCase() || 'File'}
+              </a>`).join('')}
+              ${files.length === 0 ? '<span style="font-size:12px;color:var(--muted)">No files yet</span>' : ''}
+            </div>
+          </td>
+          <td>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              ${hasHtml ? `<button onclick="rptOpenHtmlReport('${r.id}')" class="btn btn-primary btn-xs">View Report</button>` : ''}
+              <button onclick="rptUploadToMonth('${r.id}','${r.month}','${r.year}')" class="btn btn-secondary btn-xs">+ Upload File</button>
+              ${files.length > 0 ? `<button onclick="rptDownloadAll('${r.id}')" class="btn btn-secondary btn-xs">⬇ All</button>` : ''}
+            </div>
+          </td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+    });
+    if (c) c.innerHTML = html;
+  } catch(e) {
+    if (c) c.innerHTML = `<div class="empty-state"><div class="empty-title">Could not load reports</div><div class="empty-sub">${esc(e.message)}</div><button onclick="rptLoadLibrary('${type}')" class="btn btn-primary btn-sm" style="margin-top:12px">Retry</button></div>`;
   }
 }
 
-function _renderRptDoughnut(id, labels, data, colors) {
-  const ctx = document.getElementById(id); if(!ctx) return;
-  if(ctx._ch) ctx._ch.destroy();
-  ctx._ch = new Chart(ctx, {
-    type:'doughnut',
-    data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:2,borderColor:'#fff'}]},
-    options:{plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8,boxWidth:10}}},cutout:'65%',maintainAspectRatio:false,
-      onClick:(e,el) => {
-        if(!el.length) return;
-        const idx=el[0].index;
-        if(id==='rptGeoChart') rptOpenModal(idx===0?'all_leads_india':'all_leads_intl');
-        else if(id==='rptTempChart') rptOpenModal('temp_detail');
-      }
-    }
-  });
-}
-
-function _renderRptBar(id, labels, data) {
-  const ctx = document.getElementById(id); if(!ctx) return;
-  if(ctx._ch) ctx._ch.destroy();
-  ctx._ch = new Chart(ctx, {
-    type:'bar',
-    data:{labels,datasets:[{label:'Leads',data,backgroundColor:'#E8460A',borderRadius:3}]},
-    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}},maintainAspectRatio:false,
-      onClick:(e,el) => {
-        if(!el.length) return;
-        const idx=el[0].index;
-        const map=['all_leads_nov','ciso6','thailand','cannes','london','luxembourg','all_leads_nov','all_leads_nov'];
-        rptOpenModal(map[idx]||'all_leads_nov');
-      }
-    }
-  });
-}
-
-// ── Modal system ──────────────────────────────────────────────────
-function buildRptModal() {
-  return `
-  <div id="rptOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto" onclick="if(event.target===this)rptCloseModal()">
-    <div style="background:#fff;border-radius:10px;width:100%;max-width:980px;margin:auto;box-shadow:0 24px 64px rgba(0,0,0,0.3)">
-      <div style="background:var(--navy);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-radius:10px 10px 0 0;border-bottom:3px solid var(--accent)">
-        <div>
-          <div id="rptMTitle" style="font-size:15px;font-weight:700;color:#fff"></div>
-          <div id="rptMSub" style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:2px"></div>
+// ── Upload dialog ─────────────────────────────────────────────────
+function rptUploadDialog(type) {
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const years = [2026, 2027];
+  showModal('rptUploadModal');
+  const body = $('rptUploadModalBody');
+  if (!body) {
+    // Create modal dynamically
+    const overlay = document.createElement('div');
+    overlay.id = 'rptUploadModal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.innerHTML = `
+      <div style="background:var(--surface);border-radius:12px;max-width:520px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,0.25)">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:15px;font-weight:700">Upload ${type.toUpperCase()} Report</div>
+          <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
         </div>
+        <div style="padding:20px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div>
+              <div class="field-label">Month *</div>
+              <select id="rptUpMonth" class="field-select">
+                ${months.map(m=>`<option value="${m}"${m==='November'?' selected':''}>${m}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <div class="field-label">Year *</div>
+              <select id="rptUpYear" class="field-select">
+                ${years.map(y=>`<option value="${y}"${y===2026?' selected':''}>${y}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div style="margin-bottom:14px">
+            <div class="field-label">Report Title</div>
+            <input id="rptUpTitle" class="field-input" placeholder="e.g. Monthly Marketing Report — November 2026" value="Monthly Marketing Report — November 2026"/>
+          </div>
+          <div style="margin-bottom:14px">
+            <div class="field-label">Upload Files (PPT, Word, PDF, HTML)</div>
+            <input type="file" id="rptUpFiles" accept=".pptx,.ppt,.docx,.doc,.pdf,.html" multiple
+              style="width:100%;padding:10px;border:1.5px dashed var(--border);border-radius:8px;font-size:13px;cursor:pointer"/>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Multiple files allowed · Max 50MB each</div>
+          </div>
+          <div id="rptUpProgress" style="display:none;margin-bottom:14px">
+            <div style="font-size:13px;color:var(--muted)" id="rptUpProgressText">Uploading...</div>
+            <div style="background:var(--border);border-radius:100px;height:6px;margin-top:6px"><div id="rptUpBar" style="background:var(--accent);height:6px;border-radius:100px;width:0%;transition:width 0.3s"></div></div>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button onclick="this.closest('[style*=fixed]').remove()" class="btn btn-secondary">Cancel</button>
+            <button onclick="rptDoUpload('${type}')" class="btn btn-primary" id="rptUpBtn">Upload & Save</button>
+          </div>
+        </div>
+      </div>`;
+    overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+    document.body.appendChild(overlay);
+    return;
+  }
+}
+
+async function rptDoUpload(type) {
+  const month = $('rptUpMonth')?.value;
+  const year  = parseInt($('rptUpYear')?.value);
+  const title = $('rptUpTitle')?.value.trim() || `Monthly Marketing Report — ${month} ${year}`;
+  const filesInput = $('rptUpFiles');
+  const btn = $('rptUpBtn');
+  const prog = $('rptUpProgress');
+  const bar  = $('rptUpBar');
+  const progTxt = $('rptUpProgressText');
+
+  if (!month || !year) { toast('Please select month and year.', 'error'); return; }
+
+  const files = filesInput ? Array.from(filesInput.files) : [];
+  if (!files.length) { toast('Please select at least one file.', 'error'); return; }
+
+  if (btn) btn.disabled = true;
+  if (prog) prog.style.display = 'block';
+
+  const uploadedFiles = [];
+  let hasHtml = false;
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (progTxt) progTxt.textContent = `Uploading ${i+1} of ${files.length}: ${file.name}`;
+    if (bar) bar.style.width = `${Math.round((i/files.length)*80)}%`;
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    const fname = `${type}/${year}/${month}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+
+    try {
+      const uploadRes = await fetch(`${SUPA_URL}/storage/v1/object/${REPORTS_STORAGE_BUCKET}/${fname}`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPA_KEY,
+          'Authorization': 'Bearer ' + (SESSION?.access_token || SUPA_KEY),
+          'Content-Type': file.type || 'application/octet-stream',
+          'x-upsert': 'true'
+        },
+        body: file
+      });
+
+      if (uploadRes.ok) {
+        const url = `${SUPA_URL}/storage/v1/object/public/${REPORTS_STORAGE_BUCKET}/${fname}`;
+        uploadedFiles.push({ name: file.name, url, type: ext, size: file.size });
+        if (ext === 'html') hasHtml = true;
+      } else {
+        const err = await uploadRes.text();
+        console.warn('Upload failed:', err);
+        toast(`Failed to upload ${file.name}`, 'error');
+      }
+    } catch(e) {
+      console.error('Upload error:', e);
+    }
+  }
+
+  if (bar) bar.style.width = '90%';
+  if (progTxt) progTxt.textContent = 'Saving to database...';
+
+  try {
+    // Check if record for this month/year/type exists
+    const existing = await (await sbFetch(`reports_library?type=eq.${type}&month=eq.${month}&year=eq.${year}&select=id,files`)).json();
+
+    if (existing && existing.length > 0) {
+      // Merge files
+      const existingFiles = Array.isArray(existing[0].files) ? existing[0].files : (existing[0].files ? JSON.parse(existing[0].files) : []);
+      const merged = [...existingFiles, ...uploadedFiles];
+      await sbFetch(`reports_library?id=eq.${existing[0].id}`, {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json', 'Prefer':'return=minimal'},
+        body: JSON.stringify({ files: merged, has_html: hasHtml || existing[0].has_html, title })
+      });
+    } else {
+      await sbFetch('reports_library', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', 'Prefer':'return=minimal'},
+        body: JSON.stringify({ type, month, year, title, files: uploadedFiles, has_html: hasHtml, created_by: SESSION?.email || '' })
+      });
+    }
+
+    if (bar) bar.style.width = '100%';
+    setTimeout(() => {
+      document.querySelector('[style*="position:fixed"][style*="z-index:99999"]')?.remove();
+      toast(`${uploadedFiles.length} file(s) uploaded to ${month} ${year} ${type.toUpperCase()} Report.`);
+      rptLoadLibrary(type);
+    }, 500);
+  } catch(e) {
+    toast('Database save failed: ' + e.message, 'error');
+    if (btn) btn.disabled = false;
+  }
+}
+
+function rptUploadToMonth(id, month, year) {
+  rptUploadDialog(currentReportType);
+  setTimeout(() => {
+    if ($('rptUpMonth')) $('rptUpMonth').value = month;
+    if ($('rptUpYear')) $('rptUpYear').value = year;
+  }, 100);
+}
+
+function rptOpenHtmlReport(id) {
+  if (id === 'nov2026-default') {
+    // Open the built-in November 2026 HTML report
+    const win = window.open('', '_blank');
+    win.document.write(buildNovemberReportHTML());
+    win.document.close();
+    return;
+  }
+  // For uploaded HTML files, open from storage
+  toast('Loading report...', 'info');
+}
+
+function rptDownloadAll(id) {
+  toast('Preparing download...', 'info');
+}
+
+// ═══════════════════════════════════════════════════════════
+// WEEKLY MARKETING REPORTS
+// ═══════════════════════════════════════════════════════════
+let weeklyTeamMembers = [];
+let weeklySubmissions = [];
+
+async function loadWeeklyReports() {
+  const c = $('pg-reports');
+  if (!c) return;
+
+  const isAdmin = SESSION?.role === 'admin' || SESSION?.role === 'cmo';
+  const isCMO   = SESSION?.role === 'cmo';
+  const userEmail = SESSION?.email || '';
+
+  c.innerHTML = `
+    <div class="page-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button onclick="loadReports()" class="btn btn-secondary btn-sm">← Back</button>
+        <div>
+          <div class="page-title">Weekly Marketing Reports</div>
+          <div class="page-sub">Submit by Monday · Compiled PPT sent to CMO every Tuesday 10 AM</div>
+        </div>
+      </div>
+      <div class="page-actions">
+        ${isAdmin ? `<button onclick="rptManageTeam()" class="btn btn-secondary btn-sm">⚙ Manage Team</button>` : ''}
+        ${isCMO   ? `<button onclick="rptCompileNow()" class="btn btn-primary btn-sm">Compile & Download PPT</button>` : ''}
+      </div>
+    </div>
+    <div id="weeklyContent"><div class="loading-row"><span class="spinner"></span> Loading...</div></div>
+    ${buildRptModal()}
+  `;
+
+  await rptLoadWeeklyContent(isAdmin, isCMO, userEmail);
+}
+
+async function rptLoadWeeklyContent(isAdmin, isCMO, userEmail) {
+  const c = $('weeklyContent');
+  try {
+    // Load team members
+    const tmRes = await sbFetch('weekly_team_members?active=eq.true&order=name.asc&select=*');
+    weeklyTeamMembers = await tmRes.json() || [];
+
+    // Load this week's submissions
+    const weekStart = getWeekStart();
+    const subRes = await sbFetch(`weekly_submissions?week_start=eq.${weekStart}&select=*`);
+    weeklySubmissions = await subRes.json() || [];
+
+    // Determine what to show
+    const mySubmission = weeklySubmissions.find(s => s.user_email === userEmail);
+    const isMember = weeklyTeamMembers.some(m => m.email === userEmail);
+
+    let html = `
+    <!-- Week selector -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+      <div style="font-size:13px;font-weight:600;color:var(--muted)">Week of:</div>
+      <div style="font-size:14px;font-weight:700">${formatDate(weekStart)} – ${formatDate(getWeekEnd(weekStart))}</div>
+      <div class="rpt-sched-info" style="display:flex;gap:12px;flex-wrap:wrap">
+        <div class="rpt-sched-pill rpt-sched-fri">📧 Friday: Team notified to submit</div>
+        <div class="rpt-sched-pill rpt-sched-mon">📧 Monday: Reminder sent</div>
+        <div class="rpt-sched-pill rpt-sched-tue">📊 Tuesday 10AM: PPT compiled → CMO</div>
+      </div>
+    </div>`;
+
+    // If user is a team member — show their submission form
+    if (isMember || isAdmin) {
+      const sub = mySubmission;
+      html += `
+      <div style="margin-bottom:20px">
+        <div class="card">
+          <div style="font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
+            <span>Your Weekly Update${sub ? ' <span style="font-size:11px;font-weight:400;color:var(--green)">✓ Submitted</span>' : ''}</span>
+            ${sub ? `<button onclick="rptEditSubmission()" class="btn btn-secondary btn-sm">Edit</button>` : ''}
+          </div>
+          <div id="weeklyFormWrap">
+            ${sub ? rptSubmissionView(sub) : rptSubmissionForm(weekStart, userEmail)}
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // If CMO or Admin — show all submissions as a table
+    if (isCMO || isAdmin) {
+      html += `
+      <div class="card">
+        <div style="font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+          <span>Team Submissions — Week of ${formatDate(weekStart)}</span>
+          <button onclick="rptCompileNow()" class="btn btn-primary btn-sm">📊 Compile PPT</button>
+        </div>
+        <table class="table">
+          <thead><tr><th>Team Member</th><th>Status</th><th>Work Done</th><th>KPI / Impact</th><th>Next Week Plan</th><th>Submitted</th></tr></thead>
+          <tbody>`;
+
+      // Show all team members, submitted or not
+      const allMembers = weeklyTeamMembers.length > 0 ? weeklyTeamMembers :
+        [{name:'Soumya',email:'soumya@qnulabs.com'},{name:'Sumanth',email:'sumanth@qnulabs.com'},{name:'Bilal',email:'bilal@qnulabs.com'},{name:'Aditya',email:'aditya.p@qnulabs.com'}];
+
+      allMembers.forEach(m => {
+        const s = weeklySubmissions.find(x => x.user_email === m.email);
+        if (s) {
+          const statusColors = {'in-progress':'var(--accent)','to-do':'#F59E0B','done':'var(--green)','blocked':'#EF4444'};
+          html += `<tr>
+            <td style="font-weight:600">${esc(m.name)}</td>
+            <td><span style="font-size:11px;font-weight:600;color:${statusColors[s.status]||'var(--muted)'};background:rgba(0,0,0,0.05);padding:2px 8px;border-radius:20px">${(s.status||'').replace('-',' ').toUpperCase()}</span></td>
+            <td style="font-size:12px;max-width:200px">${esc(s.work_done||'—')}</td>
+            <td style="font-size:12px;max-width:150px">${esc(s.kpi_impact||'—')}</td>
+            <td style="font-size:12px;max-width:150px">${esc(s.plans_next_week||s.work_done||'—')}</td>
+            <td style="font-size:11px;color:var(--muted)">${s.submitted_at ? formatDate(s.submitted_at) : '—'}</td>
+          </tr>`;
+        } else {
+          html += `<tr>
+            <td style="font-weight:600">${esc(m.name)}</td>
+            <td><span style="font-size:11px;color:var(--muted);background:#F3F4F6;padding:2px 8px;border-radius:20px">NOT SUBMITTED</span></td>
+            <td colspan="4" style="font-size:12px;color:var(--muted)">Pending</td>
+          </tr>`;
+        }
+      });
+
+      html += `</tbody></table>
+      </div>`;
+    }
+
+    if (c) c.innerHTML = html;
+  } catch(e) {
+    if (c) c.innerHTML = `<div class="empty-state"><div class="empty-title">Could not load weekly reports</div><div class="empty-sub">${esc(e.message)}</div></div>`;
+  }
+}
+
+function rptSubmissionForm(weekStart, userEmail) {
+  return `
+  <div style="display:grid;gap:14px">
+    <div>
+      <div class="field-label">Work done this week <span style="color:var(--accent)">*</span></div>
+      <textarea id="wk_work_done" class="field-textarea" rows="3" placeholder="Describe what you worked on this week..."></textarea>
+    </div>
+    <div>
+      <div class="field-label">Status</div>
+      <select id="wk_status" class="field-select">
+        <option value="in-progress">In Progress</option>
+        <option value="done">Done</option>
+        <option value="to-do">To Do</option>
+        <option value="blocked">Blocked</option>
+      </select>
+    </div>
+    <div>
+      <div class="field-label">Impact / KPI</div>
+      <textarea id="wk_kpi" class="field-textarea" rows="2" placeholder="e.g. 96,813 LinkedIn impressions, 22 companies clicked through..."></textarea>
+    </div>
+    <div>
+      <div class="field-label">Plans for next week</div>
+      <textarea id="wk_plans" class="field-textarea" rows="2" placeholder="Leave blank to auto-fill from 'In Progress' work above..."></textarea>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">If left blank, your In Progress work will be carried forward automatically.</div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="rptSubmitWeekly('${weekStart}','${userEmail}')" class="btn btn-primary">Submit Update</button>
+    </div>
+  </div>`;
+}
+
+function rptSubmissionView(s) {
+  const statusColors = {'in-progress':'var(--accent)','to-do':'#F59E0B','done':'var(--green)','blocked':'#EF4444'};
+  return `
+  <div style="display:grid;gap:10px">
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(16,185,129,0.08);border-radius:8px;font-size:13px">
+      ✓ Submitted on ${formatDate(s.submitted_at)}
+    </div>
+    <table style="width:100%;font-size:13px">
+      <tr><td style="font-weight:600;padding:6px 0;width:160px;color:var(--muted)">Work Done</td><td style="padding:6px 0">${esc(s.work_done||'—')}</td></tr>
+      <tr><td style="font-weight:600;padding:6px 0;color:var(--muted)">Status</td><td><span style="font-size:11px;font-weight:700;color:${statusColors[s.status]||'var(--muted)'}">${(s.status||'').replace('-',' ').toUpperCase()}</span></td></tr>
+      <tr><td style="font-weight:600;padding:6px 0;color:var(--muted)">KPI / Impact</td><td style="padding:6px 0">${esc(s.kpi_impact||'—')}</td></tr>
+      <tr><td style="font-weight:600;padding:6px 0;color:var(--muted)">Next Week Plan</td><td style="padding:6px 0">${esc(s.plans_next_week||s.work_done||'—')}</td></tr>
+    </table>
+  </div>`;
+}
+
+function rptEditSubmission() {
+  const myEmail = SESSION?.email || '';
+  const weekStart = getWeekStart();
+  const sub = weeklySubmissions.find(s => s.user_email === myEmail);
+  const wrap = $('weeklyFormWrap');
+  if (!wrap) return;
+  wrap.innerHTML = rptSubmissionForm(weekStart, myEmail);
+  if (sub) {
+    if ($('wk_work_done')) $('wk_work_done').value = sub.work_done || '';
+    if ($('wk_status'))    $('wk_status').value    = sub.status    || 'in-progress';
+    if ($('wk_kpi'))       $('wk_kpi').value       = sub.kpi_impact || '';
+    if ($('wk_plans'))     $('wk_plans').value     = sub.plans_next_week || '';
+  }
+}
+
+async function rptSubmitWeekly(weekStart, userEmail) {
+  const workDone = ($('wk_work_done')?.value || '').trim();
+  const status   = $('wk_status')?.value || 'in-progress';
+  const kpi      = ($('wk_kpi')?.value || '').trim();
+  const plans    = ($('wk_plans')?.value || '').trim() || workDone; // auto-fill
+
+  if (!workDone) { toast('Please fill in work done this week.', 'error'); return; }
+
+  const name = weeklyTeamMembers.find(m => m.email === userEmail)?.name || SESSION?.full_name || userEmail;
+
+  const payload = {
+    user_email: userEmail,
+    user_name: name,
+    week_start: weekStart,
+    work_done: workDone,
+    status,
+    kpi_impact: kpi,
+    plans_next_week: plans,
+    submitted_at: new Date().toISOString()
+  };
+
+  try {
+    // Upsert — update if exists, insert if not
+    const existing = weeklySubmissions.find(s => s.user_email === userEmail);
+    if (existing) {
+      await sbFetch(`weekly_submissions?id=eq.${existing.id}`, {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json','Prefer':'return=minimal'},
+        body: JSON.stringify(payload)
+      });
+    } else {
+      await sbFetch('weekly_submissions', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','Prefer':'return=minimal'},
+        body: JSON.stringify(payload)
+      });
+    }
+    toast('Weekly update submitted ✓');
+    await loadWeeklyReports();
+  } catch(e) {
+    toast('Submit failed: ' + e.message, 'error');
+  }
+}
+
+// ── Admin: Manage team members ────────────────────────────────────
+async function rptManageTeam() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  const tmRes = await sbFetch('weekly_team_members?order=name.asc&select=*').catch(() => ({json:()=>[]}));
+  const members = await tmRes.json() || [];
+
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border-radius:12px;max-width:560px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,0.25)">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:15px;font-weight:700">Manage Weekly Report Team</div>
+        <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div style="padding:20px">
+        <table class="table" style="margin-bottom:16px">
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Active</th><th></th></tr></thead>
+          <tbody id="teamMemberRows">
+          ${members.map(m => `<tr>
+            <td>${esc(m.name)}</td>
+            <td style="font-size:12px">${esc(m.email)}</td>
+            <td style="font-size:12px">${esc(m.role||'')}</td>
+            <td>${m.active ? '✓' : '—'}</td>
+            <td><button onclick="rptToggleMember('${m.id}',${!m.active})" class="btn btn-secondary btn-xs">${m.active?'Deactivate':'Activate'}</button></td>
+          </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted)">No members yet</td></tr>'}
+          </tbody>
+        </table>
+        <div style="border-top:1px solid var(--border);padding-top:14px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:10px">Add Team Member</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <input id="newMemberName" class="field-input" placeholder="Full name"/>
+            <input id="newMemberEmail" class="field-input" placeholder="email@qnulabs.com" type="email"/>
+          </div>
+          <input id="newMemberRole" class="field-input" placeholder="Role (e.g. Content Manager)" style="margin-bottom:10px"/>
+          <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button onclick="this.closest('[style*=fixed]').remove()" class="btn btn-secondary">Done</button>
+            <button onclick="rptAddMember()" class="btn btn-primary">Add Member</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
+}
+
+async function rptAddMember() {
+  const name  = ($('newMemberName')?.value || '').trim();
+  const email = ($('newMemberEmail')?.value || '').trim();
+  const role  = ($('newMemberRole')?.value || '').trim();
+  if (!name || !email) { toast('Name and email required.', 'error'); return; }
+  try {
+    await sbFetch('weekly_team_members', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify({ name, email, role, active: true })
+    });
+    toast(`${name} added to weekly reports team.`);
+    document.querySelector('[style*="position:fixed"][style*="z-index:99999"]')?.remove();
+    rptManageTeam();
+  } catch(e) { toast('Failed: ' + e.message, 'error'); }
+}
+
+async function rptToggleMember(id, active) {
+  await sbFetch(`weekly_team_members?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {'Content-Type':'application/json','Prefer':'return=minimal'},
+    body: JSON.stringify({ active })
+  });
+  document.querySelector('[style*="position:fixed"][style*="z-index:99999"]')?.remove();
+  rptManageTeam();
+}
+
+// ── Compile PPT ───────────────────────────────────────────────────
+async function rptCompileNow() {
+  const weekStart = getWeekStart();
+  const subRes = await sbFetch(`weekly_submissions?week_start=eq.${weekStart}&select=*`).catch(()=>({json:()=>[]}));
+  const subs = await subRes.json() || [];
+
+  const members = weeklyTeamMembers.length > 0 ? weeklyTeamMembers :
+    [{name:'Soumya',email:'soumya@qnulabs.com'},{name:'Sumanth',email:'sumanth@qnulabs.com'},{name:'Bilal',email:'bilal@qnulabs.com'},{name:'Aditya',email:'aditya.p@qnulabs.com'}];
+
+  if (subs.length === 0) { toast('No submissions yet for this week.', 'error'); return; }
+
+  toast('Compiling PPT...');
+  await rptGenerateWeeklyPPT(subs, members, weekStart);
+}
+
+async function rptGenerateWeeklyPPT(subs, members, weekStart) {
+  // Build HTML-based "PPT" that opens in browser — proper PPTX needs server-side
+  const slides = members.map(m => {
+    const s = subs.find(x => x.user_email === m.email);
+    if (!s) return `
+      <div class="ppt-slide">
+        <div class="ppt-slide-header"><div class="ppt-slide-name">${esc(m.name)}</div><div class="ppt-slide-week">Week of ${formatDate(weekStart)}</div></div>
+        <div style="display:flex;align-items:center;justify-content:center;height:60%;color:rgba(255,255,255,0.4);font-size:14px">No submission received</div>
+      </div>`;
+
+    const statusColor = {'in-progress':'#E8460A','done':'#10B981','to-do':'#F59E0B','blocked':'#EF4444'}[s.status] || '#6B7280';
+    return `
+      <div class="ppt-slide">
+        <div class="ppt-slide-header">
+          <div class="ppt-slide-name">${esc(s.user_name || m.name)}</div>
+          <div class="ppt-slide-week">Week of ${formatDate(weekStart)}</div>
+        </div>
+        <div class="ppt-slide-body">
+          <div class="ppt-section">
+            <div class="ppt-section-label">WORK DONE THIS WEEK</div>
+            <div class="ppt-section-text">${esc(s.work_done||'—')}</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="ppt-section">
+              <div class="ppt-section-label">STATUS</div>
+              <div class="ppt-status-badge" style="background:${statusColor}">${(s.status||'').replace('-',' ').toUpperCase()}</div>
+            </div>
+            <div class="ppt-section">
+              <div class="ppt-section-label">KPI / IMPACT</div>
+              <div class="ppt-section-text">${esc(s.kpi_impact||'—')}</div>
+            </div>
+          </div>
+          <div class="ppt-section">
+            <div class="ppt-section-label">PLANS FOR NEXT WEEK</div>
+            <div class="ppt-section-text">${esc(s.plans_next_week || s.work_done||'—')}</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const pptHTML = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"/>
+<title>QNu Labs Weekly Marketing Report — Week of ${formatDate(weekStart)}</title>
+<style>
+body{margin:0;background:#1a1a1a;font-family:'Inter',system-ui,sans-serif;padding:20px}
+.ppt-wrap{max-width:960px;margin:0 auto}
+.ppt-title-slide{background:#0E2841;border-radius:8px;padding:48px;text-align:center;margin-bottom:16px;color:#fff}
+.ppt-title-slide h1{font-size:32px;font-weight:800;margin-bottom:8px}
+.ppt-title-slide p{font-size:14px;color:rgba(255,255,255,0.6)}
+.ppt-slide{background:#0E2841;border-radius:8px;padding:0;margin-bottom:16px;overflow:hidden;aspect-ratio:16/9;display:flex;flex-direction:column}
+.ppt-slide-header{background:#E8460A;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.ppt-slide-name{font-size:18px;font-weight:800;color:#fff}
+.ppt-slide-week{font-size:12px;color:rgba(255,255,255,0.8)}
+.ppt-slide-body{flex:1;padding:24px;display:flex;flex-direction:column;gap:14px}
+.ppt-section{background:rgba(255,255,255,0.05);border-radius:6px;padding:12px 14px}
+.ppt-section-label{font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#E8460A;margin-bottom:6px}
+.ppt-section-text{font-size:13px;color:#fff;line-height:1.5}
+.ppt-status-badge{display:inline-block;padding:6px 16px;border-radius:20px;font-size:11px;font-weight:700;color:#fff}
+.print-btn{position:fixed;bottom:20px;right:20px;background:#E8460A;color:#fff;border:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+@media print{.print-btn{display:none}.ppt-slide{page-break-after:always;break-after:page}}
+</style></head><body>
+<div class="ppt-wrap">
+  <div class="ppt-title-slide">
+    <h1>Weekly Marketing Report</h1>
+    <p>Week of ${formatDate(weekStart)} · QNu Labs Marketing Team · Compiled: ${new Date().toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</p>
+  </div>
+  ${slides}
+</div>
+<button class="print-btn" onclick="window.print()">🖨 Print / Save as PDF</button>
+</body></html>`;
+
+  const win = window.open('', '_blank');
+  if (win) { win.document.write(pptHTML); win.document.close(); }
+  else toast('Pop-up blocked. Please allow pop-ups and try again.', 'error');
+}
+
+// ── Date helpers ──────────────────────────────────────────────────
+function getWeekStart(date) {
+  const d = date ? new Date(date) : new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+  const mon = new Date(d.setDate(diff));
+  return mon.toISOString().slice(0,10);
+}
+
+function getWeekEnd(weekStart) {
+  const d = new Date(weekStart);
+  d.setDate(d.getDate() + 6);
+  return d.toISOString().slice(0,10);
+}
+
+// ── November 2026 HTML Report ─────────────────────────────────────
+function buildNovemberReportHTML() {
+  // Open the full report in a new window using existing module data
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"/><title>QNu Labs · Monthly Marketing Report · November 2026</title>
+<style>body{font-family:system-ui,sans-serif;background:#f3f4f6;padding:20px;color:#111}
+.wrap{max-width:1000px;margin:0 auto}
+.header{background:#0E2841;border-radius:8px;padding:24px 28px;color:#fff;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+h1{font-size:22px;font-weight:800;margin:0}
+p{font-size:12px;color:rgba(255,255,255,0.6);margin:4px 0 0}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border:1.5px solid #E5E7EB;border-radius:8px;padding:16px}
+.kpi-num{font-size:26px;font-weight:800;color:#E8460A}
+.kpi-label{font-size:12px;font-weight:600;margin-top:2px}
+.kpi-sub{font-size:11px;color:#6B7280}
+.section{background:#fff;border-radius:8px;padding:16px;margin-bottom:12px}
+.section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#E8460A;margin-bottom:12px;padding-bottom:6px;border-bottom:1.5px solid #FCD9CC}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#0E2841;color:#fff;padding:7px 10px;text-align:left;font-size:11px}
+td{padding:7px 10px;border-bottom:1px solid #E5E7EB}
+tr:hover td{background:#FFF3EE}
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px}
+.hot{background:#FEE2E2;color:#DC2626}
+.intl{background:#DBEAFE;color:#1E40AF}
+</style></head><body>
+<div class="wrap">
+  <div class="header">
+    <div><h1>Monthly Marketing Report — November 2026</h1><p>QNu Labs · Strictly Private & Confidential · qnulabs.com</p></div>
+    <div style="font-size:30px;font-weight:800;color:#E8460A">₹39 Cr</div>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-num">₹39 Cr</div><div class="kpi-label">International Pipeline</div><div class="kpi-sub">Cannes ₹35 Cr + Luxembourg ₹4 Cr</div></div>
+    <div class="kpi"><div class="kpi-num">9</div><div class="kpi-label">Hot Enterprise Accounts</div><div class="kpi-sub">From events this month</div></div>
+    <div class="kpi"><div class="kpi-num">96,813</div><div class="kpi-label">LinkedIn Impressions</div><div class="kpi-sub">▲ 26.8% QoQ · Zero paid</div></div>
+    <div class="kpi"><div class="kpi-num">80</div><div class="kpi-label">November Leads</div><div class="kpi-sub">Event & digital combined</div></div>
+  </div>
+  <div class="section">
+    <div class="section-title">Cannes Festival — ₹35 Cr Pipeline Leads</div>
+    <table><thead><tr><th>#</th><th>Company</th><th>Sector</th><th>Country</th><th>Est. Pipeline</th><th>Signal</th></tr></thead><tbody>
+    <tr><td>1</td><td><strong>Schneider Electric</strong></td><td>Energy / Industrial</td><td><span class="badge intl">France</span></td><td style="color:#E8460A;font-weight:700">₹5 Cr</td><td>Critical infrastructure</td></tr>
+    <tr><td>2</td><td><strong>TotalEnergies</strong></td><td>Energy</td><td><span class="badge intl">France</span></td><td style="color:#E8460A;font-weight:700">₹5 Cr</td><td>OT/IT convergence</td></tr>
+    <tr><td>3</td><td><strong>Jefferies</strong></td><td>Investment Banking</td><td><span class="badge intl">USA/UK</span></td><td style="color:#E8460A;font-weight:700">₹7 Cr</td><td>BFSI regulatory driver</td></tr>
+    <tr><td>4</td><td><strong>Intesa Sanpaolo</strong></td><td>Banking</td><td><span class="badge intl">Italy</span></td><td style="color:#E8460A;font-weight:700">₹6 Cr</td><td>PQC migration mandate</td></tr>
+    <tr><td>5</td><td><strong>UBS</strong></td><td>Banking / Wealth Mgmt</td><td><span class="badge intl">Switzerland</span></td><td style="color:#E8460A;font-weight:700">₹6 Cr</td><td>NIST PQC adoption</td></tr>
+    <tr><td>6</td><td><strong>Capgemini</strong></td><td>IT Services</td><td><span class="badge intl">France</span></td><td style="color:#E8460A;font-weight:700">₹4 Cr</td><td>QKD deployment</td></tr>
+    <tr><td>7</td><td><strong>France Quantum Institute</strong></td><td>Research / Government</td><td><span class="badge intl">France</span></td><td style="color:#E8460A;font-weight:700">₹2 Cr</td><td>Research partnership</td></tr>
+    </tbody></table>
+  </div>
+  <div class="section">
+    <div class="section-title">LinkedIn Performance</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+    ${[['96,813','Total Impressions','▲ 26.8%'],['+ 194.8%','Reactions Growth','Zero paid'],['+ 355.6%','Comments Surge','Organic']].map(([n,l,s])=>`<div style="background:#FFF7F5;border:1.5px solid #FCD9CC;border-radius:6px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:800;color:#E8460A">${n}</div><div style="font-size:12px;font-weight:600">${l}</div><div style="font-size:11px;color:#6B7280">${s}</div></div>`).join('')}
+    </div>
+  </div>
+  <div style="text-align:center;padding:16px;font-size:11px;color:#9CA3AF">Monthly Marketing Report · November 2026 · QNu Labs</div>
+</div>
+</body></html>`;
+}
+
+// ── Modal helper (reused) ─────────────────────────────────────────
+function buildRptModal() {
+  return `<div id="rptOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto" onclick="if(event.target===this)rptCloseModal()">
+    <div style="background:#fff;border-radius:10px;width:100%;max-width:980px;margin:auto;box-shadow:0 24px 64px rgba(0,0,0,0.3)">
+      <div style="background:#0E2841;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-radius:10px 10px 0 0;border-bottom:3px solid var(--accent)">
+        <div><div id="rptMTitle" style="font-size:15px;font-weight:700;color:#fff"></div><div id="rptMSub" style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:2px"></div></div>
         <button onclick="rptCloseModal()" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.12);border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
       </div>
       <div id="rptMBody" style="padding:20px;max-height:72vh;overflow-y:auto"></div>
@@ -654,452 +784,8 @@ function buildRptModal() {
   </div>`;
 }
 
-function rptOpenModal(type) {
-  const overlay = document.getElementById('rptOverlay');
-  const titleEl = document.getElementById('rptMTitle');
-  const subEl   = document.getElementById('rptMSub');
-  const bodyEl  = document.getElementById('rptMBody');
-  if (!overlay) return;
-
-  let title='', sub='', html='';
-
-  if (type === 'pipeline') {
-    title = '₹39 Cr International Pipeline — Full Breakdown';
-    sub = 'Cannes ₹35 Cr + Luxembourg ₹4 Cr · November 2026 · Not yet in sales deck';
-    html = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div style="background:#FFF7F5;border:1.5px solid #FCD9CC;border-radius:8px;padding:16px">
-        <div style="font-size:32px;font-weight:800;color:var(--accent)">₹35 Cr</div>
-        <div style="font-size:13px;font-weight:600;color:var(--navy)">World Quantum Cannes Festival</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">17–18 Nov · Bronze Sponsor · 7 hot leads<br>Owners: Vikas B, Prabhnoor, Sudiptaa Paul</div>
-      </div>
-      <div style="background:#FFF7F5;border:1.5px solid #FCD9CC;border-radius:8px;padding:16px">
-        <div style="font-size:32px;font-weight:800;color:var(--accent)">₹4 Cr</div>
-        <div style="font-size:13px;font-weight:600;color:var(--navy)">Luxembourg 1:1 Meetings</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">6–7 Nov · 2 hot leads, 8 business cards<br>Owner: Sudiptaa Paul</div>
-      </div>
-    </div>
-    <div style="background:#FFF3EE;border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:14px;font-size:13px">
-      <strong>Action required:</strong> This ₹39 Cr pipeline is entirely new and not yet in the sales deck. Route Cannes 7 hot leads to BU International immediately.
-    </div>
-    <table class="rpt-tbl"><thead><tr><th>#</th><th>Company</th><th>Sector</th><th>Country</th><th>Est. Pipeline</th><th>Why Hot</th></tr></thead><tbody>
-    ${RPT_CANNES_LEADS.map(c=>`<tr><td>${c.no}</td><td><strong>${rptEsc(c.company)}</strong></td><td>${rptEsc(c.sector)}</td><td>${rptBadge('intl',c.country)}</td><td style="color:var(--accent);font-weight:700">${c.pipeline}</td><td style="font-size:11px">${rptEsc(c.signal)}</td></tr>`).join('')}
-    <tr style="font-weight:700;background:#FFF7F5"><td colspan="4">Luxembourg — 2 bilateral hot leads</td><td style="color:var(--accent)">₹4 Cr</td><td style="font-size:11px">High-value bilateral meeting contacts</td></tr>
-    </tbody></table>`;
-  }
-
-  else if (type === 'hotaccs') {
-    title = '9 Hot Enterprise Accounts — November 2026';
-    sub = 'Cannes (7) + Luxembourg (2) · All International · Action: Route to BU International';
-    html = `
-    <div style="background:#FFF3EE;border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:16px;font-size:13px">
-      All 9 accounts are <strong>international</strong>. Route to BU International immediately. ₹39 Cr pipeline not yet in sales deck.
-    </div>
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin-bottom:8px">Cannes — 7 hot leads</div>
-    <table class="rpt-tbl"><thead><tr><th>#</th><th>Company</th><th>Sector</th><th>Country</th><th>Est. Pipeline</th><th>Signal</th></tr></thead><tbody>
-    ${RPT_CANNES_LEADS.map(c=>`<tr><td>${c.no}</td><td><strong>${rptEsc(c.company)}</strong></td><td>${rptEsc(c.sector)}</td><td>${rptBadge('intl',c.country)}</td><td style="color:var(--accent);font-weight:700">${c.pipeline}</td><td style="font-size:11px">${rptEsc(c.signal)}</td></tr>`).join('')}
-    </tbody></table>
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin:16px 0 8px">Luxembourg — 2 hot leads</div>
-    <table class="rpt-tbl"><thead><tr><th>#</th><th>Details</th><th>Est. Pipeline</th></tr></thead><tbody>
-    <tr><td>8</td><td>Hot Lead 1 — high-value bilateral meeting (Luxembourg)</td><td style="color:var(--accent);font-weight:700">₹2 Cr</td></tr>
-    <tr><td>9</td><td>Hot Lead 2 — high-value bilateral meeting (Luxembourg)</td><td style="color:var(--accent);font-weight:700">₹2 Cr</td></tr>
-    </tbody></table>`;
-  }
-
-  else if (type === 'cannes') {
-    title = 'World Quantum Cannes Festival — ₹35 Cr Pipeline';
-    sub = '17–18 Nov 2026 · Bronze Sponsor · Owners: Vikas B, Prabhnoor, Sudiptaa Paul';
-    html = `
-    <div style="background:#FFF3EE;border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:14px;font-size:13px">
-      All 7 leads are international. Must be routed to <strong>BU International immediately</strong>. These leads were NOT captured in CRM — recorded separately by Cannes team.
-    </div>
-    <table class="rpt-tbl"><thead><tr><th>#</th><th>Company</th><th>Sector</th><th>Country</th><th>Est. Pipeline</th><th>Why Hot</th></tr></thead><tbody>
-    ${RPT_CANNES_LEADS.map(c=>`<tr><td>${c.no}</td><td><strong>${rptEsc(c.company)}</strong></td><td>${rptEsc(c.sector)}</td><td>${rptBadge('intl',c.country)}</td><td style="color:var(--accent);font-weight:700">${c.pipeline}</td><td style="font-size:11px">${rptEsc(c.signal)}</td></tr>`).join('')}
-    </tbody></table>`;
-  }
-
-  else if (type === 'luxembourg') {
-    title = 'Luxembourg 1:1 Meetings — ₹4 Cr Pipeline';
-    sub = '6–7 Nov 2026 · High-value bilateral meetings · Owner: Sudiptaa Paul';
-    html = `
-    <div style="background:#FFF3EE;border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:14px;font-size:13px">
-      2 direct hot leads generated from bilateral meetings. 8 business cards for follow-up. Pipeline estimate: ₹4 Cr (₹2 Cr per hot lead).
-    </div>
-    <table class="rpt-tbl"><thead><tr><th>#</th><th>Details</th><th>Est. Pipeline</th><th>Owner</th></tr></thead><tbody>
-    <tr><td>1</td><td>Hot Lead 1 — bilateral meeting (Luxembourg)</td><td style="color:var(--accent);font-weight:700">₹2 Cr</td><td>Sudiptaa Paul Choudhury</td></tr>
-    <tr><td>2</td><td>Hot Lead 2 — bilateral meeting (Luxembourg)</td><td style="color:var(--accent);font-weight:700">₹2 Cr</td><td>Sudiptaa Paul Choudhury</td></tr>
-    </tbody></table>
-    <div style="margin-top:12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin-bottom:8px">8 Business Cards for Follow-up</div>
-    <p style="font-size:13px;color:var(--muted)">8 business cards were scanned at the Luxembourg event for follow-up qualification. These are not yet classified as hot/warm until a follow-up call is completed.</p>`;
-  }
-
-  else if (type === 'thailand') {
-    title = 'Thailand Enterprise Roundtable — 26 Leads';
-    sub = '1–5 Nov 2026 · Bangkok, Thailand · SEA Market Entry';
-    html = `
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
-      <div style="background:#FFF7F5;border:1.5px solid #FCD9CC;border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:var(--accent)">26</div><div style="font-size:11px;color:var(--muted)">Total leads</div></div>
-      <div style="background:#FEF3F2;border:1.5px solid #FECACA;border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:#EF4444">4</div><div style="font-size:11px;color:var(--muted)">Hot</div></div>
-      <div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:#F59E0B">5</div><div style="font-size:11px;color:var(--muted)">Warm</div></div>
-    </div>
-    <table class="rpt-tbl"><thead><tr><th>#</th><th>Name</th><th>Company</th><th>Owner</th><th>Date</th><th>Status</th><th>Note</th></tr></thead><tbody>
-    ${RPT_THAILAND_LEADS.map(l=>`<tr><td>${l.no}</td><td>${rptEsc(l.name)}</td><td><strong>${rptEsc(l.company)}</strong></td><td style="font-size:11px">${rptEsc(l.owner)}</td><td style="font-size:11px">${l.date}</td><td>${rptBadge(l.signal.toLowerCase(),l.signal)}</td><td style="font-size:11px;max-width:150px">${rptEsc(l.note)}</td></tr>`).join('')}
-    </tbody></table>`;
-  }
-
-  else if (type === 'london') {
-    title = 'Quantum + AI Tech Show London — 10 Leads';
-    sub = '4 Nov 2026 · London, UK · Brand + PR · Japan market entry via JETRO';
-    html = `
-    <div style="background:#FFF3EE;border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:14px;font-size:13px">
-      <strong>Key outcome:</strong> JETRO (Japan External Trade Organization) connection made — Japan market outreach now live via J-Bridge program.
-    </div>
-    <table class="rpt-tbl"><thead><tr><th>#</th><th>Name</th><th>Company</th><th>Phone</th><th>Country</th><th>Status</th><th>Note</th></tr></thead><tbody>
-    ${RPT_LONDON_LEADS.map(l=>`<tr><td>${l.no}</td><td>${rptEsc(l.name)}</td><td><strong>${rptEsc(l.company)}</strong></td><td style="font-size:11px;white-space:nowrap">${rptEsc(l.phone)}</td><td>${rptBadge('intl',l.country)}</td><td>${rptBadge(l.signal.toLowerCase(),l.signal)}</td><td style="font-size:11px;max-width:200px">${rptEsc(l.note)}</td></tr>`).join('')}
-    </tbody></table>`;
-  }
-
-  else if (type === 'ciso6') {
-    title = 'CISO6 Mumbai — 239 India Enterprise Leads';
-    sub = '15 Oct 2026 · India BFSI + Tech Enterprise CISOs · Owner: Marketing Team';
-    html = `
-    <div style="background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px">
-      239 leads from India's top enterprise CISOs. Volume-driven event — October's main pipeline source for India. All leads have Lead Source = "Event", Customer Segment = "Enterprise".
-    </div>
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin-bottom:10px">Key Companies (sample)</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
-    ${RPT_CISO6_COMPANIES.map(c=>`<span style="font-size:12px;padding:4px 11px;border-radius:20px;background:#F3F4F6;color:#374151;font-weight:500;border:1px solid #E5E7EB">${rptEsc(c)}</span>`).join('')}
-    <span style="font-size:12px;padding:4px 11px;border-radius:20px;background:#FFF3EE;color:var(--accent);font-weight:500;border:1px solid #FCD9CC">+ 202 more India enterprise CISOs</span>
-    </div>
-    <p style="font-size:12px;color:var(--muted)">Full list of all 239 names available in Zoho CRM — filter by Lead Generator = "CISO6 Mumbai".</p>`;
-  }
-
-  else if (type === 'all_leads_india') {
-    title = 'India Leads — November + Events';
-    sub = 'All domestic leads from website/organic and India events';
-    html = rptBuildCRMView('india');
-  }
-
-  else if (type === 'all_leads_intl') {
-    title = 'International Leads — Cannes + Luxembourg + Thailand + London';
-    sub = 'All international pipeline leads · November 2026';
-    html = rptBuildCRMView('intl');
-  }
-
-  else if (type === 'all_leads_nov' || type === 'all_leads_oct') {
-    const isNov = type === 'all_leads_nov';
-    title = isNov ? 'November Leads — 80 Records (Website/Organic + Events)' : 'CRM Overview — Oct & Nov Leads';
-    sub = isNov ? 'Source: FY_2027___LEADS__6_.csv · SP Source = blank · Nov 2026' : 'All events + organic leads Oct–Nov 2026';
-    html = rptBuildCRMView(isNov);
-  }
-
-  else if (type === 'temp_detail') {
-    title = 'Lead Temperature — Classification & Names';
-    sub = 'Hot 15 · Warm 4 · Cold 2 · Unclassified 59 · November 2026';
-    html = `
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
-      <div style="background:#FEF2F2;border:1.5px solid #FECACA;border-radius:8px;padding:12px;text-align:center;cursor:pointer" onclick="document.getElementById('rpt-t-hot').scrollIntoView({behavior:'smooth'})">
-        <div style="font-size:28px;font-weight:800;color:#EF4444">15</div><div style="font-size:11px;color:#EF4444;font-weight:600">Hot</div>
-      </div>
-      <div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:8px;padding:12px;text-align:center;cursor:pointer" onclick="document.getElementById('rpt-t-warm').scrollIntoView({behavior:'smooth'})">
-        <div style="font-size:28px;font-weight:800;color:#F59E0B">4</div><div style="font-size:11px;color:#F59E0B;font-weight:600">Warm</div>
-      </div>
-      <div style="background:#F9FAFB;border:1.5px solid #E5E7EB;border-radius:8px;padding:12px;text-align:center">
-        <div style="font-size:28px;font-weight:800;color:#6B7280">2</div><div style="font-size:11px;color:#6B7280;font-weight:600">Cold / spam</div>
-      </div>
-      <div style="background:#F9FAFB;border:1.5px solid #E5E7EB;border-radius:8px;padding:12px;text-align:center">
-        <div style="font-size:28px;font-weight:800;color:#6B7280">59</div><div style="font-size:11px;color:#6B7280;font-weight:600">Unclassified</div>
-      </div>
-    </div>
-    <div id="rpt-t-hot" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin:14px 0 8px">Hot (15) — Meeting done, demo/pricing requested, PQC evaluation underway</div>
-    <table class="rpt-tbl"><thead><tr><th>#</th><th>Name</th><th>Company</th><th>Signal / Reason</th><th>Owner</th></tr></thead><tbody>
-    ${RPT_NOV_WEBSITE_LEADS.filter(l=>l.temp==='Hot').map((l,i)=>`<tr><td>${i+1}</td><td>${rptEsc(l.name)}</td><td>${rptEsc(l.company)}</td><td style="font-size:11px;max-width:200px">${rptEsc(l.msg)}</td><td style="font-size:11px">${rptEsc(l.owner)}</td></tr>`).join('')}
-    </tbody></table>
-    <div id="rpt-t-warm" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#F59E0B;margin:14px 0 8px">Warm (4) — FDP inquiry, lab setup, partnership explore</div>
-    <table class="rpt-tbl"><thead><tr><th>#</th><th>Name</th><th>Company</th><th>Signal / Reason</th><th>Owner</th></tr></thead><tbody>
-    ${RPT_NOV_WEBSITE_LEADS.filter(l=>l.temp==='Warm').map((l,i)=>`<tr><td>${i+1}</td><td>${rptEsc(l.name)}</td><td>${rptEsc(l.company)}</td><td style="font-size:11px;max-width:200px">${rptEsc(l.msg)}</td><td style="font-size:11px">${rptEsc(l.owner)}</td></tr>`).join('')}
-    </tbody></table>`;
-  }
-
-  else if (type === 'linkedin_metrics') {
-    title = 'LinkedIn Performance — Full Metrics';
-    sub = 'Organic only · Zero paid amplification · 5 Sep – 4 Oct 2026 · Source: Monthly Content Report';
-    html = `
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
-    ${[['96,813','Total Impressions','▲ 26.8% QoQ'],['+ 194.8%','Reactions Growth','Zero paid'],['+ 355.6%','Comments Surge','Organic'],['+ 225.0%','Reposts Increase','Zero paid'],['~20K','Follower Target','Moving steadily'],['0','Paid Amplification','All organic']].map(([n,l,s])=>`<div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:14px;text-align:center"><div style="font-size:22px;font-weight:800;color:var(--accent)">${n}</div><div style="font-size:12px;font-weight:600;color:var(--navy);margin:3px 0">${l}</div><div style="font-size:11px;color:var(--muted)">${s}</div></div>`).join('')}
-    </div>
-    <div style="background:#FFF7F5;border:1.5px solid #FCD9CC;border-radius:8px;padding:12px;font-size:13px">
-      All growth is entirely organic. No paid promotion. 2 CEO carousels ready to publish. Moving toward 20K follower milestone.<br><br>
-      <strong>Source:</strong> Monthly_Content___Thought_Leadership_Impact_Report-2.pdf, Section 3 "Organic LinkedIn Performance Metrics (5 Sep – 4 Oct 2026)"
-    </div>`;
-  }
-
-  else if (type === 'seo_detail') {
-    title = 'AEO / SEO / GEO — Full Data';
-    sub = 'Source: QNU_labs___7_Eagles_-SEO_Report_-_October_2026.pdf';
-    html = `
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin-bottom:10px">Search & AI Impressions (Sep 22 – Oct 21, 2026 vs Aug 23 – Sep 21, 2026)</div>
-    <table class="rpt-tbl"><thead><tr><th>Metric</th><th>Current</th><th>Prior</th><th>Change</th><th>Note</th></tr></thead><tbody>
-    <tr><td>AI / Gen impressions</td><td style="font-weight:700">28,400</td><td>24,200</td><td style="color:green;font-weight:700">▲ +17%</td><td>Google AI Overview, ChatGPT, Gemini</td></tr>
-    <tr><td>Total web clicks</td><td>3,760</td><td>3,930</td><td>Stable</td><td>Sep spike (funding announcement) now excluded</td></tr>
-    <tr><td>Total impressions</td><td>143,000</td><td>164,000</td><td>Stable</td><td>Sep spike normalised</td></tr>
-    <tr><td>Average CTR</td><td style="font-weight:700">2.6%</td><td>2.4%</td><td style="color:green">▲</td><td>Improving</td></tr>
-    <tr><td>Average position</td><td style="font-weight:700">10.5</td><td>12.7</td><td style="color:green;font-weight:700">▲ Significant</td><td>Major ranking improvement</td></tr>
-    <tr><td>AI visibility score</td><td>27/100</td><td>Stable</td><td>—</td><td>Mentions: 122 (+7%). Citations: 86 (-43.4%)</td></tr>
-    </tbody></table>
-
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin:16px 0 10px">AI Platform Traffic (Google Analytics)</div>
-    <table class="rpt-tbl"><thead><tr><th>Platform</th><th>Sessions</th><th>Share</th><th>Engaged</th><th>Engagement Rate</th><th>Avg Duration</th></tr></thead><tbody>
-    ${RPT_AI_PLATFORMS.map(p=>`<tr><td><strong>${rptEsc(p.platform)}</strong></td><td>${p.sessions}</td><td>${p.pct}</td><td>${p.engaged}</td><td>${p.rate}</td><td>${p.duration}</td></tr>`).join('')}
-    <tr style="font-weight:700;background:var(--surface2)"><td>TOTAL</td><td>243</td><td>100%</td><td>130</td><td>53.5%</td><td>5m 42s avg</td></tr>
-    </tbody></table>
-
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin:16px 0 10px">Top Pages in AI Search Results</div>
-    <table class="rpt-tbl"><thead><tr><th>Page URL</th><th style="text-align:right">AI Impressions</th></tr></thead><tbody>
-    ${RPT_SEO_PAGES.map(p=>`<tr><td style="font-size:11px">${rptEsc(p.url)}</td><td style="text-align:right;font-weight:700">${p.impressions.toLocaleString()}</td></tr>`).join('')}
-    </tbody></table>
-
-    <div style="background:#F0F9FF;border:1.5px solid #BAE6FD;border-radius:8px;padding:12px;margin-top:14px;font-size:13px">
-      <strong>QNu in US Google AI Overview</strong> — Appears alongside AWS, Thales, NXP, IDQ for queries like "post quantum cryptography companies" and "top cryptography companies".
-    </div>`;
-  }
-
-  else if (type === 'digital_detail') {
-    title = 'Digital Marketing — Full Campaign Breakdown';
-    sub = 'Partner outreach · Newsletter · Academy UAE · LinkedIn · Telecom GTM · Nov 2026';
-    html = `
-    <table class="rpt-tbl"><thead><tr><th>Campaign</th><th>Impact</th><th>Key accounts engaged</th></tr></thead><tbody>
-    <tr><td><strong>Partner & Reseller Outreach</strong></td><td>9 companies, 39 clicks<br>29 CXOs for 1:1 CMO outreach</td><td>Netpoleon, Westcon-Comstor, True Corporation</td></tr>
-    <tr><td><strong>October Newsletter (Enterprise)</strong></td><td>8 enterprises engaged</td><td>BNP Paribas, ABN AMRO, OCBC, Optus, Axis Bank, Hexaware, Pfizer, MediaTek</td></tr>
-    <tr><td><strong>QNu Academy UAE Campaign</strong></td><td>5 companies engaged</td><td>Quadcode, AAFAQ, TAQA, Arbeat, Nile (all UAE)</td></tr>
-    <tr><td><strong>LinkedIn Organic</strong></td><td>96,813 impressions (+26.8%)<br>+194.8% reactions</td><td>+355.6% comments · +225% reposts · Zero paid</td></tr>
-    <tr><td><strong>India Telecom GTM (Approved)</strong></td><td>GTM plan approved; outreach live</td><td>Jio, Airtel, Vi, BSNL</td></tr>
-    </tbody></table>
-    <div style="background:#FFF7F5;border:1.5px solid #FCD9CC;border-radius:8px;padding:12px;margin-top:14px;font-size:13px">
-      <strong>Result:</strong> 22 companies clicked through to Contact Us. 29 CXOs are now in a named outreach list. Marketing is aligned to the same three segments as the sales pipeline: BFSI, Academy and Telecom.
-    </div>`;
-  }
-
-  else if (type === 'ceo_positioning') {
-    title = 'CEO Positioning & Content Deliverables';
-    sub = 'Source: Monthly_Content___Thought_Leadership_Impact_Report-2.pdf';
-    html = `
-    <table class="rpt-tbl"><thead><tr><th>Deliverable</th><th>Format</th><th>Sources</th><th>Status</th></tr></thead><tbody>
-    <tr><td><strong>"The Digital Economy Runs on Trust. Quantum Computers Will Test It."</strong></td><td>LinkedIn Carousel</td><td>DST, NPCI, NIST, GSMA Intelligence</td><td>${rptBadge('warm','Ready to Publish')}</td></tr>
-    <tr><td><strong>"Quantum Security as a Service Gives Telcos Something New to Sell"</strong></td><td>LinkedIn Carousel</td><td>GSMA Intelligence</td><td>${rptBadge('warm','Ready to Publish')}</td></tr>
-    <tr><td><strong>Dark October Security Campaign</strong></td><td>6-slide Carousel</td><td>CERT-In, Verizon DBIR, IBM X-Force, TRM Labs</td><td>${rptBadge('done','Done')}</td></tr>
-    <tr><td><strong>Strategic PO Protection</strong></td><td>Repositioned POV article</td><td>Internal</td><td>${rptBadge('done','Done')}</td></tr>
-    </tbody></table>
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin:16px 0 8px">Blog Pipeline — 17 Published (Oct–Nov)</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px">
-    ${["Black October — Digital Trust & Quantum Threat","PQC Migration Roadmap for Banks","Quantum-Safe Migration Roadmap","Quantum-Safe Satellite Communication","Thailand Quantum-Ready 2030 for CISOs","How CISOs Prioritise PQC Migration","QShield vs QShield 2.0: What's New","Malaysia PQC Readiness for CISOs","Quantum for BFSI","Quantum in Telecom GTM","Homepage Rewrite — QShield 2.0 + Global Trust Platform","Event Coverage — Cannes (pre-event teaser + Day 1 recap)","+ 5 more SEO/AEO/GEO-treated blogs"].map(b=>`<span style="font-size:12px;padding:4px 11px;border-radius:20px;background:#FFF3EE;color:var(--accent);font-weight:500;border:1px solid #FCD9CC">${rptEsc(b)}</span>`).join('')}
-    </div>`;
-  }
-
-  else if (type === 'design_detail') {
-    title = 'Product & Design — All 17 Deliverables';
-    sub = 'Source: PPT Slide 5 + CEO briefing notes · Claude MCP integrations cut turnaround >50%';
-    const items = [
-      {item:"Enterprise website — 12 pages",cat:"Website",status:"Done",detail:"Full redesign of 12 enterprise product/solution pages"},
-      {item:"Claude → Framer MCP Integration",cat:"Technology",status:"Done",detail:"Cuts design turnaround by >50%"},
-      {item:"Claude → Webflow MCP Integration",cat:"Technology",status:"Done",detail:"CMS connected to Claude AI via MCP"},
-      {item:"Event Collaterals — Cannes Festival",cat:"Events",status:"Done",detail:"Banners, standees, brochures, digital assets"},
-      {item:"Event Collaterals — Quantum+AI Tech Show UK",cat:"Events",status:"Done",detail:"Print + digital for London show, 4 Nov"},
-      {item:"Event Collaterals — Malaysia Roundtable",cat:"Events",status:"Done",detail:"Tailored for SEA academy + enterprise audience"},
-      {item:"Event Collaterals — Telecom Conclave",cat:"Events",status:"Done",detail:"Print materials, posters, standees"},
-      {item:"Datasheets — QConnect",cat:"Product Marketing",status:"Done",detail:"Technical + commercial datasheet"},
-      {item:"Datasheets — IP Encryptor",cat:"Product Marketing",status:"Done",detail:"Technical + commercial datasheet"},
-      {item:"QNu Academy Brochure",cat:"Product Marketing",status:"Done",detail:"Full Academy programme brochure"},
-      {item:"Claude PPT Deck",cat:"Templates",status:"Done",detail:"Master presentation deck for CEO / leadership"},
-      {item:"enQase Word Template",cat:"Templates",status:"Done",detail:"Official Word template for enQase division"},
-      {item:"HR Job Listing Page",cat:"Website",status:"Done",detail:"Careers page with live job listings"},
-      {item:"Website Audit — Page Speed + Bandwidth",cat:"Technology",status:"Done",detail:"Speed issues and bandwidth errors fixed"},
-      {item:"Partners Portal",cat:"Website",status:"Ongoing",detail:"Multi-vendor portal for channel partners"},
-      {item:"Design Taxonomy",cat:"Brand System",status:"Ongoing",detail:"Standardising visual design system"},
-      {item:"NCP Business Cards",cat:"Brand",status:"Ongoing",detail:"Business cards for NCP team — final review"},
-    ];
-    html = `<table class="rpt-tbl"><thead><tr><th>Deliverable</th><th>Category</th><th>Status</th><th>Detail</th></tr></thead><tbody>
-    ${items.map(d=>`<tr><td><strong>${rptEsc(d.item)}</strong></td><td style="font-size:11px">${rptEsc(d.cat)}</td><td>${rptBadge(d.status.toLowerCase(),d.status)}</td><td style="font-size:11px">${rptEsc(d.detail)}</td></tr>`).join('')}
-    </tbody></table>`;
-  }
-
-  else if (type === 'automation_detail') {
-    title = 'Automation & Strategy — One View + ₹200 Cr Roadmap';
-    sub = 'Source: PPT Slide 5 — Automation & Strategy section';
-    html = `<table class="rpt-tbl"><thead><tr><th>Module</th><th>Status</th><th>What it does</th><th>Impact</th></tr></thead><tbody>
-    <tr><td><strong>One View Module 1</strong><br><span style="font-size:11px;color:var(--muted)">Project tracker · Content approval · Marketing requisition</span></td><td>${rptBadge('live','LIVE')}</td><td style="font-size:12px">Real-time project tracking. Content approval workflows. Team requisition tool.</td><td style="font-size:12px">Integrates team, reduces frequent emails for updates.</td></tr>
-    <tr><td><strong>One View Module 2</strong><br><span style="font-size:11px;color:var(--muted)">HR / CRM analytics / Monthly reports</span></td><td>${rptBadge('ongoing','In Progress')}</td><td style="font-size:12px">HR module + CRM analytics + monthly report automation</td><td style="font-size:12px">Unified view across HR, sales data and reports</td></tr>
-    <tr><td><strong>One View Module 3 — Events CRM</strong><br><span style="font-size:11px;color:var(--muted)">Business card → CRM automation</span></td><td>${rptBadge('ongoing','Testing Phase')}</td><td style="font-size:12px">Automates business card → CRM entry from events</td><td style="font-size:12px">Instant CRM sync from every event, no manual entry</td></tr>
-    <tr><td><strong>₹200 Cr Demand Gen Roadmap</strong><br><span style="font-size:11px;color:var(--muted)">Gartner-benchmarked analysis</span></td><td>${rptBadge('done','Done')}</td><td style="font-size:12px">Market sizing, competitive positioning, channel prioritisation, ABM playbooks for BFSI, Telecom, Govt, Academy</td><td style="font-size:12px">Clear strategy to reach ₹200 Cr pipeline. Ready to present to leadership.</td></tr>
-    </tbody></table>`;
-  }
-
-  else if (type === 'bfsi') {
-    title = 'BFSI — International Banks Engaged';
-    sub = 'Cannes pipeline leads + October newsletter · November 2026';
-    html = `
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin-bottom:10px">Cannes Pipeline Leads — BFSI</div>
-    <table class="rpt-tbl"><thead><tr><th>Company</th><th>Sector</th><th>Country</th><th>Est. Pipeline</th></tr></thead><tbody>
-    ${RPT_CANNES_LEADS.filter(c=>['Banking','Investment Banking','Wealth'].some(s=>c.sector.includes(s))).map(c=>`<tr><td><strong>${rptEsc(c.company)}</strong></td><td>${rptEsc(c.sector)}</td><td>${rptBadge('intl',c.country)}</td><td style="color:var(--accent);font-weight:700">${c.pipeline}</td></tr>`).join('')}
-    </tbody></table>
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin:16px 0 8px">October Newsletter — 8 Enterprise Accounts Engaged</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px">
-    ${['BNP Paribas','ABN AMRO','OCBC','Optus','Axis Bank','Hexaware','Pfizer','MediaTek'].map(c=>`<span style="font-size:12px;padding:4px 11px;border-radius:20px;background:#FFF3EE;color:var(--accent);font-weight:500;border:1px solid #FCD9CC">${c}</span>`).join('')}
-    </div>`;
-  }
-
-  else if (type === 'academy') {
-    title = 'Academy — UAE Campaign + Maharashtra Summit';
-    sub = 'QNu Academy UAE · Maharashtra Higher Ed Summit 2–3 Dec · Goa Conclave 34 leads';
-    html = `
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin-bottom:8px">UAE Campaign — 5 Companies Engaged</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
-    ${['Quadcode','AAFAQ','TAQA','Arbeat','Nile (UAE)'].map(c=>`<span style="font-size:12px;padding:4px 11px;border-radius:20px;background:#FFF3EE;color:var(--accent);font-weight:500;border:1px solid #FCD9CC">${c}</span>`).join('')}
-    </div>
-    <div style="background:#FFF7F5;border:1.5px solid #FCD9CC;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px">
-      <strong>Upcoming:</strong> Maharashtra Higher Education Summit 2–3 Dec 2026. Academy pipeline event. Universities and higher education institutions across Maharashtra. Owner: Hermaan Kohli.
-    </div>
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin-bottom:8px">Goa Conclave (Oct) — 34 Education Leads</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px">
-    ${['BITS Pilani (Goa)','VIT (MoU exists)','Sharda University','JAIN University','KL University','SOA University','NIT Calicut','Ramdeobaba University','Pimpri Chinchwad University','Atria University','Alliance University','+ 24 more universities'].map(c=>`<span style="font-size:12px;padding:4px 11px;border-radius:20px;background:#F3F4F6;color:#374151;font-weight:500;border:1px solid #E5E7EB">${c}</span>`).join('')}
-    </div>`;
-  }
-
-  else if (type === 'telecom') {
-    title = 'Telecom — India GTM Approved';
-    sub = 'Jio, Airtel, Vi, BSNL · Telecom MSME Conclave 24 Nov · Coordinator: BU India';
-    html = `
-    <div style="background:#FFF3EE;border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:14px;font-size:13px">
-      <strong>India Telecom GTM approved.</strong> Key ask: Coordinate with BU India on outreach to Jio, Airtel, Vi, BSNL.
-    </div>
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin-bottom:8px">India Telecom GTM Targets</div>
-    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">
-    ${['Jio','Airtel','Vi','BSNL'].map(c=>`<div style="background:var(--navy);color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700">${c}</div>`).join('')}
-    </div>
-    <div style="background:#FFF7F5;border:1.5px solid #FCD9CC;border-radius:8px;padding:12px;font-size:13px">
-      <strong>Upcoming — Telecom Startups & MSME Conclave</strong><br>Date: 24 Nov 2026 · At Minister's invitation · Conclave targets telecom startups and MSMEs for QKD + PQC deployment.
-    </div>`;
-  }
-
-  titleEl.textContent = title;
-  subEl.textContent   = sub;
-  bodyEl.innerHTML    = html;
-  overlay.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-
-  if (['all_leads_nov','all_leads_oct','all_leads_india','all_leads_intl'].includes(type)) {
-    setTimeout(() => rptInitCRM(type), 50);
-  }
-}
-
 function rptCloseModal() {
-  const o = document.getElementById('rptOverlay');
+  const o = $('rptOverlay');
   if (o) o.style.display = 'none';
   document.body.style.overflow = '';
-}
-
-// ── CRM View inside modal ─────────────────────────────────────────
-function rptBuildCRMView(mode) {
-  const isNov = mode === true || mode === 'nov';
-  window._rptFilters = {temp:'All',geo:'All',q:''};
-  window._rptLeadSrc = isNov ? 'nov' : 'all';
-  return `
-  <div id="rpt-crm-stats" style="display:flex;gap:16px;padding:12px 14px;background:#FFF7F5;border-radius:8px;margin-bottom:14px;flex-wrap:wrap">
-    <div style="text-align:center"><div style="font-size:20px;font-weight:800;color:var(--navy)" id="rptCrmTotal">—</div><div style="font-size:10px;color:var(--muted)">Total</div></div>
-    <div style="text-align:center"><div style="font-size:20px;font-weight:800;color:#EF4444" id="rptCrmHot">—</div><div style="font-size:10px;color:var(--muted)">Hot</div></div>
-    <div style="text-align:center"><div style="font-size:20px;font-weight:800;color:#F59E0B" id="rptCrmWarm">—</div><div style="font-size:10px;color:var(--muted)">Warm</div></div>
-    <div style="text-align:center"><div style="font-size:20px;font-weight:800;color:#3B82F6" id="rptCrmIntl">—</div><div style="font-size:10px;color:var(--muted)">International</div></div>
-    <div style="text-align:center"><div style="font-size:20px;font-weight:800;color:var(--accent)" id="rptCrmShowing">—</div><div style="font-size:10px;color:var(--muted)">Showing</div></div>
-  </div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-    <span style="font-size:11px;font-weight:600;color:var(--muted)">Status:</span>
-    ${['All','Hot','Warm','Unclassified','Cold'].map(t=>`<button class="rpt-filter-btn ${t==='All'?'active':''}" onclick="rptCRMFilter('temp','${t}',this)">${t}</button>`).join('')}
-  </div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-    <span style="font-size:11px;font-weight:600;color:var(--muted)">Geo:</span>
-    ${['All','India','Intl'].map(g=>`<button class="rpt-filter-btn ${g==='All'?'active':''}" onclick="rptCRMFilter('geo','${g}',this)">${g}</button>`).join('')}
-  </div>
-  <div style="margin-bottom:12px">
-    <input type="text" placeholder="Search by name, company or owner..." oninput="rptCRMSearch(this.value)"
-      style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;width:280px;outline:none;font-family:inherit"/>
-  </div>
-  <div style="overflow-x:auto">
-  <table class="rpt-tbl">
-    <thead><tr><th>#</th><th>Name</th><th>Company</th><th>Phone</th><th>Geo</th><th>Event / Source</th><th>Status</th><th>Owner</th><th>Reason / Message</th></tr></thead>
-    <tbody id="rptCrmTbody"></tbody>
-  </table></div>`;
-}
-
-function rptInitCRM(mode) {
-  const allIntl = [
-    ...RPT_CANNES_LEADS.map(c=>({name:c.company,company:c.company,phone:'—',owner:'Vikas B / Sudiptaa Paul',temp:'Hot',date:'17-18 Nov',msg:c.signal+' · Est. '+c.pipeline,event:'Cannes Festival',geo:'International'})),
-    ...RPT_THAILAND_LEADS.map(l=>({name:l.name,company:l.company,phone:'—',owner:l.owner,temp:l.signal,date:l.date,msg:l.note,event:'Thailand Roundtable 2026',geo:'International'})),
-    ...RPT_LONDON_LEADS.map(l=>({name:l.name,company:l.company,phone:l.phone,owner:'Sudiptaa Paul Choudhury',temp:l.signal,date:'4 Nov',msg:l.note,event:'Quantum + AI Tech Show London',geo:'International'})),
-    {name:'Hot Lead 1',company:'Luxembourg bilateral meeting',phone:'—',owner:'Sudiptaa Paul Choudhury',temp:'Hot',date:'6-7 Nov',msg:'High-value bilateral meeting',event:'Luxembourg 1:1 Meetings',geo:'International'},
-    {name:'Hot Lead 2',company:'Luxembourg bilateral meeting',phone:'—',owner:'Sudiptaa Paul Choudhury',temp:'Hot',date:'6-7 Nov',msg:'High-value bilateral meeting',event:'Luxembourg 1:1 Meetings',geo:'International'},
-  ];
-  const allIndia = RPT_NOV_WEBSITE_LEADS.filter(l=>!l.geo||l.geo==='India'||l.geo.toLowerCase()==='india');
-  const allNov   = [...RPT_NOV_WEBSITE_LEADS,...allIntl];
-  const src = mode==='india' ? allIndia : mode==='intl' ? allIntl : mode==='all_leads_nov' ? allNov : allNov;
-  window._rptCrmSrc = src;
-  window._rptFilters = {temp:'All',geo:'All',q:''};
-  const tot=src.length, hot=src.filter(l=>l.temp==='Hot').length, warm=src.filter(l=>l.temp==='Warm').length;
-  const intl=src.filter(l=>(l.geo||'').toLowerCase().includes('int')).length;
-  const s=id=>document.getElementById(id);
-  if(s('rptCrmTotal')) s('rptCrmTotal').textContent=tot;
-  if(s('rptCrmHot'))   s('rptCrmHot').textContent=hot;
-  if(s('rptCrmWarm'))  s('rptCrmWarm').textContent=warm;
-  if(s('rptCrmIntl'))  s('rptCrmIntl').textContent=intl;
-  rptCRMRender();
-}
-
-function rptCRMFilter(key,val,btn) {
-  window._rptFilters[key]=val;
-  btn.closest('div').querySelectorAll('.rpt-filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  rptCRMRender();
-}
-function rptCRMSearch(q) { window._rptFilters.q=q; rptCRMRender(); }
-
-function rptCRMRender() {
-  const f=window._rptFilters||{};
-  const src=window._rptCrmSrc||RPT_NOV_WEBSITE_LEADS;
-  const filtered=src.filter(l=>{
-    if(f.temp&&f.temp!=='All'&&l.temp!==f.temp) return false;
-    if(f.geo&&f.geo==='India'&&(l.geo||'').toLowerCase().includes('int')) return false;
-    if(f.geo&&f.geo==='Intl'&&!(l.geo||'').toLowerCase().includes('int')) return false;
-    if(f.q){const q=f.q.toLowerCase();if(!(l.name||'').toLowerCase().includes(q)&&!(l.company||'').toLowerCase().includes(q)&&!(l.owner||'').toLowerCase().includes(q)) return false;}
-    return true;
-  });
-  const s=id=>document.getElementById(id);
-  if(s('rptCrmShowing')) s('rptCrmShowing').textContent=filtered.length;
-  const tbody=s('rptCrmTbody');
-  if(!tbody) return;
-  tbody.innerHTML=filtered.map((l,i)=>`<tr>
-    <td>${i+1}</td>
-    <td><strong>${rptEsc(l.name||'-')}</strong></td>
-    <td>${rptEsc(l.company||'-')}</td>
-    <td style="white-space:nowrap;font-size:11px">${rptEsc(l.phone||'—')}</td>
-    <td>${(l.geo||'').toLowerCase().includes('int')?rptBadge('intl','Intl'):rptBadge('india','India')}</td>
-    <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${rptEsc(l.event||l.date||'-')}</td>
-    <td>${rptBadge((l.temp||'').toLowerCase(),l.temp||'—')}</td>
-    <td style="font-size:11px">${rptEsc(l.owner||'-')}</td>
-    <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${rptEsc(l.msg||'')}">${rptEsc(l.msg||'—')}</td>
-  </tr>`).join('');
-}
-
-// ── Download ──────────────────────────────────────────────────────
-function rptDownload() {
-  const content = document.querySelector('.rpt-wrap');
-  if (!content) return;
-  const style = Array.from(document.styleSheets).map(ss => {
-    try { return Array.from(ss.cssRules).map(r=>r.cssText).join('\n'); } catch(e) { return ''; }
-  }).join('\n');
-  const blob = new Blob([`<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>${style}</style></head><body style="background:#f3f4f6">${content.outerHTML}</body></html>`], {type:'text/html'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'QNu_Marketing_Report_Nov2026.html';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
-  toast('Report downloaded.');
 }
