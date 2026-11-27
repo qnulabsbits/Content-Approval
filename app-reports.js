@@ -72,8 +72,7 @@ async function rptLoadLibrary(type) {
   const c = $('rptLibraryContent');
   try {
     const token = await getToken();
-    const res = await sbFetch(`reports_library?type=eq.${type}&order=year.desc,month.desc&select=*`);
-    const rows = await res.json();
+    const rows = await sbFetch(`reports_library?type=eq.${type}&order=year.desc,month.desc&select=*`);
 
     // Add November 2026 default if no records yet
     const months = rows && rows.length > 0 ? rows : [{
@@ -246,7 +245,7 @@ async function rptDoUpload(type) {
 
   try {
     // Check if record for this month/year/type exists
-    const existing = await (await sbFetch(`reports_library?type=eq.${type}&month=eq.${month}&year=eq.${year}&select=id,files`)).json();
+    const existing = await sbFetch(`reports_library?type=eq.${type}&month=eq.${month}&year=eq.${year}&select=id,files`);
 
     if (existing && existing.length > 0) {
       // Merge files
@@ -340,13 +339,11 @@ async function rptLoadWeeklyContent(isAdmin, isCMO, userEmail) {
   const c = $('weeklyContent');
   try {
     // Load team members
-    const tmRes = await sbFetch('weekly_team_members?active=eq.true&order=name.asc&select=*');
-    weeklyTeamMembers = await tmRes.json() || [];
+    weeklyTeamMembers = await sbFetch('weekly_team_members?active=eq.true&order=name.asc&select=*') || [];
 
     // Load this week's submissions
     const weekStart = getWeekStart();
-    const subRes = await sbFetch(`weekly_submissions?week_start=eq.${weekStart}&select=*`);
-    weeklySubmissions = await subRes.json() || [];
+    weeklySubmissions = await sbFetch(`weekly_submissions?week_start=eq.${weekStart}&select=*`) || [];
 
     // Determine what to show
     const mySubmission = weeklySubmissions.find(s => s.user_email === userEmail);
@@ -539,8 +536,7 @@ async function rptManageTeam() {
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
 
-  const tmRes = await sbFetch('weekly_team_members?order=name.asc&select=*').catch(() => ({json:()=>[]}));
-  const members = await tmRes.json() || [];
+  const members = await sbFetch('weekly_team_members?order=name.asc&select=*').catch(() => []) || [];
 
   overlay.innerHTML = `
     <div style="background:var(--surface);border-radius:12px;max-width:560px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,0.25)">
@@ -609,8 +605,7 @@ async function rptToggleMember(id, active) {
 // ── Compile PPT ───────────────────────────────────────────────────
 async function rptCompileNow() {
   const weekStart = getWeekStart();
-  const subRes = await sbFetch(`weekly_submissions?week_start=eq.${weekStart}&select=*`).catch(()=>({json:()=>[]}));
-  const subs = await subRes.json() || [];
+  const subs = await sbFetch(`weekly_submissions?week_start=eq.${weekStart}&select=*`).catch(()=>[]) || [];
 
   const members = weeklyTeamMembers.length > 0 ? weeklyTeamMembers :
     [{name:'Soumya',email:'soumya@qnulabs.com'},{name:'Sumanth',email:'sumanth@qnulabs.com'},{name:'Bilal',email:'bilal@qnulabs.com'},{name:'Aditya',email:'aditya.p@qnulabs.com'}];
